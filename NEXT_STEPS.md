@@ -31,11 +31,26 @@ A running outline of what's built and what's planned. V0 is **overlay-first,
 
 Tests + typecheck pass; everything committed.
 
-## 🔜 Next
+## ▶️ Pick up here (next session)
 
-1. **Field-test the overlay in real OBS** over a scene — the one thing only the
-   user can verify (OBS is on Windows). *Deferred by user; will test later.*
-2. **Polish from the field test** — sizing, contrast, motion once seen on stream.
+The project is **functionally complete and safe to run** — V0 works end to end,
+29 tests pass, the tunnel is hardened. What's left is verification + polish, in
+priority order:
+
+1. **End-to-end dry run (no OBS needed).** `vibe start` on a throwaway repo,
+   install the Claude hooks, make real edits, and watch `/state.json` → `/live`
+   → `/dashboard` update live. Unit tests cover the pure logic; nothing yet
+   exercises the *integration* (hooks → agent → state → page). This is the
+   highest-value next step and you can do it solo.
+2. **`/live` polish.** It already renders well (verified headless: on-brand dark
+   glass, live pill, stats, build log). Minor only: the build-log emoji icons
+   look faint, and there's a lot of empty vertical space when the log is short.
+   Not urgent — it looks good as-is.
+3. **Field-test the overlay in real OBS** over a scene — the one thing only you
+   can verify (OBS is on Windows). *Deferred; do when ready to actually stream.*
+4. **Stream reliability** (before going live for real): confirm the overlay holds
+   last-good values if git/ccusage hiccup, and decide whether an agent crash
+   mid-stream should be survivable (it currently dies → blank overlay).
 
 ## 🔒 Hardening (from code review, 2026-06-06)
 
