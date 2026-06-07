@@ -24,8 +24,8 @@ const OVERLAY_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "..
  * polls git/ccusage to keep stats fresh, accepts mutations over HTTP, and
  * serves the overlay + /state.json. See V0_SPEC.md §4 / §7.
  */
-export async function runAgent(port: number): Promise<void> {
-  let session = await readSession();
+export async function runAgent(port: number, opts: { demo?: boolean } = {}): Promise<void> {
+  let session = opts.demo ? demoSession() : await readSession();
   if (!session) {
     console.error("No active session. Run `vibe start` first.");
     process.exit(1);
@@ -178,14 +178,26 @@ export async function runAgent(port: number): Promise<void> {
 
   await new Promise<void>((resolve) => server.listen(port, "0.0.0.0", resolve));
 
-  await pollGit();
-  void pollTokens();
-  const gitTimer = setInterval(() => void pollGit(), GIT_POLL_MS);
-  const tokenTimer = setInterval(() => void pollTokens(), TOKEN_POLL_MS);
+  const timers: NodeJS.Timeout[] = [];
+  if (opts.demo) {
+    // No git/ccusage — just animate plausible stats so the overlay looks alive.
+    state.branch = "main";
+    state.stats = { ...state.stats, linesAdded: 842, linesRemoved: 219, filesChanged: 13, commits: 4, features: 3, bugs: 2, claudeTokens: 1_240_000 };
+    render();
+    timers.push(setInterval(() => {
+      state.stats.linesAdded += Math.floor(Math.random() * 12);
+      state.stats.claudeTokens += Math.floor(Math.random() * 4000);
+      render();
+    }, 2000));
+  } else {
+    await pollGit();
+    void pollTokens();
+    timers.push(setInterval(() => void pollGit(), GIT_POLL_MS));
+    timers.push(setInterval(() => void pollTokens(), TOKEN_POLL_MS));
+  }
 
   const shutdown = () => {
-    clearInterval(gitTimer);
-    clearInterval(tokenTimer);
+    timers.forEach(clearInterval);
     state.isLive = false;
     void writeState(state);
     process.exit(0);
@@ -193,11 +205,33 @@ export async function runAgent(port: number): Promise<void> {
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
 
-  console.log(`\n  VibeLog agent live on http://localhost:${port}`);
+  console.log(`\n  VibeLog agent live on http://localhost:${port}${opts.demo ? "  (DEMO)" : ""}`);
   console.log(`  OBS Browser Source →  http://localhost:${port}/overlay`);
+  if (opts.demo) console.log(`  Browser preview     →  http://localhost:${port}/overlay?preview`);
   console.log(`  Session: ${session.title ?? "(untitled)"}  ·  project: ${session.project?.name ?? "—"}`);
-  console.log(`  Watching: ${session.cwd}`);
-  console.log(`\n  Run \`vibe building\` / \`vibe mark\` / \`vibe end\` from another terminal.\n`);
+  if (!opts.demo) console.log(`  Watching: ${session.cwd}`);
+  console.log(`\n  ${opts.demo ? "Ctrl-C to stop." : "Run `vibe building` / `vibe mark` / `vibe end` from another terminal."}\n`);
+}
+
+function demoSession(): Session {
+  return {
+    cwd: process.cwd(),
+    port: 0,
+    baseline: null,
+    startedAt: new Date(Date.now() - 1000 * 60 * 47).toISOString(), // 47m ago
+    title: "Building the live tracker",
+    project: { name: "VibeLog", status: "active" },
+    nowBuilding: { title: "Wiring the live stats card into the overlay", mode: "coding" },
+    buildLog: [
+      "✨ live LOC counter works",
+      "✨ overlay reads /state.json",
+      "🐛 fixed double-count on git stash",
+      "• chose Cloudflare Tunnel for public /live",
+      "✨ redactor scrubs secrets from build log",
+    ],
+    features: 3,
+    bugs: 2,
+  };
 }
 
 export type { Session };

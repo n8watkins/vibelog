@@ -33,6 +33,27 @@
         overflow: hidden;
       }
 
+      /* ?preview — fake stream scene so you can eyeball the HUD in a browser */
+      body.preview {
+        background:
+          radial-gradient(900px 500px at 70% 20%, #2a2150, transparent),
+          radial-gradient(700px 500px at 20% 80%, #10303a, transparent),
+          #0a0c12;
+      }
+      body.preview .webcam {
+        margin: 0 0 0 18px;
+        border-radius: var(--radius);
+        background: linear-gradient(135deg, #1c2030, #11141d);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 12px;
+        height: 168px;
+      }
+      body.preview .webcam::after { content: "webcam"; }
+
       #hud {
         position: fixed;
         left: 0;
@@ -207,6 +228,10 @@
 
     <script>
       const $ = (id) => document.getElementById(id);
+
+      if (new URLSearchParams(location.search).has("preview")) {
+        document.body.classList.add("preview");
+      }
 
       function fmt(n) {
         if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";

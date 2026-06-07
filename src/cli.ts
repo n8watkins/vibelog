@@ -82,6 +82,14 @@ program
   });
 
 program
+  .command("demo")
+  .description("Preview the overlay with fake data (no git/session needed)")
+  .option("--port <port>", "HTTP port", String(DEFAULT_PORT))
+  .action(async (opts: { port: string }) => {
+    await runAgent(Number(opts.port) || DEFAULT_PORT, { demo: true });
+  });
+
+program
   .command("building <text>")
   .description("Set the 'Now Building' card")
   .option("-m, --mode <mode>", `build mode (${BUILD_MODES.join(", ")})`, "coding")
