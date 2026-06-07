@@ -14,6 +14,9 @@ export type Session = {
   buildLog: string[];
   features: number;
   bugs: number;
+  /** Today's Claude token total captured at session start; session tokens =
+   *  current today total − this. Null until the first token poll sets it. */
+  tokenBaseline: number | null;
 };
 
 export type Config = {

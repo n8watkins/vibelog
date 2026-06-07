@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { getBranch, getStats } from "./git.ts";
-import { getClaudeTokensToday } from "./ccusage.ts";
+import { getClaudeTokensToday, sessionTokenDelta } from "./ccusage.ts";
 import { redact } from "./redact.ts";
 import {
   BUILD_LOG_MAX,
@@ -70,11 +70,16 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   }
 
   async function pollTokens(): Promise<void> {
-    const tokens = await getClaudeTokensToday();
-    if (tokens !== null) {
-      state.stats.claudeTokens = tokens;
-      render();
+    const today = await getClaudeTokensToday();
+    if (today === null) return; // ccusage unavailable — leave at 0
+
+    const { tokens, baseline } = sessionTokenDelta(today, session!.tokenBaseline);
+    if (baseline !== session!.tokenBaseline) {
+      session!.tokenBaseline = baseline;
+      await persistSession();
     }
+    state.stats.claudeTokens = tokens;
+    render();
   }
 
   // ---- mutations -----------------------------------------------------------
@@ -276,6 +281,7 @@ function demoSession(): Session {
     ],
     features: 3,
     bugs: 2,
+    tokenBaseline: null,
   };
 }
 

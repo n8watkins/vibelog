@@ -66,7 +66,8 @@ session is running. Prompt text is redacted before it can reach the overlay.
 
 - **Git**, polled every 5s: lines added/removed, files changed (incl. untracked),
   commits since session start, current branch.
-- **Claude tokens** (today's total), polled every 30s via `npx ccusage --json`.
+- **Claude tokens for this session**, polled every 30s via `npx ccusage --json`
+  (today's total minus the total captured at `vibe start`).
 - **Milestones** you mark: features, bugs, etc. → the build log.
 - **Now Building**: whatever you type via `vibe building`. No AI, no Gemini.
 

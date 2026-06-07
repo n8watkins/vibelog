@@ -80,6 +80,7 @@ program
       buildLog: [],
       features: 0,
       bugs: 0,
+      tokenBaseline: null,
     });
     await appendEvent({ type: "session_started", title: opts.title ?? null, project: projectName });
 
