@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { DEFAULT_PORT } from "./config.ts";
 import { getHead, isGitRepo } from "./git.ts";
 import { BUILD_MODES, type BuildMode } from "./state.ts";
+import { getTokensByProject, labelProjects } from "./claude-projects.ts";
 import { readConfig, readSession, writeConfig, writeSession, appendEvent } from "./store.ts";
 import { runAgent } from "./agent.ts";
 
@@ -191,6 +192,50 @@ hooks
     await writeFile(target, JSON.stringify(settings, null, 2) + "\n");
     console.log(`Installed VibeLog hooks into ${target}`);
     console.log("Restart Claude Code (or open a new session) for them to take effect.");
+  });
+
+program
+  .command("tokens")
+  .description("Claude tokens by project (from local transcripts)")
+  .option("--days <n>", "only the last N days")
+  .option("--since <date>", "only since YYYY-MM-DD")
+  .option("--top <n>", "show the top N projects", "15")
+  .action(async (opts: { days?: string; since?: string; top: string }) => {
+    let since: string | null = opts.since ?? null;
+    if (!since && opts.days) {
+      const d = new Date();
+      d.setDate(d.getDate() - (Number(opts.days) - 1));
+      const pad = (n: number) => String(n).padStart(2, "0");
+      since = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    const fmt = (n: number) =>
+      n >= 1_000_000 ? (n / 1_000_000).toFixed(1) + "M" : n >= 1_000 ? (n / 1_000).toFixed(1) + "k" : String(n);
+
+    process.stdout.write("Reading Claude transcripts…\r");
+    const rows = await getTokensByProject({ since });
+    if (!rows.length) {
+      console.log("No Claude usage found in ~/.claude/projects.            ");
+      return;
+    }
+
+    // Shortest unique path suffix per project (disambiguates same-named dirs).
+    const labels = labelProjects(rows.map((r) => r.cwd));
+    const label = (r: (typeof rows)[number]) => labels.get(r.cwd) ?? r.project;
+
+    const top = rows.slice(0, Number(opts.top) || 15);
+    const max = top[0]!.tokens || 1;
+    const grand = rows.reduce((s, r) => s + r.tokens, 0);
+    const nameW = Math.min(32, Math.max(...top.map((r) => label(r).length)));
+
+    console.log(`\nClaude tokens by project${since ? ` (since ${since})` : ""}\n`);
+    for (const r of top) {
+      const bar = "█".repeat(Math.round((r.tokens / max) * 24)) || "▏";
+      const name = label(r).padEnd(nameW).slice(0, nameW);
+      const pct = ((r.tokens / grand) * 100).toFixed(0);
+      console.log(`${name}  ${fmt(r.tokens).padStart(7)}  ${pct.padStart(3)}%  ${bar}`);
+    }
+    console.log(`\nTotal: ${fmt(grand)} tokens across ${rows.length} projects.`);
   });
 
 program

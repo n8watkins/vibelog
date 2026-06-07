@@ -71,6 +71,23 @@ session is running. Prompt text is redacted before it can reach the overlay.
 - **Milestones** you mark: features, bugs, etc. → the build log.
 - **Now Building**: whatever you type via `vibe building`. No AI, no Gemini.
 
+## Tokens by project
+
+See where your Claude tokens actually go — across *all* your work, not just
+VibeLog sessions. Parses local Claude Code transcripts (no network, no ccusage):
+
+```bash
+pnpm vibe tokens --days 7        # last 7 days
+pnpm vibe tokens --since 2026-06-01 --top 20
+```
+
+```
+la-pool-engine            301.6M   19%  ████████████████████████
+date-planner-mini-site    237.2M   15%  ███████████████████
+website-template          219.5M   14%  █████████████████
+...
+```
+
 ## Safety
 
 Every user-typed string written to the overlay passes through a redactor
@@ -106,7 +123,8 @@ pnpm vibe share            # wraps `cloudflared tunnel --url http://localhost:45
 hooks/
   claude-hook.mjs  dumb Claude Code hook → forwards to the agent (no deps)
 src/
-  cli.ts        vibe CLI (commander)
+  cli.ts            vibe CLI (commander)
+  claude-projects.ts tokens-by-project from local transcripts (+ tests)
   agent.ts      HTTP server + state + git/ccusage pollers
   git.ts        git metrics
   ccusage.ts    Claude token totals (best-effort)
