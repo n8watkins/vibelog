@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VibeLog Overlay</title>
+    <style>
+      :root {
+        --bg: rgba(13, 16, 23, 0.82);
+        --bg2: rgba(20, 24, 33, 0.82);
+        --border: rgba(255, 255, 255, 0.08);
+        --text: #e8edf6;
+        --muted: #8b97ad;
+        --accent: #7c5cff;
+        --accent2: #22d3a6;
+        --add: #22d3a6;
+        --rem: #ff6b81;
+        --radius: 14px;
+        --gap: 12px;
+        --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+      }
+
+      * { box-sizing: border-box; }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: transparent; /* OBS composites over your scene */
+        font-family: var(--font);
+        color: var(--text);
+        overflow: hidden;
+      }
+
+      #hud {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: stretch;
+        gap: var(--gap);
+        padding: 18px;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.4s ease, transform 0.4s ease;
+      }
+      #hud.live { opacity: 1; transform: none; }
+
+      .webcam {
+        flex: 0 0 300px; /* visual space for your camera — not a data card */
+      }
+
+      .card {
+        flex: 1;
+        min-width: 0;
+        background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 16px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .card.stats { flex: 0 0 230px; }
+      .card.now { flex: 1.4; }
+
+      .label {
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .label .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent2);
+        box-shadow: 0 0 8px var(--accent2);
+      }
+      .label .dot.paused { background: #f5b14c; box-shadow: 0 0 8px #f5b14c; }
+
+      .project-name {
+        font-size: 20px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .branch {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .now-title {
+        font-size: 17px;
+        font-weight: 600;
+        line-height: 1.25;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .mode {
+        align-self: flex-start;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 3px 9px;
+        border-radius: 999px;
+        color: #fff;
+        background: linear-gradient(90deg, var(--accent), #9d7bff);
+      }
+
+      .log {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12.5px;
+        overflow: hidden;
+      }
+      .log li {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #cdd6e6;
+        animation: slidein 0.35s ease;
+      }
+      @keyframes slidein {
+        from { opacity: 0; transform: translateX(-6px); }
+        to { opacity: 1; transform: none; }
+      }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 14px;
+        font-family: var(--mono);
+      }
+      .stat { display: flex; flex-direction: column; }
+      .stat .v { font-size: 16px; font-weight: 700; }
+      .stat .k {
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-family: var(--font);
+      }
+      .v.add { color: var(--add); }
+      .v.rem { color: var(--rem); }
+
+      .timer {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .empty { color: var(--muted); font-style: italic; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <div id="hud">
+      <div class="webcam"></div>
+
+      <div class="card project">
+        <div class="label"><span class="dot" id="proj-dot"></span>Project</div>
+        <div class="project-name" id="proj-name">—</div>
+        <div class="branch" id="proj-branch"></div>
+        <div class="timer" id="timer"></div>
+      </div>
+
+      <div class="card now">
+        <div class="label">Now Building</div>
+        <div class="now-title" id="now-title">—</div>
+        <span class="mode" id="now-mode" hidden></span>
+      </div>
+
+      <div class="card buildlog">
+        <div class="label">Build Log</div>
+        <ul class="log" id="log"></ul>
+      </div>
+
+      <div class="card stats">
+        <div class="label">Live Stats</div>
+        <div class="stat-grid">
+          <div class="stat"><span class="v add" id="s-add">+0</span><span class="k">added</span></div>
+          <div class="stat"><span class="v rem" id="s-rem">-0</span><span class="k">removed</span></div>
+          <div class="stat"><span class="v" id="s-files">0</span><span class="k">files</span></div>
+          <div class="stat"><span class="v" id="s-commits">0</span><span class="k">commits</span></div>
+          <div class="stat"><span class="v" id="s-feat">0</span><span class="k">features</span></div>
+          <div class="stat"><span class="v" id="s-bugs">0</span><span class="k">fixes</span></div>
+          <div class="stat"><span class="v" id="s-tok">0</span><span class="k">claude tok</span></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+
+      function fmt(n) {
+        if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+        if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
+        return String(n);
+      }
+
+      function elapsed(startedAt) {
+        if (!startedAt) return "";
+        const s = Math.max(0, Math.floor((Date.now() - new Date(startedAt)) / 1000));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return (h ? h + "h " : "") + String(m).padStart(2, "0") + "m " + String(sec).padStart(2, "0") + "s";
+      }
+
+      let last = "";
+      let state = null;
+
+      function paint(d) {
+        $("hud").classList.toggle("live", !!d.isLive);
+
+        const dot = $("proj-dot");
+        dot.classList.toggle("paused", d.project?.status === "paused");
+        $("proj-name").textContent = d.project?.name ?? d.sessionTitle ?? "Vibe coding";
+        $("proj-branch").textContent = d.branch ? "⌥ " + d.branch : "";
+
+        if (d.nowBuilding) {
+          $("now-title").textContent = d.nowBuilding.title;
+          $("now-title").classList.remove("empty");
+          const mode = $("now-mode");
+          mode.textContent = d.nowBuilding.mode;
+          mode.hidden = false;
+        } else {
+          $("now-title").textContent = "Getting set up…";
+          $("now-title").classList.add("empty");
+          $("now-mode").hidden = true;
+        }
+
+        const log = $("log");
+        log.innerHTML = "";
+        if (!d.buildLog?.length) {
+          const li = document.createElement("li");
+          li.className = "empty";
+          li.textContent = "No milestones yet";
+          log.appendChild(li);
+        } else {
+          for (const entry of d.buildLog) {
+            const li = document.createElement("li");
+            li.textContent = entry;
+            log.appendChild(li);
+          }
+        }
+
+        const s = d.stats ?? {};
+        $("s-add").textContent = "+" + fmt(s.linesAdded ?? 0);
+        $("s-rem").textContent = "-" + fmt(s.linesRemoved ?? 0);
+        $("s-files").textContent = fmt(s.filesChanged ?? 0);
+        $("s-commits").textContent = fmt(s.commits ?? 0);
+        $("s-feat").textContent = fmt(s.features ?? 0);
+        $("s-bugs").textContent = fmt(s.bugs ?? 0);
+        $("s-tok").textContent = fmt(s.claudeTokens ?? 0);
+      }
+
+      async function tick() {
+        try {
+          const res = await fetch("/state.json", { cache: "no-store" });
+          const d = await res.json();
+          state = d;
+          const sig = JSON.stringify(d);
+          if (sig !== last) {
+            last = sig;
+            paint(d);
+          }
+        } catch {
+          $("hud").classList.remove("live");
+        }
+      }
+
+      setInterval(tick, 1000);
+      setInterval(() => {
+        if (state?.isLive) $("timer").textContent = elapsed(state.startedAt);
+      }, 1000);
+      tick();
+    </script>
+  </body>
+</html>
