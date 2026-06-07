@@ -9,7 +9,9 @@ import { DEFAULT_PORT } from "./config.ts";
 import { getHead, isGitRepo } from "./git.ts";
 import { BUILD_MODES, type BuildMode } from "./state.ts";
 import { getTokensByProject, labelProjects } from "./claude-projects.ts";
-import { readConfig, readSession, writeConfig, writeSession, appendEvent } from "./store.ts";
+import { localDateString } from "./ccusage.ts";
+import { formatReport, readEvents, summarizeDay } from "./report.ts";
+import { readConfig, readSession, readState, writeConfig, writeSession, appendEvent } from "./store.ts";
 import { runAgent } from "./agent.ts";
 
 const program = new Command();
@@ -259,6 +261,37 @@ program
       }
       throw err;
     });
+  });
+
+program
+  .command("report [day]")
+  .description("End-of-session recap from your local log (day: today|yesterday|YYYY-MM-DD)")
+  .action(async (day?: string) => {
+    let date = localDateString();
+    if (day && day !== "today") {
+      if (day === "yesterday") {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        date = localDateString(d);
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+        date = day;
+      } else {
+        console.error(`Bad day "${day}". Use today, yesterday, or YYYY-MM-DD.`);
+        process.exit(1);
+      }
+    }
+
+    const summary = summarizeDay(await readEvents(), date);
+
+    // Pull LOC/commit/token totals from the last state snapshot, but only if it
+    // belongs to the day we're reporting on.
+    const state = await readState();
+    const session = await readSession();
+    const sameDay = state && localDateString(new Date(state.updatedAt)) === date;
+    const stats = sameDay ? state.stats : null;
+    const project = sameDay ? (state.project?.name ?? session?.project?.name ?? null) : null;
+
+    console.log("\n" + formatReport(summary, stats, project) + "\n");
   });
 
 program

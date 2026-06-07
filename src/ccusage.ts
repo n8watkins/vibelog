@@ -28,7 +28,7 @@ export async function getClaudeTokensToday(): Promise<number | null> {
 }
 
 /** Local YYYY-MM-DD — ccusage buckets by local date, not UTC. */
-function localDateString(d = new Date()): string {
+export function localDateString(d = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }

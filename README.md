@@ -36,6 +36,28 @@ pnpm vibe status        # dump current live state
 pnpm vibe end           # end session, stop the agent
 ```
 
+When you wrap up, get a recap built from your local log (no AI, no network):
+
+```bash
+pnpm vibe report             # today
+pnpm vibe report yesterday
+pnpm vibe report 2026-06-01
+```
+
+```
+📊 Vibe report — 2026-06-06
+
+  ⏱  3h 12m active  ·  2 sessions
+  ✨ 5 features  ·  🐛 2 fixes  ·  💬 41 prompts  ·  🔧 318 tool calls
+
+  Code — VibeLog
+    +842 / -219 lines  ·  13 files  ·  4 commits  ·  1.2M tokens
+
+  Shipped
+    ✨ live LOC counter works
+  ...
+```
+
 Build modes: `planning designing coding debugging polishing deploying shipping`.
 
 ### Make `vibe` a real command (recommended)
@@ -129,6 +151,7 @@ src/
   git.ts        git metrics
   ccusage.ts    Claude token totals (best-effort)
   redact.ts     secret scrubber  (+ redact.test.ts)
+  report.ts     `vibe report` daily recap from events  (+ report.test.ts)
   state.ts      LiveState contract
   store.ts      ~/.vibelog persistence
 public/
