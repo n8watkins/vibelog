@@ -22,8 +22,12 @@ A running outline of what's built and what's planned. V0 is **overlay-first,
   event log + last state snapshot. No AI, no network.
 - **`vibe chart`** — GitHub-style activity heatmap + Vibe Score, in the terminal.
 - **Private dashboard** (`/dashboard`) — browser view of today's state + recap +
-  activity heatmap (localhost only; not exposed via `/live`).
+  activity heatmap (localhost only — enforced, see below).
 - **`vibe report week`** — 7-day rollup recap.
+- **Tunnel hardening** — remote/tunneled callers (detected via cloudflared's
+  forwarding headers) get read-only public routes only (`/`, `/overlay`, `/live`,
+  `/state.json`); writes (`mark`/`building`/`end`/hooks) and `/dashboard` return
+  403. So `vibe share` can no longer leak the dashboard or accept viewer writes.
 
 Tests + typecheck pass; everything committed.
 
@@ -35,13 +39,9 @@ Tests + typecheck pass; everything committed.
 
 ## 🔒 Hardening (from code review, 2026-06-06)
 
-1. **`vibe share` exposes the whole server, not just `/live`.** The Cloudflare
-   tunnel points at `http://localhost:4545`, so every route is reachable from the
-   public URL — including the *write* endpoints (`POST /mark`, `/building`,
-   `/end`, `/hooks/claude/*`) and the "private" `/dashboard` + `/api/dashboard.json`.
-   A viewer could end the session or inject text into the overlay. **Fix:** gate
-   mutations + `/dashboard` to localhost (or behind a token), or serve only
-   read-only public routes when a tunnel is active. *Highest-value item.*
+1. ~~**`vibe share` exposes the whole server, not just `/live`.**~~ ✅ **Fixed** —
+   remote/tunneled requests now get read-only public routes only; writes and
+   `/dashboard` return 403 (`isRemote()` in `agent.ts`, tested in `agent.test.ts`).
 2. **Dashboard re-reads the full event log every 4s.** `/api/dashboard.json`
    calls `readEvents()` + recomputes `summarizeDay` ~92×/poll. Fine for a small
    log; on a long stream it's wasteful. **Fix:** cache parsed events in the agent

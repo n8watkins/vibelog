@@ -77,7 +77,7 @@ pnpm vibe chart --days 365   # a full year
 
 Or open the **private dashboard** in your browser while the agent is running —
 today's stats + recap, this week's bars, and the activity heatmap, all in one
-page (localhost only, never exposed via `/live`):
+page (localhost only — remote/tunneled requests are refused, see *Safety*):
 
 ```
 http://localhost:4545/dashboard
@@ -143,6 +143,14 @@ secrets before they can hit the public-facing state. The overlay only ever emits
 text you typed + numeric stats — no paths, diffs, or prompts. Raw history is kept
 private in `~/.vibelog/events.jsonl`.
 
+The agent binds `0.0.0.0` (so Windows OBS can reach a WSL session), and `vibe
+share` tunnels the whole port — so it **gates by origin**. Direct/localhost
+requests get everything; remote or tunneled requests (detected via cloudflared's
+forwarding headers) get read-only public routes only (`/`, `/overlay`, `/live`,
+`/state.json`). The write endpoints (`mark`/`building`/`end`/hooks) and the
+private `/dashboard` return `403` for them — a viewer can't end your session,
+inject overlay text, or read your dashboard.
+
 ```bash
 pnpm test        # redactor tests
 pnpm typecheck
@@ -172,7 +180,7 @@ hooks/
 src/
   cli.ts            vibe CLI (commander)
   claude-projects.ts tokens-by-project from local transcripts (+ tests)
-  agent.ts      HTTP server + state + git/ccusage pollers
+  agent.ts      HTTP server + state + git/ccusage pollers  (+ agent.test.ts: origin gate)
   git.ts        git metrics
   ccusage.ts    Claude token totals (best-effort)
   redact.ts     secret scrubber  (+ redact.test.ts)

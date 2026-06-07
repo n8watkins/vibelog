@@ -25,6 +25,40 @@ const LIVE_FILE = path.join(PUBLIC_DIR, "live.html");
 const DASHBOARD_FILE = path.join(PUBLIC_DIR, "dashboard.html");
 
 /**
+ * Routes a remote viewer is allowed to see. The agent binds 0.0.0.0 and
+ * `vibe share` tunnels the *whole* port, so we must gate everything else:
+ * only these read-only GET routes are safe to expose. Writes (mark/building/
+ * end/hooks) and the private /dashboard are localhost-only — see isRemote().
+ */
+const PUBLIC_GET_ROUTES = new Set(["/", "/overlay", "/live", "/state.json"]);
+
+/**
+ * True if a request did NOT originate directly from this machine. A Cloudflare
+ * tunnel (cloudflared, behind `vibe share`) forwards from localhost, so the
+ * socket address looks local — the real tell is the forwarding headers it adds.
+ * We treat any forwarded/non-loopback request as remote (untrusted).
+ */
+export function isRemote(req: {
+  headers: IncomingMessage["headers"];
+  socket: { remoteAddress?: string | undefined };
+}): boolean {
+  const h = req.headers;
+  if (
+    h["x-forwarded-for"] ||
+    h["forwarded"] ||
+    h["x-forwarded-host"] ||
+    h["cf-connecting-ip"] ||
+    h["cf-ray"]
+  ) {
+    return true;
+  }
+  const addr = req.socket.remoteAddress ?? "";
+  const loopback =
+    addr === "" || addr === "127.0.0.1" || addr === "::1" || addr === "::ffff:127.0.0.1";
+  return !loopback;
+}
+
+/**
  * The agent: one process that owns the authoritative LiveState in memory,
  * polls git/ccusage to keep stats fresh, accepts mutations over HTTP, and
  * serves the overlay + /state.json. See V0_SPEC.md §4 / §7.
@@ -166,6 +200,13 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     const route = url.pathname;
 
     try {
+      // Remote (tunneled / LAN) callers get read-only public routes only —
+      // never the write endpoints, hooks, or the private dashboard.
+      if (isRemote(req) && !(req.method === "GET" && PUBLIC_GET_ROUTES.has(route))) {
+        sendJson(res, 403, { error: "forbidden" });
+        return;
+      }
+
       if (req.method === "GET" && (route === "/" || route === "/overlay")) {
         const html = await readFile(OVERLAY_FILE, "utf8");
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
