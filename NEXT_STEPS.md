@@ -33,6 +33,22 @@ Tests + typecheck pass; everything committed.
    user can verify (OBS is on Windows). *Deferred by user; will test later.*
 2. **Polish from the field test** — sizing, contrast, motion once seen on stream.
 
+## 🔒 Hardening (from code review, 2026-06-06)
+
+1. **`vibe share` exposes the whole server, not just `/live`.** The Cloudflare
+   tunnel points at `http://localhost:4545`, so every route is reachable from the
+   public URL — including the *write* endpoints (`POST /mark`, `/building`,
+   `/end`, `/hooks/claude/*`) and the "private" `/dashboard` + `/api/dashboard.json`.
+   A viewer could end the session or inject text into the overlay. **Fix:** gate
+   mutations + `/dashboard` to localhost (or behind a token), or serve only
+   read-only public routes when a tunnel is active. *Highest-value item.*
+2. **Dashboard re-reads the full event log every 4s.** `/api/dashboard.json`
+   calls `readEvents()` + recomputes `summarizeDay` ~92×/poll. Fine for a small
+   log; on a long stream it's wasteful. **Fix:** cache parsed events in the agent
+   and invalidate on `appendEvent`, or debounce the recompute.
+3. **`vibe report week` ignores an explicit date** — always "this week". Minor;
+   add `report week YYYY-MM-DD` if back-dated rollups are ever wanted.
+
 ## 🧊 Later (Tier 3 — only if outgrowing local/solo)
 
 Deferred PRD phases: Gemini auto-summaries, Supabase + auth, public profile,
