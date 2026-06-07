@@ -29,8 +29,9 @@ If a viewer can watch that update while you code, V0 is done. Nothing else matte
 - ❌ Monorepo with `packages/*` — one repo.
 - ❌ Gemini + budget manager — milestones are your own text, no AI rewrite.
 - ❌ Vibe Chart, daily/weekly reports, YouTube chapters, Discord recap.
-- ❌ Claude hooks (4 of them) — V0 polls git/ccusage instead. Hooks are a nice
-  upgrade later but add setup friction now.
+- ✅ Claude hooks — a *light* 3-hook integration shipped (prompt → "Now Building",
+  tool/stop → refresh git). Optional; V0 still works fully without them via the
+  CLI. The dumb-script/smart-agent split from PRD §16.3 is kept.
 - ❌ Auth / multi-user / public profile.
 
 ## 2. Architecture (V0)

@@ -47,6 +47,21 @@ alias vibe="npx tsx $(pwd)/src/cli.ts"
 # then, from any project:  vibe start
 ```
 
+## Auto-track with Claude Code hooks (optional)
+
+Wire VibeLog into Claude Code so the overlay updates itself while you code — your
+prompt becomes the "Now Building" card and git stats refresh right after each edit.
+
+```bash
+pnpm vibe hooks print              # preview the settings.json block
+pnpm vibe hooks install --global   # ~/.claude/settings.json (all projects)
+pnpm vibe hooks install --dir .    # ./.claude/settings.json (this project only)
+```
+
+Restart Claude Code afterwards. The hook script is fire-and-forget: it never blocks
+Claude, writes nothing to its stdout, and silently does nothing when no `vibe`
+session is running. Prompt text is redacted before it can reach the overlay.
+
 ## What it tracks
 
 - **Git**, polled every 5s: lines added/removed, files changed (incl. untracked),
@@ -80,6 +95,8 @@ cloudflared tunnel --url http://localhost:4545
 ## Files
 
 ```
+hooks/
+  claude-hook.mjs  dumb Claude Code hook → forwards to the agent (no deps)
 src/
   cli.ts        vibe CLI (commander)
   agent.ts      HTTP server + state + git/ccusage pollers

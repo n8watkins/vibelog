@@ -103,6 +103,31 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     await appendEvent({ type: "session_ended", title: session!.title });
   }
 
+  // ---- claude hooks (dumb script in, smart agent here) ---------------------
+
+  /** UserPromptSubmit → set "Now Building" from a sanitized first line. */
+  async function onPrompt(rawPrompt: string): Promise<void> {
+    const firstLine = rawPrompt.split("\n").map((l) => l.trim()).find(Boolean) ?? "";
+    const title = redact(firstLine).slice(0, 120);
+    await appendEvent({ type: "prompt_submitted", title });
+    if (!title) return;
+    session!.nowBuilding = { title, mode: session!.nowBuilding?.mode ?? "coding" };
+    await persistSession();
+    render();
+  }
+
+  /** PostToolUse → log + refresh git promptly so stats feel live after edits. */
+  async function onTool(tool: string): Promise<void> {
+    await appendEvent({ type: "tool_used", tool });
+    void pollGit();
+  }
+
+  /** Stop → Claude finished a response; refresh stats. */
+  async function onStop(): Promise<void> {
+    await appendEvent({ type: "claude_stopped" });
+    void pollGit();
+  }
+
   // ---- http ----------------------------------------------------------------
 
   function sendJson(res: ServerResponse, code: number, body: unknown): void {
@@ -168,6 +193,17 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         sendJson(res, 200, { ok: true });
         setTimeout(() => process.exit(0), 100);
         return;
+      }
+
+      // Claude Code hooks. The script forwards raw hook stdin JSON; we pull the
+      // fields we care about. Always 200 fast so we never block Claude.
+      if (req.method === "POST" && route.startsWith("/hooks/claude/")) {
+        const kind = route.slice("/hooks/claude/".length);
+        const body = await readBody(req);
+        if (kind === "prompt") await onPrompt(String(body.prompt ?? ""));
+        else if (kind === "tool") await onTool(String(body.tool_name ?? body.tool ?? "tool"));
+        else if (kind === "stop") await onStop();
+        return sendJson(res, 200, { ok: true });
       }
 
       sendJson(res, 404, { error: "not found" });

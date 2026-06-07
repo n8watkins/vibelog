@@ -1,5 +1,9 @@
 #!/usr/bin/env -S npx tsx
 import { Command } from "commander";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { DEFAULT_PORT } from "./config.ts";
 import { getHead, isGitRepo } from "./git.ts";
 import { BUILD_MODES, type BuildMode } from "./state.ts";
@@ -118,6 +122,73 @@ program
   .action(async () => {
     await callAgent("/end", {});
     console.log("Session ended.");
+  });
+
+// ---- claude hooks --------------------------------------------------------
+
+const HOOK_SCRIPT = path.resolve(
+  fileURLToPath(import.meta.url),
+  "..",
+  "..",
+  "hooks",
+  "claude-hook.mjs",
+);
+
+type HookEntry = { matcher?: string; hooks: { type: "command"; command: string }[] };
+
+function vibeHooksConfig(): Record<string, HookEntry[]> {
+  const cmd = (event: string) => `node ${JSON.stringify(HOOK_SCRIPT)} ${event}`;
+  return {
+    UserPromptSubmit: [{ hooks: [{ type: "command", command: cmd("prompt") }] }],
+    PostToolUse: [{ matcher: "*", hooks: [{ type: "command", command: cmd("tool") }] }],
+    Stop: [{ hooks: [{ type: "command", command: cmd("stop") }] }],
+  };
+}
+
+const hooks = program.command("hooks").description("Wire VibeLog into Claude Code hooks");
+
+hooks
+  .command("print")
+  .description("Print the settings.json hooks block to paste manually")
+  .action(() => {
+    console.log(JSON.stringify({ hooks: vibeHooksConfig() }, null, 2));
+  });
+
+hooks
+  .command("install")
+  .description("Merge VibeLog hooks into a Claude Code settings.json")
+  .option("--global", "install into ~/.claude/settings.json")
+  .option("--dir <path>", "install into <path>/.claude/settings.json")
+  .action(async (opts: { global?: boolean; dir?: string }) => {
+    const target = opts.dir
+      ? path.join(path.resolve(opts.dir), ".claude", "settings.json")
+      : opts.global
+        ? path.join(os.homedir(), ".claude", "settings.json")
+        : path.join(process.cwd(), ".claude", "settings.json");
+
+    let settings: Record<string, unknown> = {};
+    try {
+      settings = JSON.parse(await readFile(target, "utf8"));
+    } catch {
+      // new file
+    }
+
+    const existing = (settings.hooks ?? {}) as Record<string, HookEntry[]>;
+    const ours = vibeHooksConfig();
+    const merged: Record<string, HookEntry[]> = { ...existing };
+    for (const [event, entries] of Object.entries(ours)) {
+      // Drop any prior VibeLog entries first (idempotent), then add ours back.
+      const others = (existing[event] ?? []).filter(
+        (e) => !e.hooks.some((h) => h.command.includes("claude-hook.mjs")),
+      );
+      merged[event] = [...others, ...entries];
+    }
+    settings.hooks = merged;
+
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, JSON.stringify(settings, null, 2) + "\n");
+    console.log(`Installed VibeLog hooks into ${target}`);
+    console.log("Restart Claude Code (or open a new session) for them to take effect.");
   });
 
 program
