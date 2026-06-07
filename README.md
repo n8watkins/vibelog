@@ -58,6 +58,31 @@ pnpm vibe report 2026-06-01
   ...
 ```
 
+Get a weekly rollup, or a GitHub-style activity heatmap with a Vibe Score:
+
+```bash
+pnpm vibe report week        # 7-day recap with per-day bars
+pnpm vibe chart              # activity heatmap (last 84 days)
+pnpm vibe chart --days 365   # a full year
+```
+
+```
+📈 Vibe chart
+
+  Mon ■ ■ ■ ■ ▦ ▩ ▩ ■
+      ...
+  🔥 6-day streak  ·  longest 11  ·  31/56 active days
+  ✨ 19 shipped  ·  🐛 13 fixed  ·  ⏱ 26h coded  ·  ⚡ vibe score 462
+```
+
+Or open the **private dashboard** in your browser while the agent is running —
+today's stats + recap, this week's bars, and the activity heatmap, all in one
+page (localhost only, never exposed via `/live`):
+
+```
+http://localhost:4545/dashboard
+```
+
 Build modes: `planning designing coding debugging polishing deploying shipping`.
 
 ### Make `vibe` a real command (recommended)
@@ -151,10 +176,12 @@ src/
   git.ts        git metrics
   ccusage.ts    Claude token totals (best-effort)
   redact.ts     secret scrubber  (+ redact.test.ts)
-  report.ts     `vibe report` daily recap from events  (+ report.test.ts)
+  report.ts     `vibe report` daily + weekly recaps from events  (+ report.test.ts)
+  chart.ts      `vibe chart` heatmap + Vibe Score from events  (+ chart.test.ts)
   state.ts      LiveState contract
   store.ts      ~/.vibelog persistence
 public/
-  overlay.html  the OBS HUD (transparent, self-contained)
-  live.html     shareable public /live page (full-screen viewer view)
+  overlay.html   the OBS HUD (transparent, self-contained)
+  live.html      shareable public /live page (full-screen viewer view)
+  dashboard.html private /dashboard (today + week + heatmap, localhost only)
 ```

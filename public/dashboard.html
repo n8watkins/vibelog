@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VibeLog · Dashboard</title>
+    <style>
+      :root {
+        --text: #e8edf6;
+        --muted: #8b97ad;
+        --accent: #7c5cff;
+        --accent2: #22d3a6;
+        --add: #22d3a6;
+        --rem: #ff6b81;
+        --live: #ff4d5e;
+        --card: rgba(255, 255, 255, 0.035);
+        --border: rgba(255, 255, 255, 0.08);
+        --radius: 16px;
+        --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+        --l0: #262c40; --l1: #1e5a52; --l2: #22a080; --l3: #5a78e6; --l4: #9678ff;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        font-family: var(--font); color: var(--text);
+        background:
+          radial-gradient(1100px 600px at 78% -5%, #2a2150, transparent),
+          radial-gradient(900px 600px at 10% 110%, #103038, transparent),
+          #080a10;
+      }
+      .wrap { width: min(1080px, 92vw); margin: 0 auto; padding: 28px 0 56px; }
+      .topbar { display: flex; align-items: center; justify-content: space-between; }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -0.01em; font-size: 18px; }
+      .brand .spark { width: 22px; height: 22px; border-radius: 7px; background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 0 18px rgba(124, 92, 255, 0.5); }
+      .pill { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+      .pill.live { background: rgba(255, 77, 94, 0.12); color: var(--live); border-color: rgba(255, 77, 94, 0.3); }
+      .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+      .pill.live .dot { animation: pulse 1.4s infinite; }
+      @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+      h1.title { font-size: clamp(26px, 4vw, 40px); font-weight: 800; letter-spacing: -0.02em; margin: 26px 0 2px; }
+      .sub { color: var(--muted); font-family: var(--mono); font-size: 13px; }
+
+      .panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; margin-top: 18px; }
+      .panel h3 { margin: 0 0 14px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      @media (max-width: 760px) { .row { grid-template-columns: 1fr; } }
+
+      .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 18px; }
+      @media (max-width: 620px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+      .stat .v { font-family: var(--mono); font-size: 24px; font-weight: 700; }
+      .stat .v.add { color: var(--add); } .stat .v.rem { color: var(--rem); }
+      .stat .k { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+
+      .seclist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+      .seclist li { font-size: 15px; line-height: 1.35; display: flex; gap: 9px; }
+      .sech { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 16px 0 8px; font-weight: 700; }
+      .sech:first-child { margin-top: 0; }
+      .empty { color: var(--muted); font-style: italic; }
+
+      /* heatmap */
+      .heat { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 3px; overflow-x: auto; padding-bottom: 4px; }
+      .heat .cell { width: 13px; height: 13px; border-radius: 3px; background: var(--l0); }
+      .heat .cell.l1 { background: var(--l1); } .heat .cell.l2 { background: var(--l2); }
+      .heat .cell.l3 { background: var(--l3); } .heat .cell.l4 { background: var(--l4); }
+      .heat .cell.pad { background: transparent; }
+      .legend { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin-top: 12px; }
+      .legend .cell { width: 13px; height: 13px; border-radius: 3px; }
+
+      /* weekly bars */
+      .week { display: flex; flex-direction: column; gap: 8px; font-family: var(--mono); font-size: 13px; }
+      .week .d { display: grid; grid-template-columns: 64px 1fr 92px; align-items: center; gap: 10px; }
+      .week .bar { height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--accent2), var(--accent)); min-width: 2px; }
+      .week .meta { color: var(--muted); text-align: right; }
+      .week .off { color: var(--muted); opacity: 0.55; }
+
+      .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+      .chip { font-family: var(--mono); font-size: 13px; padding: 8px 13px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); }
+      .chip b { color: var(--text); } .chip span { color: var(--muted); }
+      .footer { text-align: center; color: var(--muted); font-size: 12px; padding: 24px 0 0; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="topbar">
+        <div class="brand"><span class="spark"></span> VibeLog · Dashboard</div>
+        <span class="pill" id="livePill"><span class="dot"></span> <span id="liveText">Offline</span></span>
+      </div>
+
+      <h1 class="title" id="title">Today</h1>
+      <div class="sub" id="subtitle"></div>
+
+      <div class="panel">
+        <h3>Today</h3>
+        <div class="chips" id="todayChips"></div>
+        <div class="stats" id="codeStats" style="margin-top:18px"></div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <h3>Shipped today</h3>
+          <div id="todaySections"></div>
+        </div>
+        <div class="panel">
+          <h3>This week</h3>
+          <div class="week" id="week"></div>
+          <div class="chips" id="weekTotals" style="margin-top:16px"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Activity</h3>
+        <div class="heat" id="heat"></div>
+        <div class="legend">
+          <span>less</span>
+          <span class="cell" style="background:var(--l0)"></span>
+          <span class="cell" style="background:var(--l1)"></span>
+          <span class="cell" style="background:var(--l2)"></span>
+          <span class="cell" style="background:var(--l3)"></span>
+          <span class="cell" style="background:var(--l4)"></span>
+          <span>more</span>
+          <span id="heatSummary" style="margin-left:auto"></span>
+        </div>
+      </div>
+
+      <div class="footer">private dashboard · localhost only · powered by <strong>VibeLog</strong></div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const fmt = (n) => n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(1)+"k" : String(n);
+      const dur = (m) => { const h = Math.floor(m/60), mm = m%60; return h ? `${h}h ${mm}m` : `${mm}m`; };
+      const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+      function chip(label, value) {
+        const d = document.createElement("div");
+        d.className = "chip";
+        d.innerHTML = `<b>${value}</b> <span>${label}</span>`;
+        return d;
+      }
+      function stat(value, label, cls = "") {
+        const d = document.createElement("div");
+        d.className = "stat";
+        d.innerHTML = `<div class="v ${cls}">${value}</div><div class="k">${label}</div>`;
+        return d;
+      }
+
+      // Match chart.ts levelFor: relative to busiest day in range.
+      function levelFor(score, max) {
+        if (score <= 0) return 0;
+        if (max <= 0) return 1;
+        return Math.min(4, 1 + Math.floor((score / max) * 3.999));
+      }
+
+      function renderToday(t, live) {
+        const chips = $("todayChips");
+        chips.innerHTML = "";
+        chips.append(
+          chip("active", dur(t.activeMinutes)),
+          chip("sessions", t.sessions || (live.isLive ? 1 : 0)),
+          chip("features", t.features.length),
+          chip("fixes", t.bugs.length),
+          chip("prompts", t.prompts),
+          chip("tool calls", t.tools),
+        );
+
+        const s = live.stats || {};
+        const cs = $("codeStats");
+        cs.innerHTML = "";
+        cs.append(
+          stat("+" + fmt(s.linesAdded || 0), "lines added", "add"),
+          stat("-" + fmt(s.linesRemoved || 0), "lines removed", "rem"),
+          stat(fmt(s.filesChanged || 0), "files"),
+          stat(fmt(s.commits || 0), "commits"),
+          stat(fmt(s.claudeTokens || 0), "tokens (session)"),
+        );
+
+        const sec = $("todaySections");
+        sec.innerHTML = "";
+        const groups = [
+          ["Shipped", t.features, "✨"], ["Fixed", t.bugs, "🐛"],
+          ["Decisions", t.decisions, "•"], ["Polish", t.polish, "✦"], ["Notes", t.notes, "·"],
+        ];
+        let any = false;
+        for (const [name, items, icon] of groups) {
+          if (!items.length) continue;
+          any = true;
+          const h = document.createElement("div"); h.className = "sech"; h.textContent = name; sec.append(h);
+          const ul = document.createElement("ul"); ul.className = "seclist";
+          for (const it of items) { const li = document.createElement("li"); li.innerHTML = `<span>${icon}</span><span>${it}</span>`; ul.append(li); }
+          sec.append(ul);
+        }
+        if (!any) { sec.innerHTML = `<div class="empty">Nothing logged yet today — go ship something ✨</div>`; }
+      }
+
+      function renderWeek(w) {
+        const max = Math.max(1, ...w.days.map((d) => d.activeMinutes));
+        const el = $("week");
+        el.innerHTML = "";
+        for (const d of w.days) {
+          const dow = DOW[new Date(d.date + "T00:00:00").getDay()];
+          const row = document.createElement("div"); row.className = "d";
+          const active = !!d.firstTs;
+          row.innerHTML =
+            `<div class="${active ? "" : "off"}">${dow} ${d.date.slice(5)}</div>` +
+            `<div><div class="bar" style="width:${Math.round((d.activeMinutes / max) * 100)}%;${active ? "" : "opacity:.25"}"></div></div>` +
+            `<div class="meta">${active ? dur(d.activeMinutes) + ` · ✨${d.features.length} 🐛${d.bugs.length}` : "—"}</div>`;
+          el.append(row);
+        }
+        const t = $("weekTotals");
+        t.innerHTML = "";
+        t.append(
+          chip("active days", `${w.activeDays}/7`),
+          chip("shipped", w.features.length),
+          chip("fixed", w.bugs.length),
+          chip("total time", dur(w.activeMinutes)),
+        );
+      }
+
+      function renderHeat(chart) {
+        const max = Math.max(1, ...chart.map((c) => c.score));
+        const first = new Date(chart[0].date + "T00:00:00");
+        const pad = first.getDay();
+        const heat = $("heat");
+        heat.innerHTML = "";
+        for (let i = 0; i < pad; i++) { const c = document.createElement("div"); c.className = "cell pad"; heat.append(c); }
+        let active = 0, score = 0;
+        for (const day of chart) {
+          const lvl = levelFor(day.score, max);
+          if (day.score > 0) { active++; score += day.score; }
+          const c = document.createElement("div");
+          c.className = "cell" + (lvl ? " l" + lvl : "");
+          c.title = `${day.date} · ${day.score} pts · ✨${day.features.length} 🐛${day.bugs.length}`;
+          heat.append(c);
+        }
+        // current streak
+        let streak = 0;
+        for (let i = chart.length - 1; i >= 0; i--) { if (chart[i].score > 0) streak++; else break; }
+        $("heatSummary").textContent = `🔥 ${streak}-day streak · ${active} active days · ${score} pts`;
+      }
+
+      async function tick() {
+        try {
+          const d = await (await fetch("/api/dashboard.json", { cache: "no-store" })).json();
+          const live = d.live || {};
+          $("liveText").textContent = live.isLive ? "Live" : "Offline";
+          $("livePill").className = "pill" + (live.isLive ? " live" : "");
+          $("title").textContent = live.project?.name || live.sessionTitle || "Today";
+          $("subtitle").textContent = (live.nowBuilding?.title ? "› " + live.nowBuilding.title : "")
+            + (live.branch ? `   ⌥ ${live.branch}` : "");
+          renderToday(d.today, live);
+          renderWeek(d.week);
+          renderHeat(d.chart);
+        } catch (e) {
+          $("liveText").textContent = "Agent offline";
+        }
+      }
+      tick();
+      setInterval(tick, 4000);
+    </script>
+  </body>
+</html>

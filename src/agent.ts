@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { getBranch, getStats } from "./git.ts";
-import { getClaudeTokensToday, sessionTokenDelta } from "./ccusage.ts";
+import { getClaudeTokensToday, sessionTokenDelta, localDateString } from "./ccusage.ts";
+import { readEvents, summarizeDay, summarizeWeek } from "./report.ts";
+import { summarizeRange } from "./chart.ts";
 import { redact } from "./redact.ts";
 import {
   BUILD_LOG_MAX,
@@ -20,6 +22,7 @@ const TOKEN_POLL_MS = 30_000;
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
 const OVERLAY_FILE = path.join(PUBLIC_DIR, "overlay.html");
 const LIVE_FILE = path.join(PUBLIC_DIR, "live.html");
+const DASHBOARD_FILE = path.join(PUBLIC_DIR, "dashboard.html");
 
 /**
  * The agent: one process that owns the authoritative LiveState in memory,
@@ -179,6 +182,28 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
       if (req.method === "GET" && route === "/state.json") {
         sendJson(res, 200, state);
+        return;
+      }
+
+      // Private dashboard (localhost) — a richer browser view than the CLI.
+      if (req.method === "GET" && route === "/dashboard") {
+        const html = await readFile(DASHBOARD_FILE, "utf8");
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+        res.end(html);
+        return;
+      }
+
+      // One-shot payload for the dashboard: live state + today + week + heatmap.
+      if (req.method === "GET" && route === "/api/dashboard.json") {
+        const days = Math.max(7, Math.min(371, Number(url.searchParams.get("days")) || 84));
+        const events = await readEvents();
+        const today = localDateString();
+        sendJson(res, 200, {
+          live: state,
+          today: summarizeDay(events, today),
+          week: summarizeWeek(events, today),
+          chart: summarizeRange(events, days),
+        });
         return;
       }
 
