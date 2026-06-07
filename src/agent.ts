@@ -17,7 +17,9 @@ import { appendEvent, readSession, writeSession, writeState, type Session } from
 const GIT_POLL_MS = 5_000;
 const TOKEN_POLL_MS = 30_000;
 
-const OVERLAY_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public", "overlay.html");
+const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
+const OVERLAY_FILE = path.join(PUBLIC_DIR, "overlay.html");
+const LIVE_FILE = path.join(PUBLIC_DIR, "live.html");
 
 /**
  * The agent: one process that owns the authoritative LiveState in memory,
@@ -158,6 +160,13 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     try {
       if (req.method === "GET" && (route === "/" || route === "/overlay")) {
         const html = await readFile(OVERLAY_FILE, "utf8");
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+        res.end(html);
+        return;
+      }
+
+      if (req.method === "GET" && route === "/live") {
+        const html = await readFile(LIVE_FILE, "utf8");
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
         res.end(html);
         return;

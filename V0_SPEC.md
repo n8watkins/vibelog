@@ -25,7 +25,8 @@ If a viewer can watch that update while you code, V0 is done. Nothing else matte
 ### Out (defer to PRD phases)
 - ❌ **Supabase / any cloud / any account** — V0 is 100% local, $0.
 - ❌ **Next.js** — overlay is a static page (vanilla or a Vite build) served by the agent.
-- ❌ Public `/live` page — free Cloudflare Tunnel covers this when wanted (see §2).
+- ✅ Public `/live` page — shipped (full-screen shareable view, offline state).
+  `vibe share` exposes it via a free Cloudflare Tunnel (see §2).
 - ❌ Monorepo with `packages/*` — one repo.
 - ❌ Gemini + budget manager — milestones are your own text, no AI rewrite.
 - ❌ Vibe Chart, daily/weekly reports, YouTube chapters, Discord recap.

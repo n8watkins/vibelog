@@ -83,14 +83,21 @@ pnpm test        # redactor tests
 pnpm typecheck
 ```
 
-## Going public (later, still free)
+## Going public (still free)
 
-The agent already serves everything over HTTP, so to let viewers see a live page,
-expose it with a free Cloudflare Tunnel while you stream:
+The agent serves a polished, shareable public page at **`/live`** — a richer,
+full-screen view of the same state (great to link in your bio or pin in chat).
+It shows an "Offline — back soon" state when no session is running, so the URL is
+safe to share permanently.
+
+To expose it to viewers over the internet, run a free Cloudflare Tunnel:
 
 ```bash
-cloudflared tunnel --url http://localhost:4545
+pnpm vibe share            # wraps `cloudflared tunnel --url http://localhost:4545`
+# → viewers visit <the trycloudflare URL>/live
 ```
+
+(`vibe share` prints install instructions if `cloudflared` isn't present.)
 
 ## Files
 
@@ -107,4 +114,5 @@ src/
   store.ts      ~/.vibelog persistence
 public/
   overlay.html  the OBS HUD (transparent, self-contained)
+  live.html     shareable public /live page (full-screen viewer view)
 ```

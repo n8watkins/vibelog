@@ -1,5 +1,6 @@
 #!/usr/bin/env -S npx tsx
 import { Command } from "commander";
+import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -189,6 +190,29 @@ hooks
     await writeFile(target, JSON.stringify(settings, null, 2) + "\n");
     console.log(`Installed VibeLog hooks into ${target}`);
     console.log("Restart Claude Code (or open a new session) for them to take effect.");
+  });
+
+program
+  .command("share")
+  .description("Expose the public /live page via a free Cloudflare Tunnel")
+  .option("--port <port>", "HTTP port", String(DEFAULT_PORT))
+  .action((opts: { port: string }) => {
+    const port = Number(opts.port) || DEFAULT_PORT;
+    console.log(`Starting Cloudflare Tunnel → http://localhost:${port}`);
+    console.log("Your viewers' page will be  <the trycloudflare URL>/live\n");
+    const proc = spawn("cloudflared", ["tunnel", "--url", `http://localhost:${port}`], {
+      stdio: "inherit",
+    });
+    proc.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") {
+        console.error("\ncloudflared not found. Install it (free), then re-run:");
+        console.error("  macOS:    brew install cloudflared");
+        console.error("  Windows:  winget install --id Cloudflare.cloudflared");
+        console.error("  Linux:    https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/");
+        process.exit(1);
+      }
+      throw err;
+    });
   });
 
 program
