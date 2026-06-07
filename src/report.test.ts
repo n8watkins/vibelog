@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { summarizeDay, formatReport, type VibeEvent } from "./report.ts";
+import { summarizeDay, formatReport, summarizeWeek, formatWeekly, type VibeEvent } from "./report.ts";
 
 const DATE = "2026-06-06";
 // Build timestamps in LOCAL time so the local-date filter is TZ-independent.
@@ -77,4 +77,22 @@ test("formatReport renders stats block and sections", () => {
   assert.match(out, /Shipped/);
   assert.match(out, /LOC counter works/);
   assert.match(out, /Fixed/);
+});
+
+test("summarizeWeek rolls up exactly 7 days ending on endDate", () => {
+  const w = summarizeWeek(events, DATE);
+  assert.equal(w.days.length, 7);
+  assert.equal(w.end, DATE);
+  assert.equal(w.start, "2026-05-31");
+  // 06-06's two features + the 06-05 "yesterday's thing" both fall in this week.
+  assert.deepEqual(w.features, ["yesterday's thing", "LOC counter works", "redactor scrubs secrets"]);
+  assert.equal(w.activeDays, 2); // 06-05 and 06-06
+});
+
+test("formatWeekly renders per-day bars and an empty-week message", () => {
+  assert.match(formatWeekly(summarizeWeek([], DATE)), /No activity logged this week/);
+  const out = formatWeekly(summarizeWeek(events, DATE));
+  assert.match(out, /Vibe week — 2026-05-31 → 2026-06-06/);
+  assert.match(out, /2\/7 active days/);
+  assert.match(out, /Shipped this week/);
 });

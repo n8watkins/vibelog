@@ -10,7 +10,8 @@ import { getHead, isGitRepo } from "./git.ts";
 import { BUILD_MODES, type BuildMode } from "./state.ts";
 import { getTokensByProject, labelProjects } from "./claude-projects.ts";
 import { localDateString } from "./ccusage.ts";
-import { formatReport, readEvents, summarizeDay } from "./report.ts";
+import { formatReport, formatWeekly, readEvents, summarizeDay, summarizeWeek } from "./report.ts";
+import { formatChart, summarizeRange } from "./chart.ts";
 import { readConfig, readSession, readState, writeConfig, writeSession, appendEvent } from "./store.ts";
 import { runAgent } from "./agent.ts";
 
@@ -265,8 +266,12 @@ program
 
 program
   .command("report [day]")
-  .description("End-of-session recap from your local log (day: today|yesterday|YYYY-MM-DD)")
+  .description("Recap from your local log (day: today|yesterday|week|YYYY-MM-DD)")
   .action(async (day?: string) => {
+    if (day === "week") {
+      console.log("\n" + formatWeekly(summarizeWeek(await readEvents(), localDateString())) + "\n");
+      return;
+    }
     let date = localDateString();
     if (day && day !== "today") {
       if (day === "yesterday") {
@@ -292,6 +297,16 @@ program
     const project = sameDay ? (state.project?.name ?? session?.project?.name ?? null) : null;
 
     console.log("\n" + formatReport(summary, stats, project) + "\n");
+  });
+
+program
+  .command("chart")
+  .description("Activity heatmap + Vibe Score from your local log")
+  .option("--days <n>", "how many days to chart", "84")
+  .action(async (opts: { days: string }) => {
+    const days = Math.max(7, Math.min(371, Number(opts.days) || 84));
+    const stats = summarizeRange(await readEvents(), days);
+    console.log("\n" + formatChart(stats) + "\n");
   });
 
 program
