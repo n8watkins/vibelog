@@ -196,10 +196,17 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   }
 
   const server = createServer(async (req, res) => {
-    const url = new URL(req.url ?? "/", `http://localhost:${port}`);
-    const route = url.pathname;
-
     try {
+      let url: URL;
+      try {
+        url = new URL(req.url ?? "/", `http://localhost:${port}`);
+      } catch {
+        // Malformed request target (e.g. `//`) — reject, never crash the agent.
+        sendJson(res, 400, { error: "bad request" });
+        return;
+      }
+      const route = url.pathname;
+
       // Remote (tunneled / LAN) callers get read-only public routes only —
       // never the write endpoints, hooks, or the private dashboard.
       if (isRemote(req) && !(req.method === "GET" && PUBLIC_GET_ROUTES.has(route))) {
