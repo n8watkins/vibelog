@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile, appendFile } from "node:fs/promises";
 import { CONFIG_FILE, EVENTS_FILE, SESSION_FILE, STATE_FILE, VIBE_DIR } from "./config.ts";
-import type { BuildMode, LiveState } from "./state.ts";
+import type { BuildLogEntry, BuildMode, LiveState } from "./state.ts";
 
 /** Persistent session metadata — lets the server resume after a restart. */
 export type Session = {
@@ -11,12 +11,17 @@ export type Session = {
   title: string | null;
   project: { name: string; status: "active" | "paused" } | null;
   nowBuilding: { title: string; mode: BuildMode } | null;
-  buildLog: string[];
+  buildLog: BuildLogEntry[];
   features: number;
   bugs: number;
+  /** Sub-agents (Task tool calls) spawned this session. */
+  subAgents: number;
   /** Today's Claude token total captured at session start; session tokens =
    *  current today total − this. Null until the first token poll sets it. */
   tokenBaseline: number | null;
+  /** Today's Claude USD cost captured at session start; session cost =
+   *  current today cost − this. Null until the first usage poll sets it. */
+  costBaseline: number | null;
 };
 
 export type Config = {

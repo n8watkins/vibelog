@@ -3,25 +3,34 @@ import { promisify } from "node:util";
 
 const exec = promisify(execFile);
 
+export type DailyUsage = { tokens: number; cost: number };
+
+const rowTokens = (r: DailyRow): number =>
+  r.total || r.input + r.output + r.cacheCreate + r.cacheRead;
+
 /**
- * Best-effort Claude token total for "today" via `npx ccusage --json`.
- * V0 keeps this simple: today's grand total, not per-session attribution
- * (that's a PRD-phase-2 concern). Never throws — returns null if ccusage
- * isn't available, so the overlay just shows 0 tokens.
+ * Best-effort Claude usage (tokens + USD cost) for "today" via
+ * `npx ccusage --json`. V0 keeps this simple: today's grand total, not
+ * per-session attribution. Never throws — returns null if ccusage isn't
+ * available, so the overlay just shows zeros.
  */
-export async function getClaudeTokensToday(): Promise<number | null> {
+export async function getClaudeUsageToday(): Promise<DailyUsage | null> {
+  const rows = await getDailyUsage();
+  if (rows === null) return null;
+  const today = localDateString();
+  const row = rows.find((r) => r.date === today);
+  if (!row) return { tokens: 0, cost: 0 };
+  return { tokens: rowTokens(row), cost: row.cost };
+}
+
+/** All daily usage rows ccusage knows about (date → tokens/cost). Null on failure. */
+export async function getDailyUsage(): Promise<DailyRow[] | null> {
   try {
     const { stdout } = await exec("npx", ["--yes", "ccusage", "--json"], {
       maxBuffer: 32 * 1024 * 1024,
       timeout: 30_000,
     });
-    const data = JSON.parse(stdout) as unknown;
-    const today = localDateString();
-    const rows = extractDailyRows(data);
-    const row = rows.find((r) => r.date === today);
-    if (!row) return 0;
-    // Prefer ccusage's own total; fall back to summing the components.
-    return row.total || row.input + row.output + row.cacheCreate + row.cacheRead;
+    return extractDailyRows(JSON.parse(stdout) as unknown);
   } catch {
     return null;
   }
@@ -56,6 +65,7 @@ type DailyRow = {
   cacheCreate: number;
   cacheRead: number;
   total: number;
+  cost: number;
 };
 
 /** Tolerant of ccusage output shape changes — pulls numbers by likely key names. */
@@ -81,5 +91,6 @@ function extractDailyRows(data: unknown): DailyRow[] {
       cacheCreate: num(r, ["cacheCreationTokens", "cache_creation_tokens", "cacheCreate"]),
       cacheRead: num(r, ["cacheReadTokens", "cache_read_tokens", "cacheRead"]),
       total: num(r, ["totalTokens", "total_tokens", "total"]),
+      cost: num(r, ["totalCost", "total_cost", "costUSD", "cost"]),
     }));
 }

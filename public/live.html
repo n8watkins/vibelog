@@ -188,7 +188,7 @@
         } else {
           for (const entry of d.buildLog) {
             const li = document.createElement("li");
-            li.textContent = entry;
+            li.textContent = typeof entry === "string" ? entry : entry.text;
             log.appendChild(li);
           }
         }

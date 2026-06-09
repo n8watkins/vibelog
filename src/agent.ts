@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { getBranch, getStats } from "./git.ts";
-import { getClaudeTokensToday, sessionTokenDelta, localDateString } from "./ccusage.ts";
+import { getClaudeUsageToday, sessionTokenDelta, localDateString } from "./ccusage.ts";
 import { readEvents, summarizeDay, summarizeWeek } from "./report.ts";
 import { summarizeRange } from "./chart.ts";
 import { redact } from "./redact.ts";
@@ -80,6 +80,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     state.buildLog = session!.buildLog;
     state.stats.features = session!.features;
     state.stats.bugs = session!.bugs;
+    state.stats.subAgents = session!.subAgents;
     state.startedAt = session!.startedAt;
     state.updatedAt = new Date().toISOString();
     void writeState(state);
@@ -107,15 +108,18 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   }
 
   async function pollTokens(): Promise<void> {
-    const today = await getClaudeTokensToday();
-    if (today === null) return; // ccusage unavailable — leave at 0
+    const usage = await getClaudeUsageToday();
+    if (usage === null) return; // ccusage unavailable — leave at 0
 
-    const { tokens, baseline } = sessionTokenDelta(today, session!.tokenBaseline);
-    if (baseline !== session!.tokenBaseline) {
-      session!.tokenBaseline = baseline;
+    const tok = sessionTokenDelta(usage.tokens, session!.tokenBaseline);
+    const cost = sessionTokenDelta(usage.cost, session!.costBaseline);
+    if (tok.baseline !== session!.tokenBaseline || cost.baseline !== session!.costBaseline) {
+      session!.tokenBaseline = tok.baseline;
+      session!.costBaseline = cost.baseline;
       await persistSession();
     }
-    state.stats.claudeTokens = tokens;
+    state.stats.claudeTokens = tok.tokens;
+    state.stats.costUsd = cost.tokens;
     render();
   }
 
@@ -132,7 +136,8 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   async function addMark(kind: string, rawText: string): Promise<void> {
     const text = redact(rawText).slice(0, 140);
     const icon = kind === "bug" ? "🐛" : kind === "feature" ? "✨" : "•";
-    session!.buildLog = [`${icon} ${text}`, ...session!.buildLog].slice(0, BUILD_LOG_MAX);
+    const entry = { text: `${icon} ${text}`, ts: new Date().toISOString() };
+    session!.buildLog = [entry, ...session!.buildLog].slice(0, BUILD_LOG_MAX);
     if (kind === "feature") session!.features += 1;
     if (kind === "bug") session!.bugs += 1;
     await persistSession();
@@ -160,9 +165,16 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     render();
   }
 
-  /** PostToolUse → log + refresh git promptly so stats feel live after edits. */
+  /** PostToolUse → log + refresh git promptly so stats feel live after edits.
+   *  The `Task` tool spawns a sub-agent — count those; they're the signal we
+   *  surface on /live (raw tool calls are noise). */
   async function onTool(tool: string): Promise<void> {
     await appendEvent({ type: "tool_used", tool });
+    if (tool === "Task") {
+      session!.subAgents += 1;
+      await persistSession();
+      await appendEvent({ type: "subagent_used" });
+    }
     void pollGit();
   }
 
@@ -305,11 +317,13 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   if (opts.demo) {
     // No git/ccusage — just animate plausible stats so the overlay looks alive.
     state.branch = "main";
-    state.stats = { ...state.stats, linesAdded: 842, linesRemoved: 219, filesChanged: 13, commits: 4, features: 3, bugs: 2, claudeTokens: 1_240_000 };
+    state.stats = { ...state.stats, linesAdded: 842, linesRemoved: 219, filesChanged: 13, commits: 4, features: 3, bugs: 2, claudeTokens: 1_240_000, costUsd: 4.12, subAgents: 2 };
     render();
     timers.push(setInterval(() => {
       state.stats.linesAdded += Math.floor(Math.random() * 12);
-      state.stats.claudeTokens += Math.floor(Math.random() * 4000);
+      const dt = Math.floor(Math.random() * 4000);
+      state.stats.claudeTokens += dt;
+      state.stats.costUsd += dt * 0.0000033;
       render();
     }, 2000));
   } else {
@@ -346,16 +360,23 @@ function demoSession(): Session {
     project: { name: "VibeLog", status: "active" },
     nowBuilding: { title: "Wiring the live stats card into the overlay", mode: "coding" },
     buildLog: [
-      "✨ live LOC counter works",
-      "✨ overlay reads /state.json",
-      "🐛 fixed double-count on git stash",
-      "• chose Cloudflare Tunnel for public /live",
-      "✨ redactor scrubs secrets from build log",
+      { text: "✨ redactor scrubs secrets from build log", ts: ago(2) },
+      { text: "• chose Cloudflare Tunnel for public /live", ts: ago(11) },
+      { text: "🐛 fixed double-count on git stash", ts: ago(19) },
+      { text: "✨ overlay reads /state.json", ts: ago(28) },
+      { text: "✨ live LOC counter works", ts: ago(41) },
     ],
     features: 3,
     bugs: 2,
+    subAgents: 2,
     tokenBaseline: null,
+    costBaseline: null,
   };
+}
+
+/** ISO timestamp `m` minutes ago — for plausible demo feed timestamps. */
+function ago(m: number): string {
+  return new Date(Date.now() - m * 60_000).toISOString();
 }
 
 export type { Session };

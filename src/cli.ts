@@ -84,7 +84,9 @@ program
       buildLog: [],
       features: 0,
       bugs: 0,
+      subAgents: 0,
       tokenBaseline: null,
+      costBaseline: null,
     });
     await appendEvent({ type: "session_started", title: opts.title ?? null, project: projectName });
 
