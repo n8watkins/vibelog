@@ -5,6 +5,19 @@ A running outline of what's built and what's planned. V0 is **overlay-first,
 
 ## ✅ Done (V0 + extras)
 
+- **Redesign — solo phase 1 (2026-06-09)** — sharpened the product around the
+  metrics that matter:
+  - **`/live`** is now unambiguously the public "right now" view: the build log
+    became a **chat-style feed** (oldest→newest, newest at the bottom, only new
+    entries animate in, auto-scrolls), and the stat tiles are **features · fixes ·
+    tokens · cost ($) · commits · sub-agents** (dropped lines/files).
+  - **`/dashboard`** is now the private "over-time" view. Its activity heatmap is
+    recolored by **one honest axis — Claude tokens/day** (from ccusage), with a
+    caption stating range + totals; Today panel drops sessions/tool-calls and
+    adds cost + sub-agents.
+  - New backend signals: **session cost ($)** (ccusage cost, baselined like
+    tokens) and **sub-agents** (Task-tool invocations). Build-feed entries are
+    timestamped `{ text, ts }`.
 - **Agent + overlay** — one Node/TS process (`src/agent.ts`) tracks git + Claude
   tokens and serves the OBS overlay (`/overlay`) and shareable `/live` page over
   HTTP on `:4545` (binds `0.0.0.0` so Windows OBS reaches WSL).
@@ -33,24 +46,34 @@ Tests + typecheck pass; everything committed.
 
 ## ▶️ Pick up here (next session)
 
-The project is **functionally complete and safe to run** — V0 works end to end,
-29 tests pass, the tunnel is hardened. What's left is verification + polish, in
-priority order:
+### Phase 2 — multi-user VibeLog (the next big direction)
+
+The headline next move: let **anyone** run VibeLog as a CLI addition to their
+project, across **multiple terminals**, feeding one shared feed. This is an
+architecture decision, not a tweak. Open questions to settle first:
+
+- **Exposure model** — *what does each participant expose to VibeLog?* (project
+  name, metrics, feed entries — but never paths/diffs/prompts). Per-participant
+  opt-in; the redactor already gates user strings.
+- **Topology** — one shared agent/hub that multiple CLIs report to (identity per
+  terminal/person), vs. a federation of local agents aggregated into one view.
+- **Multiplayer views** — `/live` showing several builders at once; "simultaneous
+  builders" as a first-class number.
+
+Build solo-first foundations (done) → design the shared data model → views on top.
+
+### Solo polish still worth doing
 
 1. **End-to-end dry run (no OBS needed).** `vibe start` on a throwaway repo,
    install the Claude hooks, make real edits, and watch `/state.json` → `/live`
    → `/dashboard` update live. Unit tests cover the pure logic; nothing yet
-   exercises the *integration* (hooks → agent → state → page). This is the
-   highest-value next step and you can do it solo.
-2. **`/live` polish.** It already renders well (verified headless: on-brand dark
-   glass, live pill, stats, build log). Minor only: the build-log emoji icons
-   look faint, and there's a lot of empty vertical space when the log is short.
-   Not urgent — it looks good as-is.
-3. **Field-test the overlay in real OBS** over a scene — the one thing only you
-   can verify (OBS is on Windows). *Deferred; do when ready to actually stream.*
-4. **Stream reliability** (before going live for real): confirm the overlay holds
-   last-good values if git/ccusage hiccup, and decide whether an agent crash
-   mid-stream should be survivable (it currently dies → blank overlay).
+   exercises the *integration* (hooks → agent → state → page).
+2. **Field-test the overlay in real OBS** over a scene — the one thing only you
+   can verify (OBS is on Windows). The overlay still shows lines/files; decide
+   whether to bring it in line with the new `/live` metric set.
+3. **Stream reliability** — confirm the overlay holds last-good values if
+   git/ccusage hiccup. (Agent no longer crashes on a malformed request path —
+   fixed 2026-06-09.)
 
 ## 🔒 Hardening (from code review, 2026-06-06)
 
@@ -60,7 +83,9 @@ priority order:
 2. **Dashboard re-reads the full event log every 4s.** `/api/dashboard.json`
    calls `readEvents()` + recomputes `summarizeDay` ~92×/poll. Fine for a small
    log; on a long stream it's wasteful. **Fix:** cache parsed events in the agent
-   and invalidate on `appendEvent`, or debounce the recompute.
+   and invalidate on `appendEvent`, or debounce the recompute. (The ccusage
+   per-day call this route now makes *is* cached — 60s TTL — but the event
+   re-read still stands.)
 3. **`vibe report week` ignores an explicit date** — always "this week". Minor;
    add `report week YYYY-MM-DD` if back-dated rollups are ever wanted.
 
