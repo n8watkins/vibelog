@@ -78,10 +78,21 @@
       .stat .v.rem { color: var(--rem); }
       .stat .k { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
 
-      .log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-      .log li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 1.35; animation: slidein 0.4s ease; }
-      .log .ic { flex: 0 0 auto; }
-      @keyframes slidein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+      /* Build feed — a chat-style stream: oldest at top, newest at the bottom. */
+      .feed-panel { display: flex; flex-direction: column; max-height: 460px; }
+      .feed { list-style: none; margin: 0; padding: 2px 0; display: flex; flex-direction: column;
+              gap: 10px; overflow-y: auto; flex: 1; scroll-behavior: smooth; }
+      .feed::-webkit-scrollbar { width: 6px; }
+      .feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+      .feed li {
+        display: flex; gap: 10px; align-items: baseline; font-size: 15px; line-height: 1.4;
+        padding: 9px 12px; border-radius: 11px;
+        background: rgba(255, 255, 255, 0.025); border: 1px solid var(--border);
+      }
+      .feed li.fresh { animation: slidein 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
+      .feed .txt { flex: 1; }
+      .feed .when { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+      @keyframes slidein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
       .empty { color: var(--muted); font-style: italic; }
 
       .footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px; }
@@ -118,20 +129,19 @@
       </div>
 
       <div class="grid">
-        <div class="panel">
-          <h3>Build Log</h3>
-          <ul class="log" id="log"></ul>
+        <div class="panel feed-panel">
+          <h3>Build Feed</h3>
+          <ul class="feed" id="log"></ul>
         </div>
         <div class="panel">
           <h3>Live Stats</h3>
           <div class="stats">
-            <div class="stat"><div class="v add" id="s-add">+0</div><div class="k">lines added</div></div>
-            <div class="stat"><div class="v rem" id="s-rem">-0</div><div class="k">lines removed</div></div>
-            <div class="stat"><div class="v" id="s-files">0</div><div class="k">files touched</div></div>
-            <div class="stat"><div class="v" id="s-commits">0</div><div class="k">commits</div></div>
-            <div class="stat"><div class="v" id="s-feat">0</div><div class="k">features</div></div>
-            <div class="stat"><div class="v" id="s-bugs">0</div><div class="k">fixes</div></div>
+            <div class="stat"><div class="v add" id="s-feat">0</div><div class="k">features</div></div>
+            <div class="stat"><div class="v rem" id="s-bugs">0</div><div class="k">fixes</div></div>
             <div class="stat"><div class="v" id="s-tok">0</div><div class="k">tokens this session</div></div>
+            <div class="stat"><div class="v" id="s-cost">$0</div><div class="k">spend this session</div></div>
+            <div class="stat"><div class="v" id="s-commits">0</div><div class="k">commits</div></div>
+            <div class="stat"><div class="v" id="s-agents">0</div><div class="k">sub-agents</div></div>
           </div>
         </div>
       </div>
@@ -149,6 +159,16 @@
       const $ = (id) => document.getElementById(id);
       const fmt = (n) =>
         n >= 1_000_000 ? (n / 1_000_000).toFixed(1) + "M" : n >= 1_000 ? (n / 1_000).toFixed(1) + "k" : String(n);
+      const money = (n) => (n >= 100 ? "$" + Math.round(n) : "$" + (n || 0).toFixed(2));
+      function since(ts) {
+        if (!ts) return "";
+        const s = Math.max(0, Math.floor((Date.now() - new Date(ts)) / 1000));
+        if (s < 60) return "just now";
+        const m = Math.floor(s / 60);
+        if (m < 60) return m + "m ago";
+        const h = Math.floor(m / 60);
+        return h < 24 ? h + "h ago" : Math.floor(h / 24) + "d ago";
+      }
 
       function elapsed(startedAt) {
         if (!startedAt) return "";
@@ -158,10 +178,12 @@
       }
 
       let state = null, last = "";
+      const seen = new Set(); // feed keys already rendered (so only new ones animate)
 
       function paint(d) {
+        const wasOffline = document.body.classList.contains("offline");
         document.body.classList.toggle("offline", !d.isLive);
-        if (!d.isLive) return;
+        if (!d.isLive) { seen.clear(); return; }
 
         $("eyebrow").textContent = d.sessionTitle ? "Now streaming · " + d.sessionTitle : "Now streaming";
         $("project").textContent = d.project?.name ?? "Vibe coding";
@@ -178,29 +200,61 @@
           $("mode").hidden = true;
         }
 
-        const log = $("log");
-        log.innerHTML = "";
-        if (!d.buildLog?.length) {
-          const li = document.createElement("li");
-          li.className = "empty";
-          li.textContent = "No milestones yet — stay tuned";
-          log.appendChild(li);
-        } else {
-          for (const entry of d.buildLog) {
-            const li = document.createElement("li");
-            li.textContent = typeof entry === "string" ? entry : entry.text;
-            log.appendChild(li);
-          }
-        }
+        renderFeed(d.buildLog ?? [], wasOffline);
 
         const s = d.stats ?? {};
-        $("s-add").textContent = "+" + fmt(s.linesAdded ?? 0);
-        $("s-rem").textContent = "-" + fmt(s.linesRemoved ?? 0);
-        $("s-files").textContent = fmt(s.filesChanged ?? 0);
-        $("s-commits").textContent = fmt(s.commits ?? 0);
         $("s-feat").textContent = fmt(s.features ?? 0);
         $("s-bugs").textContent = fmt(s.bugs ?? 0);
         $("s-tok").textContent = fmt(s.claudeTokens ?? 0);
+        $("s-cost").textContent = money(s.costUsd ?? 0);
+        $("s-commits").textContent = fmt(s.commits ?? 0);
+        $("s-agents").textContent = fmt(s.subAgents ?? 0);
+      }
+
+      // Chat-style: state.buildLog is newest-first; render oldest→newest so new
+      // entries land at the bottom and scroll into view. Only unseen keys animate.
+      function renderFeed(buildLog, replay) {
+        const log = $("log");
+        const chrono = buildLog
+          .map((e) => (typeof e === "string" ? { text: e, ts: null } : e))
+          .slice()
+          .reverse();
+
+        if (!chrono.length) {
+          if (!log.querySelector(".empty")) {
+            log.innerHTML = '<li class="empty">No milestones yet — stay tuned</li>';
+          }
+          return;
+        }
+        const empty = log.querySelector(".empty");
+        if (empty) empty.remove();
+        if (replay) { log.innerHTML = ""; seen.clear(); }
+
+        // Refresh relative times on existing rows.
+        for (const li of log.children) {
+          const w = li.querySelector(".when");
+          if (w && li.dataset.ts) w.textContent = since(li.dataset.ts);
+        }
+
+        let appended = false;
+        for (const e of chrono) {
+          const key = (e.ts ?? "") + "|" + e.text;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          appended = true;
+          const li = document.createElement("li");
+          li.className = "fresh";
+          li.dataset.ts = e.ts ?? "";
+          const txt = document.createElement("span");
+          txt.className = "txt";
+          txt.textContent = e.text;
+          const when = document.createElement("span");
+          when.className = "when";
+          when.textContent = since(e.ts);
+          li.append(txt, when);
+          log.appendChild(li);
+        }
+        if (appended) log.scrollTop = log.scrollHeight;
       }
 
       async function tick() {

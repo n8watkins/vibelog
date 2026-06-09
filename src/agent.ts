@@ -326,6 +326,24 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
       state.stats.costUsd += dt * 0.0000033;
       render();
     }, 2000));
+    // Stream new feed entries so the chat-style /live build feed visibly moves.
+    const demoMarks = [
+      "✨ added cost-per-session to the live HUD",
+      "🐛 fixed feed not auto-scrolling on new entry",
+      "✨ sub-agent counter wired to the Task hook",
+      "• switched activity chart to tokens/day",
+      "✨ chat feed streams newest at the bottom",
+      "🐛 guarded malformed request paths",
+    ];
+    let di = 0;
+    timers.push(setInterval(() => {
+      const text = demoMarks[di % demoMarks.length]!;
+      di++;
+      if (text.startsWith("✨")) state.stats.features += 1;
+      if (text.startsWith("🐛")) state.stats.bugs += 1;
+      session!.buildLog = [{ text, ts: new Date().toISOString() }, ...session!.buildLog].slice(0, BUILD_LOG_MAX);
+      render();
+    }, 9000));
   } else {
     await pollGit();
     void pollTokens();
