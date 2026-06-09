@@ -36,6 +36,15 @@ export async function getDailyUsage(): Promise<DailyRow[] | null> {
   }
 }
 
+/** date → { tokens, cost } map for the dashboard activity chart. Null on failure. */
+export async function dailyUsageMap(): Promise<Record<string, DailyUsage> | null> {
+  const rows = await getDailyUsage();
+  if (rows === null) return null;
+  const out: Record<string, DailyUsage> = {};
+  for (const r of rows) out[r.date] = { tokens: rowTokens(r), cost: r.cost };
+  return out;
+}
+
 /** Local YYYY-MM-DD — ccusage buckets by local date, not UTC. */
 export function localDateString(d = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");

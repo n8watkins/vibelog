@@ -47,7 +47,7 @@
       .row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
       @media (max-width: 760px) { .row { grid-template-columns: 1fr; } }
 
-      .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 18px; }
+      .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 18px; }
       @media (max-width: 620px) { .stats { grid-template-columns: repeat(2, 1fr); } }
       .stat .v { font-family: var(--mono); font-size: 24px; font-weight: 700; }
       .stat .v.add { color: var(--add); } .stat .v.rem { color: var(--rem); }
@@ -110,7 +110,7 @@
       </div>
 
       <div class="panel">
-        <h3>Activity</h3>
+        <h3>Activity — Claude tokens per day</h3>
         <div class="heat" id="heat"></div>
         <div class="legend">
           <span>less</span>
@@ -122,6 +122,7 @@
           <span>more</span>
           <span id="heatSummary" style="margin-left:auto"></span>
         </div>
+        <div class="sub" id="heatCaption" style="margin-top:10px"></div>
       </div>
 
       <div class="footer">private dashboard · localhost only · powered by <strong>VibeLog</strong></div>
@@ -158,22 +159,22 @@
         chips.innerHTML = "";
         chips.append(
           chip("active", dur(t.activeMinutes)),
-          chip("sessions", t.sessions || (live.isLive ? 1 : 0)),
           chip("features", t.features.length),
           chip("fixes", t.bugs.length),
           chip("prompts", t.prompts),
-          chip("tool calls", t.tools),
         );
 
         const s = live.stats || {};
+        const cost = s.costUsd || 0;
         const cs = $("codeStats");
         cs.innerHTML = "";
         cs.append(
-          stat("+" + fmt(s.linesAdded || 0), "lines added", "add"),
-          stat("-" + fmt(s.linesRemoved || 0), "lines removed", "rem"),
-          stat(fmt(s.filesChanged || 0), "files"),
-          stat(fmt(s.commits || 0), "commits"),
+          stat(fmt(s.features || 0), "features", "add"),
+          stat(fmt(s.bugs || 0), "fixes", "rem"),
           stat(fmt(s.claudeTokens || 0), "tokens (session)"),
+          stat(cost >= 100 ? "$" + Math.round(cost) : "$" + cost.toFixed(2), "spend (session)"),
+          stat(fmt(s.commits || 0), "commits"),
+          stat(fmt(s.subAgents || 0), "sub-agents"),
         );
 
         const sec = $("todaySections");
@@ -218,26 +219,33 @@
         );
       }
 
-      function renderHeat(chart) {
-        const max = Math.max(1, ...chart.map((c) => c.score));
+      // One honest axis: a square per day, colored by Claude tokens spent that
+      // day (relative to the busiest day in range). Empty = no AI coding logged.
+      function renderHeat(chart, usage) {
+        const tok = (d) => (usage[d.date]?.tokens) || 0;
+        const max = Math.max(1, ...chart.map(tok));
         const first = new Date(chart[0].date + "T00:00:00");
         const pad = first.getDay();
         const heat = $("heat");
         heat.innerHTML = "";
         for (let i = 0; i < pad; i++) { const c = document.createElement("div"); c.className = "cell pad"; heat.append(c); }
-        let active = 0, score = 0;
+        let active = 0, total = 0, totalCost = 0;
         for (const day of chart) {
-          const lvl = levelFor(day.score, max);
-          if (day.score > 0) { active++; score += day.score; }
+          const t = tok(day);
+          const lvl = levelFor(t, max);
+          if (t > 0) { active++; total += t; totalCost += (usage[day.date]?.cost) || 0; }
           const c = document.createElement("div");
           c.className = "cell" + (lvl ? " l" + lvl : "");
-          c.title = `${day.date} · ${day.score} pts · ✨${day.features.length} 🐛${day.bugs.length}`;
+          const cost = (usage[day.date]?.cost) || 0;
+          c.title = `${day.date} · ${fmt(t)} tokens · $${cost.toFixed(2)} · ✨${day.features.length} 🐛${day.bugs.length}`;
           heat.append(c);
         }
-        // current streak
         let streak = 0;
-        for (let i = chart.length - 1; i >= 0; i--) { if (chart[i].score > 0) streak++; else break; }
-        $("heatSummary").textContent = `🔥 ${streak}-day streak · ${active} active days · ${score} pts`;
+        for (let i = chart.length - 1; i >= 0; i--) { if (tok(chart[i]) > 0) streak++; else break; }
+        $("heatSummary").textContent = `🔥 ${streak}-day streak · ${active}/${chart.length} active`;
+        $("heatCaption").textContent =
+          `Each square = one day · last ${chart.length} days · ` +
+          `${fmt(total)} tokens (~$${Math.round(totalCost)}) · darker = more AI coding.`;
       }
 
       async function tick() {
@@ -251,7 +259,7 @@
             + (live.branch ? `   ⌥ ${live.branch}` : "");
           renderToday(d.today, live);
           renderWeek(d.week);
-          renderHeat(d.chart);
+          renderHeat(d.chart, d.usageByDay || {});
         } catch (e) {
           $("liveText").textContent = "Agent offline";
         }

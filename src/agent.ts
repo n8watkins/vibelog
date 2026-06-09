@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { getBranch, getStats } from "./git.ts";
-import { getClaudeUsageToday, sessionTokenDelta, localDateString } from "./ccusage.ts";
+import { getClaudeUsageToday, dailyUsageMap, sessionTokenDelta, localDateString } from "./ccusage.ts";
 import { readEvents, summarizeDay, summarizeWeek } from "./report.ts";
 import { summarizeRange } from "./chart.ts";
 import { redact } from "./redact.ts";
@@ -121,6 +121,19 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     state.stats.claudeTokens = tok.tokens;
     state.stats.costUsd = cost.tokens;
     render();
+  }
+
+  // Per-day usage is for the dashboard heatmap only and barely changes, but the
+  // dashboard polls every 4s — cache it so we don't spawn ccusage 15×/min.
+  let usageCache: { at: number; data: Record<string, { tokens: number; cost: number }> } = {
+    at: 0,
+    data: {},
+  };
+  async function cachedUsageByDay(): Promise<Record<string, { tokens: number; cost: number }>> {
+    if (Date.now() - usageCache.at < 60_000) return usageCache.data;
+    const m = await dailyUsageMap();
+    if (m) usageCache = { at: Date.now(), data: m };
+    return usageCache.data;
   }
 
   // ---- mutations -----------------------------------------------------------
@@ -263,6 +276,8 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
           today: summarizeDay(events, today),
           week: summarizeWeek(events, today),
           chart: summarizeRange(events, days),
+          // Per-day Claude usage (tokens/cost) — the honest axis for the heatmap.
+          usageByDay: await cachedUsageByDay(),
         });
         return;
       }
