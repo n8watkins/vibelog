@@ -6,180 +6,209 @@
     <title>VibeLog · Live</title>
     <style>
       :root {
-        --text: #e8edf6;
-        --muted: #8b97ad;
-        --accent: #7c5cff;
+        --text: #f3f0ff;
+        --muted: #a99fce;
+        --accent: #a06bff;
         --accent2: #22d3a6;
-        --add: #22d3a6;
-        --rem: #ff6b81;
+        --pink: #ff5cf0;
         --live: #ff4d5e;
-        --card: rgba(255, 255, 255, 0.035);
-        --border: rgba(255, 255, 255, 0.08);
-        --radius: 16px;
+        --glass: linear-gradient(165deg, rgba(38, 22, 72, 0.55), rgba(14, 11, 28, 0.62));
+        --border: rgba(167, 134, 255, 0.30);
+        --glow: 0 0 22px rgba(160, 107, 255, 0.22);
+        --radius: 18px;
         --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
       }
       * { box-sizing: border-box; }
-      html, body { margin: 0; height: 100%; }
+      html, body { margin: 0; min-height: 100%; }
       body {
-        font-family: var(--font);
-        color: var(--text);
-        background:
-          radial-gradient(1100px 600px at 78% -5%, #2a2150, transparent),
-          radial-gradient(900px 600px at 10% 110%, #103038, transparent),
-          #080a10;
-        min-height: 100%;
-        display: flex;
-        flex-direction: column;
+        font-family: var(--font); color: var(--text); background: #07060e;
+        min-height: 100vh; overflow-x: hidden;
       }
 
-      .wrap { width: min(1100px, 92vw); margin: 0 auto; padding: 28px 0 48px; flex: 1; width: 100%; }
+      /* animatable angle for the travelling gradient ring */
+      @property --vlangle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+      @keyframes vlspin { to { --vlangle: 360deg; } }
 
-      .topbar { display: flex; align-items: center; justify-content: space-between; }
-      .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -0.01em; font-size: 18px; }
-      .brand .spark {
-        width: 22px; height: 22px; border-radius: 7px;
-        background: linear-gradient(135deg, var(--accent), var(--accent2));
-        box-shadow: 0 0 18px rgba(124, 92, 255, 0.5);
+      /* drifting aurora background */
+      body::before, body::after {
+        content: ""; position: fixed; z-index: -1; border-radius: 50%;
+        filter: blur(100px); opacity: 0.55; pointer-events: none;
       }
-      .live-pill {
-        display: inline-flex; align-items: center; gap: 8px;
-        font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-        padding: 7px 13px; border-radius: 999px;
-        background: rgba(255, 77, 94, 0.12); color: var(--live); border: 1px solid rgba(255, 77, 94, 0.3);
+      body::before {
+        width: 65vw; height: 65vw; top: -25vw; right: -12vw;
+        background: radial-gradient(circle, #3a1d7a, transparent 65%);
+        animation: drift1 28s ease-in-out infinite alternate;
       }
-      .live-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); box-shadow: 0 0 10px var(--live); animation: pulse 1.4s infinite; }
-      .live-pill.off { background: rgba(255, 255, 255, 0.05); color: var(--muted); border-color: var(--border); }
-      .live-pill.off .dot { background: var(--muted); box-shadow: none; animation: none; }
-      @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
-      .timer { font-family: var(--mono); color: var(--muted); font-size: 13px; margin-left: 12px; }
+      body::after {
+        width: 60vw; height: 60vw; bottom: -28vw; left: -14vw;
+        background: radial-gradient(circle, #0f3a44, transparent 65%);
+        animation: drift2 34s ease-in-out infinite alternate;
+      }
+      @keyframes drift1 { from { transform: translate(0,0) scale(1); } to { transform: translate(-9vw,11vh) scale(1.18); } }
+      @keyframes drift2 { from { transform: translate(0,0) scale(1); } to { transform: translate(11vw,-9vh) scale(1.12); } }
+      @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.22; } }
 
-      /* social trackers */
-      .socials { display: flex; gap: 16px; margin-top: 16px; font-family: var(--mono); font-size: 14px; }
+      .stage { width: min(1180px, 92vw); margin: 0 auto; min-height: 100vh; padding: 26px 0 30px; display: flex; flex-direction: column; gap: 22px; }
+
+      /* ---- header ---- */
+      .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+      .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; font-size: 19px; letter-spacing: -0.01em; }
+      .brand .spark { width: 24px; height: 24px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 0 18px rgba(124,92,255,0.55); }
+      .top-right { display: flex; align-items: center; gap: 16px; }
+      .pill { display: inline-flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 15px; border-radius: 999px; background: rgba(255,77,94,0.14); color: var(--live); border: 1px solid rgba(255,77,94,0.35); box-shadow: 0 0 18px rgba(255,77,94,0.25); }
+      .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; animation: pulse 1.4s infinite; }
+      .pill.off { background: rgba(255,255,255,0.05); color: var(--muted); border-color: var(--border); box-shadow: none; }
+      .pill.off .dot { animation: none; box-shadow: none; }
+      .timer { font-family: var(--mono); color: var(--muted); font-size: 13px; }
+
+      .socials { display: flex; gap: 16px; font-family: var(--mono); font-size: 14px; }
       .socials .so { display: flex; align-items: center; gap: 7px; color: var(--muted); }
       .socials .so b { color: var(--text); font-weight: 700; }
       .socials .so svg { width: 15px; height: 15px; fill: currentColor; }
       .socials .so.tw { color: #b794ff; } .socials .so.yt { color: #ff6b81; }
       .socials .so .ldot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px var(--live); animation: pulse 1.4s infinite; }
-      .socials .so small { color: var(--muted); }
 
-      .hero { margin-top: 40px; }
-      .eyebrow { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
-      .project { font-size: clamp(34px, 6vw, 60px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; margin: 6px 0 0; }
-      .branch { font-family: var(--mono); color: var(--muted); font-size: 13px; margin-top: 8px; }
-
-      .now {
-        margin-top: 28px; padding: 22px 24px; border-radius: var(--radius);
-        background: linear-gradient(180deg, rgba(124,92,255,0.10), rgba(124,92,255,0.02));
-        border: 1px solid rgba(124, 92, 255, 0.25);
+      /* ---- hero ---- */
+      .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 8px 0; }
+      .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; color: var(--pink); text-shadow: 0 0 14px rgba(255,92,240,0.45); }
+      .eyebrow .rec { width: 9px; height: 9px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 10px var(--pink); animation: pulse 1.3s infinite; }
+      .headline {
+        font-size: clamp(40px, 7.5vw, 88px); font-weight: 850; letter-spacing: -0.03em; line-height: 1.02; margin: 0;
+        background: linear-gradient(100deg, #ffffff 0%, var(--pink) 30%, var(--accent) 55%, #ffffff 80%);
+        background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+        animation: textflow 9s linear infinite; max-width: 18ch;
       }
-      .now .eyebrow { color: #b9a7ff; }
-      .now-title { font-size: clamp(20px, 3vw, 28px); font-weight: 650; margin-top: 8px; line-height: 1.25; }
-      .mode { display: inline-block; margin-top: 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 11px; border-radius: 999px; color: #fff; background: linear-gradient(90deg, var(--accent), #9d7bff); }
+      @keyframes textflow { to { background-position: 250% 0; } }
+      .hero .sub { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-family: var(--mono); font-size: 15px; color: var(--muted); }
+      .hero .sub .proj { color: var(--text); font-weight: 600; font-family: var(--font); font-size: 17px; }
+      .mode { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; color: #fff; background: linear-gradient(90deg, var(--accent), var(--pink)); box-shadow: 0 0 14px rgba(160,107,255,0.4); }
 
-      .grid { margin-top: 26px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; }
-      @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
-
-      .panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
-      .panel h3 { margin: 0 0 14px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
-
-      .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 22px; }
-      .stat .v { font-family: var(--mono); font-size: 26px; font-weight: 700; }
-      .stat .v.add { color: var(--add); }
-      .stat .v.rem { color: var(--rem); }
-      .stat .k { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
-
-      /* Build feed — shows the latest activity only (no scroll; this is a HUD,
-         not a history browser). Newest lands at the bottom. */
-      .feed-panel { display: flex; flex-direction: column; }
-      .feed { list-style: none; margin: 0; padding: 2px 0; display: flex; flex-direction: column; gap: 10px; }
-      .feed li {
-        display: flex; gap: 10px; align-items: baseline; font-size: 15px; line-height: 1.4;
-        padding: 9px 12px; border-radius: 11px;
-        background: rgba(255, 255, 255, 0.025); border: 1px solid var(--border);
+      /* ---- glass panel + travelling ring ---- */
+      .glass {
+        position: relative; background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius);
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        box-shadow: var(--glow), 0 12px 36px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.05); overflow: hidden;
       }
-      .feed li.fresh { animation: slidein 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
-      .feed .txt { flex: 1; }
+      .glass::after {
+        content: ""; position: absolute; inset: 0; border-radius: var(--radius); padding: 1.5px;
+        background: conic-gradient(from var(--vlangle), transparent 30%, var(--accent) 50%, var(--pink) 64%, var(--accent2) 76%, transparent 92%);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; animation: vlspin 10s linear infinite;
+      }
+
+      /* ---- stat tiles ---- */
+      .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+      @media (max-width: 860px) { .tiles { grid-template-columns: repeat(3, 1fr); } }
+      @media (max-width: 480px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+      .tile { padding: 16px 18px; }
+      .tile .v { font-family: var(--mono); font-size: clamp(22px, 2.4vw, 30px); font-weight: 800; text-shadow: 0 0 16px rgba(160,107,255,0.3); }
+      .tile .v.tok { color: #c9aaff; } .tile .v.cost { color: var(--accent2); } .tile .v.streak { color: #ff9d4d; }
+      .tile .k { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+      .tile .k .ic-flame { width: 12px; height: 12px; color: #ff7a3d; fill: currentColor; filter: drop-shadow(0 0 4px rgba(255,122,61,0.7)); }
+
+      /* ---- lower: projects + feed ---- */
+      .lower { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 16px; }
+      @media (max-width: 820px) { .lower { grid-template-columns: 1fr; } }
+      .panel { padding: 18px 20px; }
+      .panel h3 { margin: 0 0 14px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; color: var(--accent); text-shadow: 0 0 10px rgba(160,107,255,0.5); }
+
+      .ticker { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+      .ticker li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 11px; background: rgba(255,255,255,0.02); border: 1px solid transparent; transition: all 0.4s; }
+      .ticker li.active { background: linear-gradient(90deg, rgba(160,107,255,0.18), rgba(255,92,240,0.05)); border-color: rgba(167,134,255,0.5); box-shadow: 0 0 16px rgba(160,107,255,0.25); }
+      .ticker .pdot { width: 8px; height: 8px; border-radius: 50%; background: #4a4570; flex: 0 0 auto; }
+      .ticker li.active .pdot { background: var(--accent2); box-shadow: 0 0 9px var(--accent2); animation: pulse 1.4s infinite; }
+      .ticker .pname { flex: 1; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .ticker li:not(.active) .pname { color: #b9b1d6; }
+      .ticker .pnote { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+      .ticker li.active .pnote { color: var(--accent2); }
+
+      .feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+      .feed li { display: flex; gap: 12px; align-items: baseline; }
+      .feed li.fresh { animation: slidein 0.5s cubic-bezier(0.2,0.8,0.2,1); }
+      @keyframes slidein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+      .feed .fdot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); flex: 0 0 auto; align-self: center; }
+      .feed li:first-child .fdot { background: var(--pink); box-shadow: 0 0 10px var(--pink); animation: pulse 1.3s infinite; }
+      .feed .txt { flex: 1; font-size: 16px; line-height: 1.35; }
+      .feed li:first-child .txt { font-weight: 700; }
       .feed .when { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
-      @keyframes slidein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+      .feed li:first-child .when { color: var(--pink); }
       .empty { color: var(--muted); font-style: italic; }
 
-      .footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px; }
-      .footer a { color: var(--muted); }
+      .footer { text-align: center; color: var(--muted); font-size: 12px; padding-top: 4px; }
+      .footer strong { background: linear-gradient(90deg, var(--accent), var(--pink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-      /* offline state */
-      #offline { display: none; flex: 1; align-items: center; justify-content: center; flex-direction: column; gap: 14px; text-align: center; }
-      #offline .big { font-size: clamp(28px, 5vw, 44px); font-weight: 800; }
+      /* offline */
+      #offline { display: none; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 16px; text-align: center; }
+      #offline .big { font-size: clamp(30px, 5vw, 48px); font-weight: 850; background: linear-gradient(100deg, #fff, var(--accent), var(--pink), #fff); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: textflow 9s linear infinite; }
       #offline .sub { color: var(--muted); }
       body.offline #offline { display: flex; }
-      body.offline .wrap { display: none; }
+      body.offline .stage { display: none; }
     </style>
   </head>
   <body>
-    <div class="wrap" id="content">
-      <div class="topbar">
+    <main class="stage" id="content">
+      <div class="top">
         <div class="brand"><span class="spark"></span> VibeLog</div>
-        <div>
-          <span class="live-pill" id="livePill"><span class="dot"></span> <span id="pillText">Live</span></span>
+        <div class="top-right">
+          <div class="socials" id="socials" style="display:none"></div>
+          <span class="pill" id="livePill"><span class="dot"></span> <span id="pillText">Live</span></span>
           <span class="timer" id="timer"></span>
         </div>
       </div>
 
-      <div class="hero">
-        <div class="eyebrow" id="eyebrow">Now streaming</div>
-        <h1 class="project" id="project">—</h1>
-        <div class="branch" id="branch"></div>
-        <div class="socials" id="socials" style="display:none"></div>
-      </div>
+      <section class="hero">
+        <div class="eyebrow"><span class="rec"></span> <span id="eyebrow">Now Building</span></div>
+        <h1 class="headline" id="now-title">Getting set up…</h1>
+        <div class="sub">
+          <span class="proj" id="project">—</span>
+          <span id="branch"></span>
+          <span class="mode" id="mode" hidden></span>
+        </div>
+      </section>
 
-      <div class="now">
-        <div class="eyebrow">Now Building</div>
-        <div class="now-title" id="now-title">—</div>
-        <span class="mode" id="mode" hidden></span>
-      </div>
+      <section class="tiles">
+        <div class="tile glass"><div class="v" id="s-feat">0</div><div class="k">features built</div></div>
+        <div class="tile glass"><div class="v" id="s-commits">0</div><div class="k">commits</div></div>
+        <div class="tile glass"><div class="v tok" id="s-tok">0</div><div class="k">tokens</div></div>
+        <div class="tile glass"><div class="v cost" id="s-cost">$0</div><div class="k">spend</div></div>
+        <div class="tile glass"><div class="v" id="s-agents">0</div><div class="k">sub-agents</div></div>
+        <div class="tile glass"><div class="v streak" id="s-streak">0</div><div class="k"><svg class="ic-flame" viewBox="0 0 24 24"><path d="M12 2c1.2 3.2-1 4.4-2 6.4-.9 1.8.2 3.6 2 3.6 1.1 0 1.9-.9 2-2.6 1.9 1.9 3 4 3 6.2a7 7 0 1 1-14 0c0-3 1.7-5.2 3-7 .7 1.8 1.8 2 2.7 1.1C13.6 8 12.8 4.6 12 2Z"/></svg> day streak</div></div>
+      </section>
 
-      <div class="grid">
-        <div class="panel feed-panel">
+      <section class="lower">
+        <div class="panel glass">
+          <h3>Projects</h3>
+          <ul class="ticker" id="projects"></ul>
+        </div>
+        <div class="panel glass">
           <h3>Build Feed</h3>
           <ul class="feed" id="log"></ul>
         </div>
-        <div class="panel">
-          <h3>Live Stats</h3>
-          <div class="stats">
-            <div class="stat"><div class="v add" id="s-feat">0</div><div class="k">features</div></div>
-            <div class="stat"><div class="v rem" id="s-bugs">0</div><div class="k">fixes</div></div>
-            <div class="stat"><div class="v" id="s-tok">0</div><div class="k">tokens this session</div></div>
-            <div class="stat"><div class="v" id="s-cost">$0</div><div class="k">spend this session</div></div>
-            <div class="stat"><div class="v" id="s-commits">0</div><div class="k">commits</div></div>
-            <div class="stat"><div class="v" id="s-agents">0</div><div class="k">sub-agents</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
+      </section>
+
+      <div class="footer">powered by <strong>VibeLog</strong></div>
+    </main>
 
     <div id="offline">
-      <div class="brand" style="justify-content:center"><span class="spark"></span> VibeLog</div>
+      <div class="brand" style="justify-content:center;font-size:22px"><span class="spark"></span> VibeLog</div>
       <div class="big">Offline — back soon</div>
       <div class="sub">No live build session right now. Check back later.</div>
     </div>
 
-    <div class="footer">powered by <strong>VibeLog</strong></div>
-
     <script>
       const $ = (id) => document.getElementById(id);
-      const fmt = (n) =>
-        n >= 1_000_000 ? (n / 1_000_000).toFixed(1) + "M" : n >= 1_000 ? (n / 1_000).toFixed(1) + "k" : String(n);
+      const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
       const money = (n) => (n >= 100 ? "$" + Math.round(n) : "$" + (n || 0).toFixed(2));
       function since(ts) {
         if (!ts) return "";
         const s = Math.max(0, Math.floor((Date.now() - new Date(ts)) / 1000));
-        if (s < 60) return "just now";
+        if (s < 60) return "now";
         const m = Math.floor(s / 60);
         if (m < 60) return m + "m ago";
         const h = Math.floor(m / 60);
         return h < 24 ? h + "h ago" : Math.floor(h / 24) + "d ago";
       }
-
       function elapsed(startedAt) {
         if (!startedAt) return "";
         const s = Math.max(0, Math.floor((Date.now() - new Date(startedAt)) / 1000));
@@ -191,83 +220,83 @@
       const YT_SVG = '<svg viewBox="0 0 24 24"><path d="M23 7.5a3 3 0 0 0-2.1-2.1C19 5 12 5 12 5s-7 0-8.9.4A3 3 0 0 0 1 7.5 31 31 0 0 0 .6 12 31 31 0 0 0 1 16.5a3 3 0 0 0 2.1 2.1C5 19 12 19 12 19s7 0 8.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 23.4 12 31 31 0 0 0 23 7.5ZM9.8 15.3V8.7l5.7 3.3-5.7 3.3Z"/></svg>';
 
       let state = null, last = "";
-      const seen = new Set(); // feed keys already rendered (so only new ones animate)
+      const seen = new Set();
 
       function paint(d) {
         document.body.classList.toggle("offline", !d.isLive);
         if (!d.isLive) { seen.clear(); return; }
 
-        // pill reflects real streaming status
         $("pillText").textContent = d.streaming ? "Live" : "Online";
         $("livePill").classList.toggle("off", !d.streaming);
 
-        $("eyebrow").textContent = d.sessionTitle ? "Now streaming · " + d.sessionTitle : "Now streaming";
-        $("project").textContent = d.project?.name ?? "Vibe coding";
-        $("branch").textContent = d.branch ? "· " + d.branch : "";
-
-        // social trackers — live dot + follower/sub counts
+        // social trackers
         const soc = d.social, socEl = $("socials");
         const so = (cls, svg, ch, label) =>
-          ch ? `<span class="so ${cls}">${svg}${ch.live ? '<span class="ldot"></span>' : ""}<b>${fmt(ch.followers ?? 0)}</b> <small>${label}</small></span>` : "";
+          ch ? `<span class="so ${cls}">${svg}${ch.live ? '<span class="ldot"></span>' : ""}<b>${fmt(ch.followers ?? 0)}</b> ${label}</span>` : "";
         if (soc && (soc.twitch || soc.youtube)) {
           socEl.innerHTML = so("tw", TW_SVG, soc.twitch, "followers") + so("yt", YT_SVG, soc.youtube, "subs");
           socEl.style.display = "flex";
-        } else {
-          socEl.style.display = "none";
-        }
+        } else { socEl.style.display = "none"; }
 
+        // hero
+        $("eyebrow").textContent = d.streaming ? "Now Building · Live" : "Now Building";
         if (d.nowBuilding) {
           $("now-title").textContent = d.nowBuilding.title;
-          $("now-title").classList.remove("empty");
           $("mode").textContent = d.nowBuilding.mode;
           $("mode").hidden = false;
         } else {
           $("now-title").textContent = "Getting set up…";
-          $("now-title").classList.add("empty");
           $("mode").hidden = true;
         }
+        $("project").textContent = (d.project?.name ?? d.sessionTitle) || "Vibe coding";
+        $("branch").textContent = d.branch ? "· " + d.branch : "";
+
+        // projects ticker
+        const pe = $("projects");
+        pe.innerHTML = "";
+        for (const p of (d.projects ?? []).slice(0, 5)) {
+          const li = document.createElement("li");
+          if (p.status === "active") li.className = "active";
+          li.innerHTML = `<span class="pdot"></span><span class="pname"></span><span class="pnote"></span>`;
+          li.querySelector(".pname").textContent = p.name;
+          li.querySelector(".pnote").textContent = p.note ?? "";
+          pe.appendChild(li);
+        }
+        if (!pe.children.length) pe.innerHTML = '<li class="empty">No active projects</li>';
 
         renderFeed(d.buildLog ?? []);
 
         const s = d.stats ?? {};
         $("s-feat").textContent = fmt(s.features ?? 0);
-        $("s-bugs").textContent = fmt(s.bugs ?? 0);
+        $("s-commits").textContent = fmt(s.commits ?? 0);
         $("s-tok").textContent = fmt(s.claudeTokens ?? 0);
         $("s-cost").textContent = money(s.costUsd ?? 0);
-        $("s-commits").textContent = fmt(s.commits ?? 0);
         $("s-agents").textContent = fmt(s.subAgents ?? 0);
+        $("s-streak").textContent = fmt(s.streak ?? 0);
       }
 
-      const FEED_SHOWN = 4; // latest milestones to show — no scroll, no history
+      const FEED_SHOWN = 5; // latest first; no scroll, no history browser
 
-      // state.buildLog is newest-first. Show only the latest few, oldest→newest
-      // so the newest sits at the bottom. New entries animate in; we rebuild the
-      // (small) list each paint and prune the rest.
       function renderFeed(buildLog) {
         const log = $("log");
         const latest = buildLog
           .slice(0, FEED_SHOWN)
-          .map((e) => (typeof e === "string" ? { text: e, ts: null } : e))
-          .reverse();
-
+          .map((e) => (typeof e === "string" ? { text: e, ts: null } : e));
         if (!latest.length) {
           log.innerHTML = '<li class="empty">No milestones yet — stay tuned</li>';
           return;
         }
         log.innerHTML = "";
-        for (const e of latest) {
+        latest.forEach((e, idx) => {
           const key = (e.ts ?? "") + "|" + e.text;
           const li = document.createElement("li");
           if (!seen.has(key)) { li.className = "fresh"; seen.add(key); }
-          const txt = document.createElement("span");
-          txt.className = "txt";
-          txt.textContent = e.text;
-          const when = document.createElement("span");
-          when.className = "when";
-          when.textContent = since(e.ts);
-          li.append(txt, when);
+          const dot = document.createElement("span"); dot.className = "fdot";
+          const txt = document.createElement("span"); txt.className = "txt"; txt.textContent = e.text;
+          const when = document.createElement("span"); when.className = "when"; when.textContent = idx === 0 ? "now" : since(e.ts);
+          li.append(dot, txt, when);
           log.appendChild(li);
-        }
+        });
       }
 
       async function tick() {
@@ -276,11 +305,8 @@
           state = d;
           const sig = JSON.stringify(d);
           if (sig !== last) { last = sig; paint(d); }
-        } catch {
-          document.body.classList.add("offline");
-        }
+        } catch { document.body.classList.add("offline"); }
       }
-
       setInterval(tick, 1500);
       setInterval(() => { if (state?.isLive) $("timer").textContent = elapsed(state.startedAt); }, 1000);
       tick();

@@ -22,6 +22,12 @@
       * { box-sizing: border-box; }
       html, body { margin: 0; height: 100%; background: transparent; font-family: var(--font); color: var(--text); overflow: hidden; }
 
+      /* A neon glow that travels around each card — animated conic-gradient ring
+         (masked to a border). @property makes the angle animatable; Chromium
+         (OBS Browser Source) supports it. This is the "alive" gradient. */
+      @property --vlangle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+      @keyframes vlspin { to { --vlangle: 360deg; } }
+
       body.preview {
         background:
           radial-gradient(1000px 600px at 72% 8%, #2c1a5e, transparent),
@@ -69,7 +75,19 @@
       .card::before {
         content: ""; position: absolute; top: 0; left: 14px; right: 14px; height: 1.5px;
         background: linear-gradient(90deg, transparent, var(--accent), var(--pink), transparent); opacity: 0.8;
+        z-index: 1;
       }
+      /* the travelling gradient ring */
+      .card::after {
+        content: ""; position: absolute; inset: 0; border-radius: var(--radius); padding: 1.5px;
+        background: conic-gradient(from var(--vlangle), transparent 30%, var(--accent) 50%, var(--pink) 62%, var(--accent2) 74%, transparent 90%);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor; mask-composite: exclude;
+        pointer-events: none; animation: vlspin 8s linear infinite;
+      }
+      .card.projects::after { animation-duration: 7s; }
+      .card.now::after { animation-duration: 11s; animation-direction: reverse; }
+      .card.stats::after { animation-duration: 9s; animation-delay: -3s; }
       .card.projects { flex: 0 0 270px; }
       .card.now { flex: 1; }
       .card.stats { flex: 0 0 300px; }
