@@ -1,4 +1,5 @@
 import { readSecrets, type Secrets } from "./secrets.ts";
+import { twitchUserToken } from "./twitch-oauth.ts";
 import { localDateString } from "./ccusage.ts";
 import type { VibeEvent } from "./report.ts";
 import type { SocialChannel, SocialState } from "./state.ts";
@@ -10,8 +11,10 @@ import type { SocialChannel, SocialState } from "./state.ts";
  * (null) rather than throwing, so self-deployers with no channel still work.
  *
  * Twitch: app access token (client_credentials) → live status + viewer count.
- *   (Follower count needs a broadcaster user token w/ moderator:read:followers;
- *   we attempt it and silently omit if the app token isn't authorized.)
+ *   Follower count needs a broadcaster user token w/ moderator:read:followers
+ *   (run `vibe twitch login`, stored in ~/.vibelog/twitch-tokens.json). When that
+ *   token exists we use it for /users + /channels/followers so `total` returns;
+ *   without it we degrade to live + viewers only (no follower count).
  * YouTube: API key → subscriber + view counts (public channel statistics).
  */
 
@@ -61,14 +64,22 @@ async function twitchAppToken(clientId: string, clientSecret: string): Promise<s
 async function fetchTwitch(s: Secrets): Promise<SocialChannel | null> {
   const { clientId, clientSecret, login } = s.twitch ?? {};
   if (!clientId || !clientSecret || !login) return null;
-  const token = await twitchAppToken(clientId, clientSecret);
-  if (!token) return null;
-  const headers = { "client-id": clientId, authorization: `Bearer ${token}` };
+  const appToken = await twitchAppToken(clientId, clientSecret);
+  if (!appToken) return null;
+  const appHeaders = { "client-id": clientId, authorization: `Bearer ${appToken}` };
 
-  const users = await getJson(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`, headers);
+  // Prefer the broadcaster user token (if `vibe twitch login` was run) so the
+  // follower /channels/followers `total` is authorized; otherwise fall back to
+  // the app token everywhere and just omit follower count.
+  const userToken = await twitchUserToken().catch(() => null);
+  const readHeaders = userToken ? { "client-id": clientId, authorization: `Bearer ${userToken}` } : appHeaders;
+
+  const users = await getJson(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`, readHeaders);
   const userId = users?.data?.[0]?.id as string | undefined;
 
-  const streams = await getJson(`https://api.twitch.tv/helix/streams?user_login=${encodeURIComponent(login)}`, headers);
+  // /streams works with the app token; keep using it so live/viewers report
+  // even when no user token is present.
+  const streams = await getJson(`https://api.twitch.tv/helix/streams?user_login=${encodeURIComponent(login)}`, appHeaders);
   const stream = streams?.data?.[0];
 
   const out: SocialChannel = {
@@ -76,8 +87,10 @@ async function fetchTwitch(s: Secrets): Promise<SocialChannel | null> {
     viewers: stream?.viewer_count,
     url: `https://twitch.tv/${login}`,
   };
-  if (userId) {
-    const followers = await getJson(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${userId}`, headers);
+  // Follower total only returns with the user token; with the app token this
+  // request 401s and getJson yields null, so we silently omit followers.
+  if (userId && userToken) {
+    const followers = await getJson(`https://api.twitch.tv/helix/channels/followers?broadcaster_id=${userId}`, readHeaders);
     if (typeof followers?.total === "number") out.followers = followers.total;
   }
   return out;

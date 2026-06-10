@@ -14,6 +14,7 @@ import { formatReport, formatWeekly, readEvents, summarizeDay, summarizeWeek } f
 import { formatChart, summarizeRange } from "./chart.ts";
 import { readConfig, readSession, readState, writeConfig, writeSession, appendEvent } from "./store.ts";
 import { runAgent } from "./agent.ts";
+import { loginCommand as twitchLogin } from "./twitch-oauth.ts";
 
 const program = new Command();
 program.name("vibe").description("VibeLog — live coding telemetry + OBS overlay (V0)").version("0.0.0");
@@ -270,6 +271,21 @@ program
       }
       throw err;
     });
+  });
+
+const twitch = program.command("twitch").description("Twitch broadcaster integration");
+
+twitch
+  .command("login")
+  .description("Authorize VibeLog to read your Twitch follower count (one-time OAuth)")
+  .action(async () => {
+    try {
+      await twitchLogin();
+    } catch (err) {
+      // err.message only — never log token values or the request.
+      console.error(`Twitch login failed: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
   });
 
 program
