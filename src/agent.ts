@@ -16,6 +16,7 @@ import {
 } from "./state.ts";
 import { appendEvent, readConfig, readSession, writeSession, writeState, type Session } from "./store.ts";
 import { demoDashboard, demoToday, demoWeek } from "./demodata.ts";
+import { getProjectActivity, type ProjectActivity } from "./projects.ts";
 
 const GIT_POLL_MS = 5_000;
 const TOKEN_POLL_MS = 30_000;
@@ -148,6 +149,20 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     const m = await dailyUsageMap();
     if (m) usageCache = { at: Date.now(), data: m };
     return usageCache.data;
+  }
+
+  // Per-project activity joins transcripts + git (several git spawns) — heavy, so
+  // cache it the same way; the dashboard's per-project view polls every 4s.
+  let projCache: { at: number; data: ProjectActivity } = { at: 0, data: { projects: [], byDay: {} } };
+  async function cachedProjectActivity(costPerToken: number): Promise<ProjectActivity> {
+    if (Date.now() - projCache.at < 60_000) return projCache.data;
+    const since = localDateString(new Date(Date.now() - 371 * 86_400_000));
+    try {
+      projCache = { at: Date.now(), data: await getProjectActivity({ since, costPerToken }) };
+    } catch {
+      // transcripts/git unavailable — keep last good (or empty) activity
+    }
+    return projCache.data;
   }
 
   // ---- mutations -----------------------------------------------------------
@@ -312,17 +327,54 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
         const events = await readEvents();
         const today = localDateString();
+        const usage = await cachedUsageByDay();
+
+        // Blended $/token from ccusage totals — used to estimate per-project cost
+        // (ccusage gives no project dimension). Fallback ~$2/Mtok if unknown.
+        let sumTok = 0;
+        let sumCost = 0;
+        for (const u of Object.values(usage)) {
+          sumTok += u.tokens || 0;
+          sumCost += u.cost || 0;
+        }
+        const costPerToken = sumTok > 0 ? sumCost / sumTok : 0.000002;
+        const activity = await cachedProjectActivity(costPerToken);
+        const chart = summarizeRange(events, days);
+
+        // Scope the heatmap: a single project (colored by commits) or all
+        // projects (real ccusage tokens, with per-day commits summed across repos).
+        const sel = project && project !== "all"
+          ? activity.projects.find((p) => p.name === project)
+          : null;
+
+        const usageByDay: Record<string, { tokens: number; cost: number; commits: number; features: number }> = {};
+        if (sel) {
+          const pd = activity.byDay[sel.name] ?? {};
+          for (const d of chart) {
+            const x = pd[d.date];
+            const t = x?.tokens ?? 0;
+            usageByDay[d.date] = { tokens: t, cost: +(t * costPerToken).toFixed(2), commits: x?.commits ?? 0, features: 0 };
+          }
+        } else {
+          // Total commits per day across all projects, for the all-projects strip.
+          const commitsByDay: Record<string, number> = {};
+          for (const pd of Object.values(activity.byDay)) {
+            for (const [date, v] of Object.entries(pd)) commitsByDay[date] = (commitsByDay[date] ?? 0) + v.commits;
+          }
+          for (const d of chart) {
+            const u = usage[d.date];
+            usageByDay[d.date] = { tokens: u?.tokens ?? 0, cost: u?.cost ?? 0, commits: commitsByDay[d.date] ?? 0, features: 0 };
+          }
+        }
+
         sendJson(res, 200, {
           live: state,
           today: summarizeDay(events, today),
           week: summarizeWeek(events, today),
-          chart: summarizeRange(events, days),
-          // Per-day Claude usage (tokens/cost) — the honest axis for the heatmap.
-          usageByDay: await cachedUsageByDay(),
-          // Per-project attribution isn't captured locally yet — solo/all-projects
-          // view only until the project-capture work lands.
-          projects: [],
-          activeProject: null,
+          chart,
+          usageByDay,
+          projects: activity.projects,
+          activeProject: sel?.name ?? null,
           socials: await readConfig().then((c) => ({ twitch: c?.twitch ?? null, youtube: c?.youtube ?? null })),
         });
         return;

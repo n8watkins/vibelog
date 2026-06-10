@@ -34,6 +34,69 @@ export async function getBranch(cwd: string): Promise<string | null> {
   }
 }
 
+/**
+ * Normalize a git remote URL into a stable project key: `host/owner/repo`,
+ * credentials stripped, scheme/`.git` dropped, host lowercased. So
+ * `git@github.com:Natkins/VibeLog.git` and
+ * `https://x-token:abc@github.com/Natkins/VibeLog` both become
+ * `github.com/Natkins/VibeLog`. Returns null for empty input. Pure + testable.
+ *
+ * Stripping the embedded credential is a security requirement — this key is the
+ * project identity and must never carry a token (see docs/INFRA_PLAN.md §2).
+ */
+export function normalizeRemote(raw: string): string | null {
+  let s = raw.trim();
+  if (!s) return null;
+  // scp-like syntax: git@host:owner/repo(.git)
+  const scp = s.match(/^[\w.+-]+@([^/:]+):(.+)$/);
+  if (scp) s = `ssh://${scp[1]}/${scp[2]}`;
+  s = s.replace(/^([a-z][\w+.-]*:\/\/)[^@/]*@/i, "$1"); // drop user:pass@ credentials
+  s = s.replace(/^[a-z][\w+.-]*:\/\//i, ""); // drop scheme
+  s = s.replace(/\.git$/i, "").replace(/\/+$/, "");
+  if (!s) return null;
+  const slash = s.indexOf("/");
+  if (slash > 0) s = s.slice(0, slash).toLowerCase() + s.slice(slash);
+  return s;
+}
+
+/** Normalized origin remote for `cwd`, or null (no remote / not a repo). */
+export async function getRemote(cwd: string): Promise<string | null> {
+  try {
+    return normalizeRemote(await git(cwd, ["config", "--get", "remote.origin.url"]));
+  } catch {
+    return null;
+  }
+}
+
+/** Absolute repo root for `cwd`, or null if not inside a work tree. */
+export async function getRepoRoot(cwd: string): Promise<string | null> {
+  try {
+    return await git(cwd, ["rev-parse", "--show-toplevel"]);
+  } catch {
+    return null;
+  }
+}
+
+/** Commits per local day (YYYY-MM-DD → count) on the current branch since `since`. */
+export async function getCommitsByDay(cwd: string, since: string): Promise<Record<string, number>> {
+  try {
+    const out = await git(cwd, [
+      "log",
+      `--since=${since}`,
+      "--date=format-local:%Y-%m-%d",
+      "--pretty=%ad",
+    ]);
+    const map: Record<string, number> = {};
+    for (const line of out.split("\n")) {
+      const d = line.trim();
+      if (d) map[d] = (map[d] ?? 0) + 1;
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 export type GitStats = {
   linesAdded: number;
   linesRemoved: number;

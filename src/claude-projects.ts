@@ -3,6 +3,7 @@ import { readdir } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import os from "node:os";
 import path from "node:path";
+import { localDateString } from "./ccusage.ts";
 
 /**
  * Tokens-by-project from Claude Code transcripts (PRD §17 V2). ccusage has no
@@ -102,6 +103,26 @@ export function labelProjects(cwds: string[]): Map<string, string> {
   return out;
 }
 
+/**
+ * Per-cwd, per-local-day token totals: `cwd → { 'YYYY-MM-DD': tokens }`. Same
+ * `id:requestId` dedupe as aggregate(). This is the per-day signal the dashboard
+ * needs to draw a project-scoped activity heatmap. Pure.
+ */
+export function aggregateDaily(rows: Row[]): Record<string, Record<string, number>> {
+  const seen = new Set<string>();
+  const out: Record<string, Record<string, number>> = {};
+  for (const row of rows) {
+    const key = `${row.id ?? ""}:${row.requestId ?? ""}`;
+    if (key !== ":" && seen.has(key)) continue;
+    if (key !== ":") seen.add(key);
+    if (!row.timestamp) continue;
+    const date = localDateString(new Date(row.timestamp));
+    const days = (out[row.cwd] ??= {});
+    days[date] = (days[date] ?? 0) + sumUsage(row.usage);
+  }
+  return out;
+}
+
 async function* readJsonl(file: string): AsyncGenerator<unknown> {
   const rl = createInterface({ input: createReadStream(file, "utf8"), crlfDelay: Infinity });
   for await (const line of rl) {
@@ -114,8 +135,8 @@ async function* readJsonl(file: string): AsyncGenerator<unknown> {
   }
 }
 
-/** Read all transcripts and aggregate tokens by project. */
-export async function getTokensByProject(opts: { since?: string | null } = {}): Promise<ProjectTokens[]> {
+/** Read every Claude transcript line that carries token usage into flat Rows. */
+async function readAllRows(): Promise<Row[]> {
   let dirs: string[];
   try {
     dirs = await readdir(PROJECTS_DIR);
@@ -150,6 +171,15 @@ export async function getTokensByProject(opts: { since?: string | null } = {}): 
       }
     }
   }
+  return rows;
+}
 
-  return aggregate(rows, opts.since ?? null);
+/** Read all transcripts and aggregate tokens by project. */
+export async function getTokensByProject(opts: { since?: string | null } = {}): Promise<ProjectTokens[]> {
+  return aggregate(await readAllRows(), opts.since ?? null);
+}
+
+/** Read all transcripts and aggregate tokens by cwd, per local day. */
+export async function getDailyUsageByCwd(): Promise<Record<string, Record<string, number>>> {
+  return aggregateDaily(await readAllRows());
 }
