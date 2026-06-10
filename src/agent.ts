@@ -15,6 +15,7 @@ import {
   type LiveState,
 } from "./state.ts";
 import { appendEvent, readConfig, readSession, writeSession, writeState, type Session } from "./store.ts";
+import { demoDashboard, demoToday, demoWeek } from "./demodata.ts";
 
 const GIT_POLL_MS = 5_000;
 const TOKEN_POLL_MS = 30_000;
@@ -287,8 +288,28 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
       }
 
       // One-shot payload for the dashboard: live state + today + week + heatmap.
+      // `days` picks the range (31 = month, 371 = year); `project` scopes it.
       if (req.method === "GET" && route === "/api/dashboard.json") {
-        const days = Math.max(7, Math.min(371, Number(url.searchParams.get("days")) || 84));
+        const days = Math.max(7, Math.min(371, Number(url.searchParams.get("days")) || 371));
+        const project = url.searchParams.get("project");
+
+        // Demo: a full seeded year so the calendar looks alive, plus per-project
+        // attribution that ccusage/git can't give us yet (see docs/INFRA_PLAN.md).
+        if (opts.demo) {
+          const dd = demoDashboard({ days, project });
+          sendJson(res, 200, {
+            live: state,
+            today: demoToday(),
+            week: demoWeek(),
+            chart: dd.chart,
+            usageByDay: dd.usageByDay,
+            projects: dd.projects,
+            activeProject: dd.activeProject,
+            socials: { twitch: "https://twitch.tv/yourchannel", youtube: "https://youtube.com/@yourchannel" },
+          });
+          return;
+        }
+
         const events = await readEvents();
         const today = localDateString();
         sendJson(res, 200, {
@@ -298,9 +319,11 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
           chart: summarizeRange(events, days),
           // Per-day Claude usage (tokens/cost) — the honest axis for the heatmap.
           usageByDay: await cachedUsageByDay(),
-          socials: opts.demo
-            ? { twitch: "https://twitch.tv/yourchannel", youtube: "https://youtube.com/@yourchannel" }
-            : await readConfig().then((c) => ({ twitch: c?.twitch ?? null, youtube: c?.youtube ?? null })),
+          // Per-project attribution isn't captured locally yet — solo/all-projects
+          // view only until the project-capture work lands.
+          projects: [],
+          activeProject: null,
+          socials: await readConfig().then((c) => ({ twitch: c?.twitch ?? null, youtube: c?.youtube ?? null })),
         });
         return;
       }
