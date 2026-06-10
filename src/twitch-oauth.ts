@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import http from "node:http";
@@ -180,10 +181,14 @@ export async function loginCommand(): Promise<void> {
     process.exit(1);
   }
 
+  // CSRF guard: a random state we echo in the authorize URL and verify on the
+  // redirect, so only the request we initiated can complete the exchange.
+  const state = randomBytes(16).toString("hex");
   const authorizeUrl =
     `${AUTHORIZE_URL}?client_id=${encodeURIComponent(clientId)}` +
     `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-    `&response_type=code&scope=${encodeURIComponent(SCOPE)}`;
+    `&response_type=code&scope=${encodeURIComponent(SCOPE)}` +
+    `&state=${state}`;
 
   await new Promise<void>((resolve, reject) => {
     let done = false;
@@ -196,6 +201,13 @@ export async function loginCommand(): Promise<void> {
       }
       const error = url.searchParams.get("error");
       const code = url.searchParams.get("code");
+
+      // Reject a callback whose state doesn't match the one we issued (CSRF).
+      if (code && url.searchParams.get("state") !== state) {
+        res.writeHead(400, { "content-type": "text/html; charset=utf-8" }).end(ERROR_HTML);
+        finish(new Error("State mismatch on Twitch redirect — aborting."));
+        return;
+      }
 
       if (error) {
         res.writeHead(400, { "content-type": "text/html; charset=utf-8" }).end(ERROR_HTML);
