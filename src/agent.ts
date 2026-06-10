@@ -14,7 +14,8 @@ import {
   type BuildMode,
   type LiveState,
 } from "./state.ts";
-import { appendEvent, readConfig, readSession, writeSession, writeState, type Session } from "./store.ts";
+import { appendEvent, readConfig, readSession, readSettings, writeSession, writeSettings, writeState, type Session } from "./store.ts";
+import { PRESETS, resolveTheme, validateVars, type Settings } from "./theme.ts";
 import { demoDashboard, demoToday, demoWeek, demoSocialGrowth } from "./demodata.ts";
 import { getProjectActivity, type ProjectActivity } from "./projects.ts";
 import { summarize } from "./summarize.ts";
@@ -38,7 +39,14 @@ const DASHBOARD_FILE = path.join(PUBLIC_DIR, "dashboard.html");
  * only these read-only GET routes are safe to expose. Writes (mark/building/
  * end/hooks) and the private /dashboard are localhost-only — see isRemote().
  */
-const PUBLIC_GET_ROUTES = new Set(["/", "/overlay", "/live", "/state.json"]);
+const PUBLIC_GET_ROUTES = new Set([
+  "/", "/overlay", "/live", "/state.json",
+  // The overlay runs in OBS with no auth, so it must be able to read its theme
+  // and the preset list publicly. Only the resolved theme vars are exposed —
+  // never profile/integration/secret data. Writes (POST /api/settings) stay
+  // localhost-only by NOT being listed here.
+  "/api/theme.json", "/api/presets.json",
+]);
 
 /**
  * True if a request did NOT originate directly from this machine. A Cloudflare
@@ -335,6 +343,21 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         return;
       }
 
+      // Resolved theme vars for a page — public so the overlay (in OBS, no auth)
+      // can skin itself. Only allowlisted CSS-var values are ever returned.
+      if (req.method === "GET" && route === "/api/theme.json") {
+        const page = url.searchParams.get("page") ?? "overlay";
+        const vars = resolveTheme(await readSettings(), page);
+        sendJson(res, 200, { vars });
+        return;
+      }
+
+      // The curated preset list for the dashboard's theme picker (color data only).
+      if (req.method === "GET" && route === "/api/presets.json") {
+        sendJson(res, 200, { presets: PRESETS });
+        return;
+      }
+
       // Private dashboard (localhost) — a richer browser view than the CLI.
       if (req.method === "GET" && route === "/dashboard") {
         const html = await readFile(DASHBOARD_FILE, "utf8");
@@ -428,6 +451,29 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
           socials: await readConfig().then((c) => ({ twitch: c?.twitch ?? null, youtube: c?.youtube ?? null })),
         });
         return;
+      }
+
+      // Persist theme settings. POST + not in PUBLIC_GET_ROUTES, so the isRemote
+      // gate above already 403s any tunneled/LAN caller — writes are localhost
+      // only. Every theme value is validated/allowlisted before it's stored.
+      if (req.method === "POST" && route === "/api/settings") {
+        const body = await readBody(req);
+        const incoming = (body.theme ?? {}) as Record<string, unknown>;
+        const current = (await readSettings()) ?? { version: 1 as const, theme: { sync: true, shared: {} } };
+        const theme = current.theme ?? { sync: true, shared: {} };
+        if (typeof incoming.sync === "boolean") theme.sync = incoming.sync;
+        if (typeof incoming.presetId === "string") theme.presetId = incoming.presetId.slice(0, 64);
+        if (incoming.shared) theme.shared = validateVars(incoming.shared);
+        if (incoming.perPage && typeof incoming.perPage === "object") {
+          theme.perPage = theme.perPage ?? {};
+          for (const p of ["overlay", "live", "dashboard"] as const) {
+            const pv = (incoming.perPage as Record<string, unknown>)[p];
+            if (pv) theme.perPage[p] = validateVars(pv);
+          }
+        }
+        const next: Settings = { ...current, version: 1, theme };
+        await writeSettings(next);
+        return sendJson(res, 200, { ok: true, theme: next.theme });
       }
 
       if (req.method === "POST" && route === "/building") {

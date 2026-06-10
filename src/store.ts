@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile, appendFile } from "node:fs/promises";
-import { CONFIG_FILE, EVENTS_FILE, SESSION_FILE, STATE_FILE, VIBE_DIR } from "./config.ts";
+import { CONFIG_FILE, EVENTS_FILE, SESSION_FILE, SETTINGS_FILE, STATE_FILE, VIBE_DIR } from "./config.ts";
 import type { BuildLogEntry, BuildMode, LiveState } from "./state.ts";
+import type { Settings } from "./theme.ts";
 
 /** Persistent session metadata — lets the server resume after a restart. */
 export type Session = {
@@ -58,6 +59,11 @@ export const writeSession = (s: Session) => writeJson(SESSION_FILE, s);
 
 export const readState = () => readJson<LiveState>(STATE_FILE);
 export const writeState = (s: LiveState) => writeJson(STATE_FILE, s);
+
+/** Theme + (later) profile/integrations. Localhost writes only; the theme
+ *  sub-tree is the only part ever served publicly — see src/theme.ts. */
+export const readSettings = () => readJson<Settings>(SETTINGS_FILE);
+export const writeSettings = (s: Settings) => writeJson(SETTINGS_FILE, s);
 
 /** Append-only private history. Raw and local — never served publicly. */
 export async function appendEvent(event: Record<string, unknown>): Promise<void> {

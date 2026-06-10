@@ -7,5 +7,6 @@ export const CONFIG_FILE = path.join(VIBE_DIR, "config.json");
 export const SESSION_FILE = path.join(VIBE_DIR, "session.json");
 export const STATE_FILE = path.join(VIBE_DIR, "state.json");
 export const EVENTS_FILE = path.join(VIBE_DIR, "events.jsonl");
+export const SETTINGS_FILE = path.join(VIBE_DIR, "settings.json");
 
 export const DEFAULT_PORT = 4545;

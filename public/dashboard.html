@@ -262,6 +262,14 @@
 
     <script>
       const $ = (id) => document.getElementById(id);
+      async function applyTheme(page, vars) {
+        try {
+          if (!vars) vars = (await (await fetch(`/api/theme.json?page=${page}`, { cache: "no-store" })).json()).vars;
+          const s = document.documentElement.style;
+          for (const k in vars) s.setProperty(k, vars[k]);
+        } catch { /* keep CSS :root defaults */ }
+      }
+      applyTheme("dashboard");
       const fmt = (n) => n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e3 ? (n/1e3).toFixed(1)+"k" : String(n);
       const dur = (m) => { const h = Math.floor(m/60), mm = m%60; return h ? `${h}h ${mm}m` : `${mm}m`; };
       const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];

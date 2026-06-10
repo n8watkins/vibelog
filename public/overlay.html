@@ -196,6 +196,19 @@
       const $ = (id) => document.getElementById(id);
       if (new URLSearchParams(location.search).has("preview")) document.body.classList.add("preview");
 
+      // Skin the page from the server-side theme. Re-fetch periodically so a
+      // theme change in the dashboard reaches this overlay inside OBS (no shared
+      // localStorage with the browser/OBS — settings.json is the sync channel).
+      async function applyTheme(page) {
+        try {
+          const { vars } = await (await fetch(`/api/theme.json?page=${page}`, { cache: "no-store" })).json();
+          const s = document.documentElement.style;
+          for (const k in vars) s.setProperty(k, vars[k]);
+        } catch { /* keep CSS :root defaults */ }
+      }
+      applyTheme("overlay");
+      setInterval(() => applyTheme("overlay"), 10000);
+
       const fmt = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n));
       const money = (n) => (n >= 100 ? "$" + Math.round(n) : "$" + (n || 0).toFixed(2));
       function since(ts) {
