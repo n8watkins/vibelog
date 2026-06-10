@@ -119,13 +119,26 @@
       .stat .v { font-size: 21px; font-weight: 700; text-shadow: 0 0 14px rgba(160, 107, 255, 0.3); }
       .stat .k { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-family: var(--font); margin-top: 2px; }
       .v.tok { color: #c9aaff; } .v.cost { color: var(--accent2); } .v.streak { color: #ff9d4d; }
+      .ic-flame { width: 11px; height: 11px; vertical-align: -1px; color: #ff7a3d; fill: currentColor; filter: drop-shadow(0 0 4px rgba(255, 122, 61, 0.7)); }
+
+      /* social strip in the stats card */
+      .socials { display: flex; gap: 16px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 13px; }
+      .socials .so { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+      .socials .so b { color: var(--text); font-weight: 700; }
+      .socials .so svg { width: 14px; height: 14px; fill: currentColor; }
+      .socials .so.tw { color: #b794ff; } .socials .so.yt { color: #ff6b81; }
+      .socials .so .ldot { width: 6px; height: 6px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 7px var(--pink); animation: pulse 1.4s infinite; }
+
+      /* camera "off air" state when not streaming */
+      .cam .tag.off { color: rgba(169, 159, 206, 0.6); }
+      .cam .tag.off .rec { background: var(--muted); box-shadow: none; animation: none; }
 
       .timer { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: auto; }
     </style>
   </head>
   <body>
     <div id="hud">
-      <div class="cam"><span class="tag"><span class="rec"></span> live</span><span class="ph"></span></div>
+      <div class="cam"><span class="tag" id="camtag"><span class="rec"></span> <span id="camtagtext">live</span></span><span class="ph"></span></div>
 
       <div class="card projects">
         <div class="label"><span class="dot"></span> Projects</div>
@@ -148,8 +161,9 @@
           <div class="stat"><span class="v tok" id="s-tok">0</span><span class="k">tokens</span></div>
           <div class="stat"><span class="v cost" id="s-cost">$0</span><span class="k">spend</span></div>
           <div class="stat"><span class="v tok" id="s-tpm">0</span><span class="k">tok / min</span></div>
-          <div class="stat"><span class="v streak" id="s-streak">0</span><span class="k">🔥 day streak</span></div>
+          <div class="stat"><span class="v streak" id="s-streak">0</span><span class="k"><svg class="ic-flame" viewBox="0 0 24 24"><path d="M12 2c1.2 3.2-1 4.4-2 6.4-.9 1.8.2 3.6 2 3.6 1.1 0 1.9-.9 2-2.6 1.9 1.9 3 4 3 6.2a7 7 0 1 1-14 0c0-3 1.7-5.2 3-7 .7 1.8 1.8 2 2.7 1.1C13.6 8 12.8 4.6 12 2Z"/></svg> day streak</span></div>
         </div>
+        <div class="socials" id="socials" style="display:none"></div>
       </div>
     </div>
 
@@ -196,11 +210,30 @@
         }
       }
 
+      const TW_SVG = '<svg viewBox="0 0 24 24"><path d="M4 2 2.5 6v14h5v3h3l3-3h4L23 13V2H4Zm17 10-3 3h-5l-3 3v-3H6V4h15v8Z"/><path d="M16 7h2v5h-2zm-5 0h2v5h-2z"/></svg>';
+      const YT_SVG = '<svg viewBox="0 0 24 24"><path d="M23 7.5a3 3 0 0 0-2.1-2.1C19 5 12 5 12 5s-7 0-8.9.4A3 3 0 0 0 1 7.5 31 31 0 0 0 .6 12 31 31 0 0 0 1 16.5a3 3 0 0 0 2.1 2.1C5 19 12 19 12 19s7 0 8.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 23.4 12 31 31 0 0 0 23 7.5ZM9.8 15.3V8.7l5.7 3.3-5.7 3.3Z"/></svg>';
+
       let last = "", state = null;
 
       function paint(d) {
         $("hud").classList.toggle("live", !!d.isLive);
         if (!d.isLive) return;
+
+        // camera tag reflects real streaming status (OBS-driven)
+        const camtag = $("camtag");
+        camtag.classList.toggle("off", !d.streaming);
+        $("camtagtext").textContent = d.streaming ? "live" : "off air";
+
+        // social strip — live dot + follower/sub counts
+        const soc = d.social, socEl = $("socials");
+        const so = (cls, svg, ch) =>
+          ch ? `<span class="so ${cls}">${svg}${ch.live ? '<span class="ldot"></span>' : ""}<b>${fmt(ch.followers ?? 0)}</b></span>` : "";
+        if (soc && (soc.twitch || soc.youtube)) {
+          socEl.innerHTML = so("tw", TW_SVG, soc.twitch) + so("yt", YT_SVG, soc.youtube);
+          socEl.style.display = "flex";
+        } else {
+          socEl.style.display = "none";
+        }
 
         // projects ticker
         flipRender($("projects"), d.projects ?? [], (p) => {

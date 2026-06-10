@@ -49,8 +49,19 @@
         background: rgba(255, 77, 94, 0.12); color: var(--live); border: 1px solid rgba(255, 77, 94, 0.3);
       }
       .live-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); box-shadow: 0 0 10px var(--live); animation: pulse 1.4s infinite; }
+      .live-pill.off { background: rgba(255, 255, 255, 0.05); color: var(--muted); border-color: var(--border); }
+      .live-pill.off .dot { background: var(--muted); box-shadow: none; animation: none; }
       @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
       .timer { font-family: var(--mono); color: var(--muted); font-size: 13px; margin-left: 12px; }
+
+      /* social trackers */
+      .socials { display: flex; gap: 16px; margin-top: 16px; font-family: var(--mono); font-size: 14px; }
+      .socials .so { display: flex; align-items: center; gap: 7px; color: var(--muted); }
+      .socials .so b { color: var(--text); font-weight: 700; }
+      .socials .so svg { width: 15px; height: 15px; fill: currentColor; }
+      .socials .so.tw { color: #b794ff; } .socials .so.yt { color: #ff6b81; }
+      .socials .so .ldot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px var(--live); animation: pulse 1.4s infinite; }
+      .socials .so small { color: var(--muted); }
 
       .hero { margin-top: 40px; }
       .eyebrow { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
@@ -109,7 +120,7 @@
       <div class="topbar">
         <div class="brand"><span class="spark"></span> VibeLog</div>
         <div>
-          <span class="live-pill"><span class="dot"></span> Live</span>
+          <span class="live-pill" id="livePill"><span class="dot"></span> <span id="pillText">Live</span></span>
           <span class="timer" id="timer"></span>
         </div>
       </div>
@@ -118,6 +129,7 @@
         <div class="eyebrow" id="eyebrow">Now streaming</div>
         <h1 class="project" id="project">—</h1>
         <div class="branch" id="branch"></div>
+        <div class="socials" id="socials" style="display:none"></div>
       </div>
 
       <div class="now">
@@ -175,6 +187,9 @@
         return (h ? h + "h " : "") + String(m).padStart(2, "0") + "m " + String(sec).padStart(2, "0") + "s";
       }
 
+      const TW_SVG = '<svg viewBox="0 0 24 24"><path d="M4 2 2.5 6v14h5v3h3l3-3h4L23 13V2H4Zm17 10-3 3h-5l-3 3v-3H6V4h15v8Z"/><path d="M16 7h2v5h-2zm-5 0h2v5h-2z"/></svg>';
+      const YT_SVG = '<svg viewBox="0 0 24 24"><path d="M23 7.5a3 3 0 0 0-2.1-2.1C19 5 12 5 12 5s-7 0-8.9.4A3 3 0 0 0 1 7.5 31 31 0 0 0 .6 12 31 31 0 0 0 1 16.5a3 3 0 0 0 2.1 2.1C5 19 12 19 12 19s7 0 8.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 23.4 12 31 31 0 0 0 23 7.5ZM9.8 15.3V8.7l5.7 3.3-5.7 3.3Z"/></svg>';
+
       let state = null, last = "";
       const seen = new Set(); // feed keys already rendered (so only new ones animate)
 
@@ -182,9 +197,24 @@
         document.body.classList.toggle("offline", !d.isLive);
         if (!d.isLive) { seen.clear(); return; }
 
+        // pill reflects real streaming status
+        $("pillText").textContent = d.streaming ? "Live" : "Online";
+        $("livePill").classList.toggle("off", !d.streaming);
+
         $("eyebrow").textContent = d.sessionTitle ? "Now streaming · " + d.sessionTitle : "Now streaming";
         $("project").textContent = d.project?.name ?? "Vibe coding";
-        $("branch").textContent = d.branch ? "⌥ " + d.branch : "";
+        $("branch").textContent = d.branch ? "· " + d.branch : "";
+
+        // social trackers — live dot + follower/sub counts
+        const soc = d.social, socEl = $("socials");
+        const so = (cls, svg, ch, label) =>
+          ch ? `<span class="so ${cls}">${svg}${ch.live ? '<span class="ldot"></span>' : ""}<b>${fmt(ch.followers ?? 0)}</b> <small>${label}</small></span>` : "";
+        if (soc && (soc.twitch || soc.youtube)) {
+          socEl.innerHTML = so("tw", TW_SVG, soc.twitch, "followers") + so("yt", YT_SVG, soc.youtube, "subs");
+          socEl.style.display = "flex";
+        } else {
+          socEl.style.display = "none";
+        }
 
         if (d.nowBuilding) {
           $("now-title").textContent = d.nowBuilding.title;
