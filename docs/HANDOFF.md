@@ -56,10 +56,15 @@ download it, set it up in minutes, and stream their public development. See `doc
   OAuth** (`vibe twitch login`, with CSRF state); channel-growth deltas.
 - **Gemini Flash-Lite** prompt→feature summarizer (non-blocking, template fallback).
 - Three surfaces with a GitHub-style activity calendar (AI / Streaming / VibeLog modes).
-- **Theming engine (T1–T3):** desynced moving-gradient borders on all three pages, 10 presets +
-  Randomize + custom colors + cross-page sync, a dashboard **Settings sheet** (gear icon),
-  `~/.vibelog/settings.json` persistence, public `GET /api/theme.json` + localhost
-  `POST /api/settings`. See `docs/THEMING.md`. 55 tests pass, typecheck clean.
+- **Theming engine (T1–T5 COMPLETE):** desynced moving-gradient borders on all three pages, 10 presets +
+  Randomize + cross-page sync, a dashboard **Settings sheet** (gear icon), `~/.vibelog/settings.json`
+  persistence, public `GET /api/theme.json` + localhost `POST /api/settings`. **T4/T5 (this session):**
+  8 custom color pickers (accent/secondary/highlight/bg/text/muted/aurora1/aurora2) with **hex entry**,
+  and a **per-page editor** — an "Editing page" selector (Overlay/Live/Dashboard) appears when "Sync all
+  pages" is off so each surface gets its own theme. New localhost-only `GET /api/settings.json` returns
+  the theme sub-tree (sync/shared/perPage/presetId) so the sheet loads persisted state on open (outside
+  `PUBLIC_GET_ROUTES`, so `isRemote()` 403s remote callers; no profile/integration/secret data exposed).
+  Commits: `822305e` (feature), `0f13d34` (docs). See `docs/THEMING.md`. 55 tests pass, typecheck clean.
 - **X2 Landing page (DONE this session):** dynamic neon marketing page at `GET /landing`
   (`public/landing.html`) built around **real product screenshots** (`public/shots/{overlay,live,
   dashboard}.png`, served via an allowlisted `GET /shots/<name>.png` route). Hero shows the real
@@ -74,26 +79,31 @@ download it, set it up in minutes, and stream their public development. See `doc
 
 In rough priority, with entry points:
 
-1. **T4/T5 theming polish** — broaden custom-var coverage + a per-page (sync-off) edit UI in the
-   dashboard Settings sheet. Backend + resolver already support per-page; only the UI is missing.
-   Files: `public/dashboard.html` (Settings module near the bottom `<script>`), `src/theme.ts`.
-2. **X2 Landing page** — ✅ DONE (see §4). Dynamic page at `GET /landing` with real product
+1. **T4/T5 theming polish** — ✅ DONE (see §4). Custom-var coverage broadened to 8 vars + hex entry,
+   and the per-page (sync-off) edit UI shipped in the dashboard Settings sheet.
+2. **T6 icon pass [NOW]** — replace the remaining bare text/emoji with on-brand neon inline-SVG icons
+   (the dashboard already has a small glyph set — see the `// On-brand neon glyphs` block in
+   `public/dashboard.html`; `🎲 Randomize` in the Settings sheet is still an emoji). Sweep
+   `overlay.html`/`live.html`/`dashboard.html` for emoji and bare-text labels and give them icons.
+   Pure HTML/CSS, no server surface. Small, self-contained — do inline.
+3. **S2/S3 Profile + Integrations hub [NEXT, design-first]** — profile fields (bio/Twitter/channel
+   header) + connect Twitch/YouTube/Discord/GitHub from the dashboard. Data model is **already stubbed**
+   in the `Settings` type (`src/theme.ts` → `profile`, `integrations`), and `GET /api/settings.json`
+   now exists (currently returns only the `theme` sub-tree — extend it to include profile/integrations
+   for the dashboard, keeping it localhost-only). Reuse `src/twitch-oauth.ts` as the OAuth pattern.
+   Tokens stay in `secrets.json`; only `connected` booleans surface.
+4. **X2 Landing page** — ✅ DONE (see §4). Dynamic page at `GET /landing` with real product
    screenshots, zigzag flow, and live-recolor theme swatches. To **refresh the screenshots** after
    any UI redesign, re-run the three captures in §6 against the demo server and overwrite
    `public/shots/*.png`. Possible follow-ups (optional): compress the PNGs (~1.3 MB total), point
    the "Clone on GitHub" CTA at the real repo URL (currently `https://github.com/`).
-3. **S2/S3 Profile + Integrations hub** — profile fields (bio/Twitter/channel header) + connect
-   Twitch/YouTube/Discord/GitHub from the dashboard. Data model is **already stubbed** in the
-   `Settings` type (`src/theme.ts` → `profile`, `integrations`). Add a localhost
-   `GET /api/settings.json`, dashboard UI, and reuse `src/twitch-oauth.ts` as the OAuth pattern.
-   Tokens stay in `secrets.json`; only `connected` booleans surface.
-4. **G1/G2 Share page + OG/Twitter cards** — shareable page with OG meta + server-rendered preset
+5. **G1/G2 Share page + OG/Twitter cards** — shareable page with OG meta + server-rendered preset
    share images (daily stats / "join VibeLog").
-5. **Doc reconciliation** — `README.md` is stale (says "no Gemini" but `src/summarize.ts` uses it;
+6. **Doc reconciliation** — `README.md` is stale (says "no Gemini" but `src/summarize.ts` uses it;
    file map omits ~9 modules). `V0_SPEC.md`/`PRD.md`/`NEXT_STEPS.md` describe older directions;
    mark historical. Add an in-repo `CLAUDE.md` (streaming-safety block is in `INFRA_PLAN.md §4`)
    and a keyless `.env.example`.
-6. **LATER (needs design + a user decision first — ask before building):** Discord server
+7. **LATER (needs design + a user decision first — ask before building):** Discord server
    create/manage + suggestion-box front-end, Twitter auto-post, embeddable widget, VibeLog MCP,
    hosted accounts / Google login. See `docs/VISION.md §3.4–3.5`.
 
