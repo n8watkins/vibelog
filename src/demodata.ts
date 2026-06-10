@@ -230,6 +230,14 @@ export function demoWeek(end = new Date()) {
   };
 }
 
+/** Fake but plausible channel growth for the demo dashboard's social panel. */
+export function demoSocialGrowth(): Record<string, { followers: number; views?: number; deltaWeek: number; deltaMonth: number; series: { date: string; followers: number }[] }> {
+  return {
+    twitch: { followers: 1240, deltaWeek: 38, deltaMonth: 162, series: [] },
+    youtube: { followers: 3210, views: 142_000, deltaWeek: 21, deltaMonth: 240, series: [] },
+  };
+}
+
 /** A plausible "today" summary consistent with the demo year's last day. */
 export function demoToday(end = new Date()) {
   const d = demoWeek(end).days.at(-1)!;

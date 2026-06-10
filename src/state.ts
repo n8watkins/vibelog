@@ -54,6 +54,22 @@ export type BuildLogEntry = {
 /** A project in the overlay ticker — ranked, [0] is the one in focus now. */
 export type ProjectTick = { name: string; status: "active" | "idle"; note?: string };
 
+/** Public-safe social stats for one channel (all numbers are already public). */
+export type SocialChannel = {
+  live: boolean;
+  followers?: number;
+  views?: number;
+  viewers?: number;
+  url?: string;
+};
+
+/** Live status + audience counts across platforms, shown on the overlay/dashboard. */
+export type SocialState = {
+  twitch?: SocialChannel;
+  youtube?: SocialChannel;
+  updatedAt: string;
+};
+
 export type LiveState = {
   isLive: boolean;
   /** True while OBS reports an active stream output (from the obs-websocket bridge). */
@@ -66,6 +82,8 @@ export type LiveState = {
   /** Newest first, capped to BUILD_LOG_MAX entries. */
   buildLog: BuildLogEntry[];
   stats: LiveStats;
+  /** Live status + follower/sub counts (Twitch/YouTube), or null if unconfigured. */
+  social: SocialState | null;
   branch: string | null;
   startedAt: string | null;
   updatedAt: string;
@@ -101,6 +119,7 @@ export function emptyState(): LiveState {
     nowBuilding: null,
     buildLog: [],
     stats: emptyStats(),
+    social: null,
     branch: null,
     startedAt: null,
     updatedAt: new Date().toISOString(),

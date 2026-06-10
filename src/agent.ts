@@ -15,15 +15,17 @@ import {
   type LiveState,
 } from "./state.ts";
 import { appendEvent, readConfig, readSession, writeSession, writeState, type Session } from "./store.ts";
-import { demoDashboard, demoToday, demoWeek } from "./demodata.ts";
+import { demoDashboard, demoToday, demoWeek, demoSocialGrowth } from "./demodata.ts";
 import { getProjectActivity, type ProjectActivity } from "./projects.ts";
 import { summarize } from "./summarize.ts";
 import { connectOBS, type OBSHandle } from "./obs.ts";
 import { streamMinutesByDay } from "./stream.ts";
 import { readSecrets } from "./secrets.ts";
+import { fetchSocial, socialGrowth } from "./social.ts";
 
 const GIT_POLL_MS = 5_000;
 const TOKEN_POLL_MS = 30_000;
+const SOCIAL_POLL_MS = 180_000;
 
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
 const OVERLAY_FILE = path.join(PUBLIC_DIR, "overlay.html");
@@ -140,6 +142,25 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     state.stats.claudeTokens = tok.tokens;
     state.stats.costUsd = cost.tokens;
     render();
+  }
+
+  // Live status + audience counts (Twitch/YouTube). Snapshots followers once per
+  // day to the event log so the dashboard can chart channel growth over time.
+  let lastSnapDay = "";
+  async function pollSocial(): Promise<void> {
+    const social = await fetchSocial();
+    if (!social) return; // no channels configured
+    state.social = social;
+    render();
+    const day = localDateString();
+    if (day === lastSnapDay) return;
+    lastSnapDay = day;
+    for (const platform of ["twitch", "youtube"] as const) {
+      const ch = social[platform];
+      if (ch?.followers != null) {
+        await appendEvent({ type: "social_snapshot", platform, followers: ch.followers, views: ch.views ?? null });
+      }
+    }
   }
 
   // Per-day usage is for the dashboard heatmap only and barely changes, but the
@@ -340,6 +361,8 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
             usageByDay: dd.usageByDay,
             projects: dd.projects,
             activeProject: dd.activeProject,
+            social: state.social,
+            socialGrowth: demoSocialGrowth(),
             socials: { twitch: "https://twitch.tv/yourchannel", youtube: "https://youtube.com/@yourchannel" },
           });
           return;
@@ -400,6 +423,8 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
           usageByDay,
           projects: activity.projects,
           activeProject: sel?.name ?? null,
+          social: state.social,
+          socialGrowth: socialGrowth(events),
           socials: await readConfig().then((c) => ({ twitch: c?.twitch ?? null, youtube: c?.youtube ?? null })),
         });
         return;
@@ -481,9 +506,11 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     void pollTokens();
     void refreshHistory();
     void connectStreamCapture();
+    void pollSocial();
     timers.push(setInterval(() => void pollGit(), GIT_POLL_MS));
     timers.push(setInterval(() => void pollTokens(), TOKEN_POLL_MS));
     timers.push(setInterval(() => void refreshHistory(), 60_000));
+    timers.push(setInterval(() => void pollSocial(), SOCIAL_POLL_MS));
   }
 
   const shutdown = () => {
@@ -558,6 +585,12 @@ function runDemoLoop(
   state.stats.claudeTokens = 120_000;
   state.stats.costUsd = 0.4;
   state.stats.streak = 6;
+  state.streaming = true;
+  state.social = {
+    twitch: { live: true, followers: 1240, viewers: 87, url: "https://twitch.tv/yourchannel" },
+    youtube: { live: false, followers: 3210, views: 142_000, url: "https://youtube.com/@yourchannel" },
+    updatedAt: new Date().toISOString(),
+  };
   session.features = 1;
   session.bugs = 0;
   session.subAgents = 1;

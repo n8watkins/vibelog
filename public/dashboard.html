@@ -73,9 +73,24 @@
         margin: 0 0 13px; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700;
         color: var(--accent); text-shadow: 0 0 10px rgba(160, 107, 255, 0.5);
       }
-      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; flex: 1; min-height: 0; }
+      .row { display: grid; grid-template-columns: 1.1fr 1.1fr 0.95fr; gap: 13px; flex: 1; min-height: 0; }
       .row .panel { display: flex; flex-direction: column; }
       @media (max-width: 760px) { .row { grid-template-columns: 1fr; } }
+
+      /* channel panel */
+      .chan { display: flex; flex-direction: column; gap: 14px; }
+      .chan .c { display: flex; align-items: center; gap: 10px; }
+      .chan .badge { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; flex: 0 0 30px; }
+      .chan .badge.tw { background: rgba(145, 70, 255, 0.15); color: #b794ff; } .chan .badge.yt { background: rgba(255, 0, 51, 0.14); color: #ff6b81; }
+      .chan .badge svg { width: 16px; height: 16px; fill: currentColor; }
+      .chan .meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+      .chan .nm { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+      .chan .livetag { font-size: 9px; font-weight: 800; letter-spacing: 0.08em; color: #fff; background: var(--live); padding: 2px 6px; border-radius: 5px; box-shadow: 0 0 10px rgba(255,77,94,0.55); }
+      .chan .off { font-size: 9px; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+      .chan .figs { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+      .chan .figs b { color: var(--text); font-size: 14px; }
+      .chan .up { color: var(--add); } .chan .empty { color: var(--muted); font-size: 13px; line-height: 1.5; }
+      .chan .empty code { color: #c9aaff; font-family: var(--mono); font-size: 11px; }
 
       .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 18px; }
       @media (max-width: 620px) { .stats { grid-template-columns: repeat(2, 1fr); } }
@@ -217,6 +232,10 @@
           <div class="week" id="week"></div>
           <div class="chips" id="weekTotals" style="margin-top:14px"></div>
         </div>
+        <div class="panel">
+          <h3>Channel</h3>
+          <div id="social"></div>
+        </div>
       </div>
     </div>
 
@@ -356,6 +375,42 @@
         set("yt", s?.youtube);
       }
 
+      const SOCIAL_SVG = {
+        twitch: '<svg viewBox="0 0 24 24"><path d="M4 2 2.5 6v14h5v3h3l3-3h4L23 13V2H4Zm17 10-3 3h-5l-3 3v-3H6V4h15v8Z"/><path d="M16 7h2v5h-2zm-5 0h2v5h-2z"/></svg>',
+        youtube: '<svg viewBox="0 0 24 24"><path d="M23 7.5a3 3 0 0 0-2.1-2.1C19 5 12 5 12 5s-7 0-8.9.4A3 3 0 0 0 1 7.5 31 31 0 0 0 .6 12 31 31 0 0 0 1 16.5a3 3 0 0 0 2.1 2.1C5 19 12 19 12 19s7 0 8.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 23.4 12 31 31 0 0 0 23 7.5ZM9.8 15.3V8.7l5.7 3.3-5.7 3.3Z"/></svg>',
+      };
+      const NMS = { twitch: "Twitch", youtube: "YouTube" };
+      const compact = (n) => n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e4 ? (n/1e3).toFixed(0)+"k" : n.toLocaleString();
+
+      // Channel panel: live status + follower/sub counts + weekly growth.
+      function renderSocial(social, growth) {
+        const el = $("social");
+        el.innerHTML = "";
+        const platforms = ["twitch", "youtube"].filter((p) => social && social[p]);
+        if (!platforms.length) {
+          el.innerHTML = `<div class="empty">No channel connected. Add <code>twitch</code> / <code>youtube</code> creds to <code>~/.vibelog/secrets.json</code> to track live status &amp; growth.</div>`;
+          return;
+        }
+        const wrap = document.createElement("div"); wrap.className = "chan";
+        for (const p of platforms) {
+          const ch = social[p]; const g = (growth || {})[p] || {};
+          const foll = ch.followers ?? g.followers;
+          const delta = g.deltaWeek || 0;
+          const label = p === "youtube" ? "subs" : "followers";
+          const row = document.createElement("div"); row.className = "c";
+          row.innerHTML =
+            `<span class="badge ${p === "twitch" ? "tw" : "yt"}">${SOCIAL_SVG[p]}</span>` +
+            `<div class="meta">` +
+              `<div class="nm">${NMS[p]} ${ch.live ? `<span class="livetag">LIVE${ch.viewers != null ? " · " + compact(ch.viewers) : ""}</span>` : '<span class="off">offline</span>'}</div>` +
+              `<div class="figs">${foll != null ? `<b>${compact(foll)}</b> ${label}` : "—"}` +
+                `${delta ? ` <span class="up">+${compact(delta)}/wk</span>` : ""}` +
+                `${ch.views != null ? ` · ${compact(ch.views)} views` : ""}</div>` +
+            `</div>`;
+          wrap.append(row);
+        }
+        el.append(wrap);
+      }
+
       function renderWeek(w) {
         const max = Math.max(1, ...w.days.map((d) => d.activeMinutes));
         const el = $("week");
@@ -444,13 +499,15 @@
           const url = `/api/dashboard.json?days=${DAYS_SEL}&project=${encodeURIComponent(PROJ_SEL)}`;
           const d = await (await fetch(url, { cache: "no-store" })).json();
           const live = d.live || {};
-          $("liveText").textContent = live.isLive ? "Live" : "Offline";
-          $("livePill").className = "pill" + (live.isLive ? " live" : "");
+          const onAir = !!(live.streaming || live.social?.twitch?.live || live.social?.youtube?.live);
+          $("liveText").textContent = onAir ? "Live" : "Offline";
+          $("livePill").className = "pill" + (onAir ? " live" : "");
           const proj = live.project?.name || live.sessionTitle;
           $("subtitle").textContent = (proj ? proj : "No active session")
             + (live.nowBuilding?.title ? "  ·  › " + live.nowBuilding.title : "")
             + (live.branch ? `   · ${live.branch}` : "");
           renderSocials(d.socials);
+          renderSocial(live.social, d.socialGrowth);
           renderProjects(d.projects, d.activeProject);
           renderToday(d.today, live);
           renderWeek(d.week);
