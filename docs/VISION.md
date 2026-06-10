@@ -108,9 +108,11 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 
 - **X1 [NEXT] — Deploy guide.** Step-by-step for deploying the public dashboard (Vercel or similar)
   while keeping the overlay local. Clarify what runs where (local agent vs. hosted read-only view).
-- **X2 [NOW-ISH] — Landing page.** A marketing landing page that sells VibeLog: keep the neon
-  design, go all out on copy, show off everything (stream what you build, integrations, sharing,
-  auto-post, token tracking), heavy use of icons. Static, no backend needed.
+- **X2 [DONE] — Landing page.** Static marketing page at `GET /landing` (`public/landing.html`),
+  reusing the shared neon palette/aurora/travelling-gradient rings. Sticky nav, hero with a mocked
+  overlay, 12-card feature grid, three-step setup, the three surfaces, a privacy band, a theming
+  preset strip, final CTA + footer; heavy inline-SVG icons; OG/Twitter meta. No backend, no existing
+  route changed (`/` stays the OBS overlay).
 - **X3 [LATER] — VibeLog MCP.** Ship VibeLog's own MCP server so the Claude desktop app can read
   and modify VibeLog (settings, theme, profile) directly. Next-level; needs the settings API
   (S1) to exist first.

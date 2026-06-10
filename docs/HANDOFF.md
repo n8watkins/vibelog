@@ -66,8 +66,9 @@ In rough priority, with entry points:
 1. **T4/T5 theming polish** — broaden custom-var coverage + a per-page (sync-off) edit UI in the
    dashboard Settings sheet. Backend + resolver already support per-page; only the UI is missing.
    Files: `public/dashboard.html` (Settings module near the bottom `<script>`), `src/theme.ts`.
-2. **X2 Landing page** — a marketing page selling VibeLog (neon design, big copy, icons). Static,
-   **no backend** → fully parallelizable, good first subagent task. New file under `public/`.
+2. **X2 Landing page** — ✅ DONE. Shipped at `GET /landing` (`public/landing.html`): static neon
+   marketing page (hero + mocked overlay, 12-feature grid, 3-step setup, surfaces, privacy band,
+   theming strip, CTA, footer), OG/Twitter meta. `/` still serves the OBS overlay.
 3. **S2/S3 Profile + Integrations hub** — profile fields (bio/Twitter/channel header) + connect
    Twitch/YouTube/Discord/GitHub from the dashboard. Data model is **already stubbed** in the
    `Settings` type (`src/theme.ts` → `profile`, `integrations`). Add a localhost
