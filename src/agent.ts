@@ -17,6 +17,7 @@ import {
 import { appendEvent, readConfig, readSession, writeSession, writeState, type Session } from "./store.ts";
 import { demoDashboard, demoToday, demoWeek } from "./demodata.ts";
 import { getProjectActivity, type ProjectActivity } from "./projects.ts";
+import { summarize } from "./summarize.ts";
 
 const GIT_POLL_MS = 5_000;
 const TOKEN_POLL_MS = 30_000;
@@ -197,21 +198,37 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
   // ---- claude hooks (dumb script in, smart agent here) ---------------------
 
-  /** UserPromptSubmit → set "Now Building" from a sanitized first line. */
+  /**
+   * UserPromptSubmit → set "Now Building". We respond fast with a sanitized
+   * first line (so the overlay updates instantly and Claude is never blocked),
+   * then refine it in the background with a generated feature label from the
+   * summarizer (Gemini 3.1 Flash-Lite, template fallback). The raw prompt is
+   * never persisted or sent to LiveState; only the redacted label is.
+   */
   async function onPrompt(rawPrompt: string): Promise<void> {
     const firstLine = rawPrompt.split("\n").map((l) => l.trim()).find(Boolean) ?? "";
     const title = redact(firstLine).slice(0, 120);
     session!.prompts += 1;
     await appendEvent({ type: "prompt_submitted", title });
-    if (!title) {
+    const mode = session!.nowBuilding?.mode ?? "coding";
+    if (title) {
+      session!.nowBuilding = { title, mode };
       await persistSession();
       render();
-      return;
+      void refreshHistory();
+    } else {
+      await persistSession();
+      render();
     }
-    session!.nowBuilding = { title, mode: session!.nowBuilding?.mode ?? "coding" };
-    await persistSession();
-    render();
-    void refreshHistory();
+
+    // Refine asynchronously — upgrade the title to the generated feature label.
+    void summarize(rawPrompt).then((s) => {
+      const label = redact(s.text).slice(0, 140);
+      if (!label) return;
+      session!.nowBuilding = { title: label, mode };
+      void persistSession();
+      render();
+    });
   }
 
   /** PostToolUse → log + refresh git promptly so stats feel live after edits.
