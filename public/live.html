@@ -12,6 +12,9 @@
         --accent2: #22d3a6;
         --pink: #ff5cf0;
         --live: #ff4d5e;
+        --bg: #07060e;
+        --g1: var(--accent); --g2: var(--pink); --g3: var(--accent2);
+        --aurora1: #3a1d7a; --aurora2: #0f3a44;
         --glass: linear-gradient(165deg, rgba(38, 22, 72, 0.55), rgba(14, 11, 28, 0.62));
         --border: rgba(167, 134, 255, 0.30);
         --glow: 0 0 22px rgba(160, 107, 255, 0.22);
@@ -22,7 +25,7 @@
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
       body {
-        font-family: var(--font); color: var(--text); background: #07060e;
+        font-family: var(--font); color: var(--text); background: var(--bg, #07060e);
         min-height: 100vh; overflow-x: hidden;
       }
 
@@ -37,12 +40,12 @@
       }
       body::before {
         width: 65vw; height: 65vw; top: -25vw; right: -12vw;
-        background: radial-gradient(circle, #3a1d7a, transparent 65%);
+        background: radial-gradient(circle, var(--aurora1, #3a1d7a), transparent 65%);
         animation: drift1 28s ease-in-out infinite alternate;
       }
       body::after {
         width: 60vw; height: 60vw; bottom: -28vw; left: -14vw;
-        background: radial-gradient(circle, #0f3a44, transparent 65%);
+        background: radial-gradient(circle, var(--aurora2, #0f3a44), transparent 65%);
         animation: drift2 34s ease-in-out infinite alternate;
       }
       @keyframes drift1 { from { transform: translate(0,0) scale(1); } to { transform: translate(-9vw,11vh) scale(1.18); } }
@@ -92,10 +95,17 @@
       }
       .glass::after {
         content: ""; position: absolute; inset: 0; border-radius: var(--radius); padding: 1.5px;
-        background: conic-gradient(from var(--vlangle), transparent 30%, var(--accent) 50%, var(--pink) 64%, var(--accent2) 76%, transparent 92%);
+        background: conic-gradient(from calc(var(--vlangle) + var(--vlstart, 0deg)), transparent 30%, var(--g1) 50%, var(--g2) 64%, var(--g3) 76%, transparent 92%);
+        filter: hue-rotate(var(--vlhue, 0deg));
         -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-        -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; animation: vlspin 10s linear infinite;
+        -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+        animation: vlspin var(--vldur, 28s) linear infinite; animation-delay: var(--vldelay, 0s);
       }
+      /* desync each panel/tile across four axes so they never lock in step */
+      .glass:nth-of-type(4n+1)::after { --vlstart: 0deg;   --vlhue: 0deg;   --vldur: 24s; --vldelay: 0s; }
+      .glass:nth-of-type(4n+2)::after { --vlstart: 120deg; --vlhue: 52deg;  --vldur: 29s; --vldelay: -9s;  animation-direction: reverse; }
+      .glass:nth-of-type(4n+3)::after { --vlstart: 240deg; --vlhue: -46deg; --vldur: 33s; --vldelay: -17s; }
+      .glass:nth-of-type(4n)::after   { --vlstart: 60deg;  --vlhue: 28deg;  --vldur: 37s; --vldelay: -25s; animation-direction: reverse; }
 
       /* ---- stat tiles ---- */
       .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }

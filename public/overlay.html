@@ -13,6 +13,9 @@
         --accent: #a06bff;
         --accent2: #22d3a6;
         --pink: #ff5cf0;
+        --bg: #07060e;
+        /* gradient-ring stops — default to the accents; a theme can override */
+        --g1: var(--accent); --g2: var(--pink); --g3: var(--accent2);
         --radius: 16px;
         --gap: 14px;
         --glow: 0 0 22px rgba(160, 107, 255, 0.35);
@@ -32,7 +35,7 @@
         background:
           radial-gradient(1000px 600px at 72% 8%, #2c1a5e, transparent),
           radial-gradient(800px 600px at 12% 95%, #10303a, transparent),
-          #07060e;
+          var(--bg, #07060e);
       }
 
       #hud {
@@ -77,17 +80,21 @@
         background: linear-gradient(90deg, transparent, var(--accent), var(--pink), transparent); opacity: 0.8;
         z-index: 1;
       }
-      /* the travelling gradient ring */
+      /* the travelling gradient ring — desynced per card across four axes so the
+         cards never move in lockstep: different start corner (--vlstart), color
+         family (--vlhue), speed (--vldur) and phase (--vldelay). */
       .card::after {
         content: ""; position: absolute; inset: 0; border-radius: var(--radius); padding: 1.5px;
-        background: conic-gradient(from var(--vlangle), transparent 30%, var(--accent) 50%, var(--pink) 62%, var(--accent2) 74%, transparent 90%);
+        background: conic-gradient(from calc(var(--vlangle) + var(--vlstart, 0deg)), transparent 30%, var(--g1) 50%, var(--g2) 62%, var(--g3) 74%, transparent 90%);
+        filter: hue-rotate(var(--vlhue, 0deg));
         -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
         -webkit-mask-composite: xor; mask-composite: exclude;
-        pointer-events: none; animation: vlspin 8s linear infinite;
+        pointer-events: none; animation: vlspin var(--vldur, 26s) linear infinite;
+        animation-delay: var(--vldelay, 0s);
       }
-      .card.projects::after { animation-duration: 7s; }
-      .card.now::after { animation-duration: 11s; animation-direction: reverse; }
-      .card.stats::after { animation-duration: 9s; animation-delay: -3s; }
+      .card.projects::after { --vlstart: 0deg;   --vlhue: 0deg;   --vldur: 23s; --vldelay: 0s; }
+      .card.now::after      { --vlstart: 140deg; --vlhue: 58deg;  --vldur: 31s; --vldelay: -11s; animation-direction: reverse; }
+      .card.stats::after    { --vlstart: 250deg; --vlhue: -46deg; --vldur: 27s; --vldelay: -19s; }
       .card.projects { flex: 0 0 270px; }
       .card.now { flex: 1; }
       .card.stats { flex: 0 0 300px; }

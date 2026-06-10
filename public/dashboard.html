@@ -18,16 +18,22 @@
         --card: rgba(255, 255, 255, 0.035);
         --border: rgba(167, 134, 255, 0.30);
         --glow: 0 0 22px rgba(160, 107, 255, 0.22);
+        --bg: #07060e;
+        --g1: var(--accent); --g2: var(--pink); --g3: var(--accent2);
+        --aurora1: #3a1d7a; --aurora2: #0f3a44;
         --radius: 16px;
         --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
         --l0: #241b3a; --l1: #3a2d6e; --l2: #6a4bd0; --l3: #a06bff; --l4: #ff5cf0;
       }
+      /* animatable angle for the travelling gradient ring (Chromium @property) */
+      @property --vlangle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+      @keyframes vlspin { to { --vlangle: 360deg; } }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; }
       body {
         font-family: var(--font); color: var(--text);
-        background: #07060e; overflow: hidden;
+        background: var(--bg, #07060e); overflow: hidden;
       }
       /* drifting aurora blobs — the overlay vibe, alive */
       body::before, body::after {
@@ -36,12 +42,12 @@
       }
       body::before {
         width: 60vw; height: 60vw; top: -22vw; right: -10vw;
-        background: radial-gradient(circle, #3a1d7a, transparent 65%);
+        background: radial-gradient(circle, var(--aurora1, #3a1d7a), transparent 65%);
         animation: drift1 26s ease-in-out infinite alternate;
       }
       body::after {
         width: 55vw; height: 55vw; bottom: -24vw; left: -12vw;
-        background: radial-gradient(circle, #0f3a44, transparent 65%);
+        background: radial-gradient(circle, var(--aurora2, #0f3a44), transparent 65%);
         animation: drift2 32s ease-in-out infinite alternate;
       }
       @keyframes drift1 { from { transform: translate(0, 0) scale(1); } to { transform: translate(-8vw, 10vh) scale(1.15); } }
@@ -68,7 +74,22 @@
       .panel::before {
         content: ""; position: absolute; top: 0; left: 16px; right: 16px; height: 1.5px;
         background: linear-gradient(90deg, transparent, var(--accent), var(--pink), transparent); opacity: 0.75;
+        z-index: 1;
       }
+      /* travelling gradient ring — desynced per panel across four axes */
+      .panel::after {
+        content: ""; position: absolute; inset: 0; border-radius: var(--radius); padding: 1.5px;
+        background: conic-gradient(from calc(var(--vlangle) + var(--vlstart, 0deg)), transparent 32%, var(--g1) 50%, var(--g2) 63%, var(--g3) 75%, transparent 91%);
+        filter: hue-rotate(var(--vlhue, 0deg));
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+        animation: vlspin var(--vldur, 30s) linear infinite; animation-delay: var(--vldelay, 0s);
+        opacity: 0.85;
+      }
+      .panel:nth-of-type(4n+1)::after { --vlstart: 0deg;   --vlhue: 0deg;   --vldur: 25s; --vldelay: 0s; }
+      .panel:nth-of-type(4n+2)::after { --vlstart: 120deg; --vlhue: 54deg;  --vldur: 31s; --vldelay: -10s; animation-direction: reverse; }
+      .panel:nth-of-type(4n+3)::after { --vlstart: 240deg; --vlhue: -48deg; --vldur: 35s; --vldelay: -18s; }
+      .panel:nth-of-type(4n)::after   { --vlstart: 60deg;  --vlhue: 26deg;  --vldur: 39s; --vldelay: -27s; animation-direction: reverse; }
       .panel h3 {
         margin: 0 0 13px; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 700;
         color: var(--accent); text-shadow: 0 0 10px rgba(160, 107, 255, 0.5);
