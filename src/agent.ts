@@ -385,6 +385,17 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         return;
       }
 
+      // Full persisted theme settings (sync flag + shared + per-page themes) for
+      // the dashboard's Settings sheet. LOCALHOST ONLY — not in PUBLIC_GET_ROUTES,
+      // so the isRemote gate above 403s any tunneled/LAN caller. Only the `theme`
+      // sub-tree is returned; profile/integrations/secrets are never exposed.
+      if (req.method === "GET" && route === "/api/settings.json") {
+        const s = await readSettings();
+        const theme = s?.theme ?? { sync: true, shared: {} };
+        sendJson(res, 200, { theme });
+        return;
+      }
+
       // Private dashboard (localhost) — a richer browser view than the CLI.
       if (req.method === "GET" && route === "/dashboard") {
         const html = await readFile(DASHBOARD_FILE, "utf8");

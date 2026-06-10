@@ -206,10 +206,13 @@
       .sw .bar { height: 22px; border-radius: 6px; display: flex; overflow: hidden; }
       .sw .bar i { flex: 1; }
       .sw .nm { display: block; font-size: 9.5px; text-align: center; margin-top: 5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .colorrow { display: flex; flex-wrap: wrap; gap: 14px; }
-      .colorrow .ci { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+      .colorrow { display: flex; flex-wrap: wrap; gap: 12px 14px; }
+      .colorrow .ci { display: flex; flex-direction: column; gap: 5px; align-items: center; width: 58px; }
       .colorrow .ci span { font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
       .colorrow input[type=color] { width: 40px; height: 30px; border: 1px solid var(--border); border-radius: 8px; background: none; cursor: pointer; padding: 2px; }
+      .colorrow input.hex { width: 58px; font: 11px ui-monospace, monospace; text-align: center; color: var(--text); background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 6px; padding: 3px 2px; text-transform: lowercase; }
+      .colorrow input.hex:focus { outline: none; border-color: var(--accent); }
+      .pageseg { margin-bottom: 2px; }
       .sheet-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
       .sheet-actions .grow { flex: 1; }
       .btn { font: inherit; font-size: 13px; font-weight: 700; padding: 8px 15px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer; transition: border-color 0.15s, background 0.15s; }
@@ -306,13 +309,22 @@
           <button class="x" id="closeSettings" aria-label="Close">&times;</button>
         </div>
 
+        <div class="field" id="pageField" style="display:none">
+          <label>Editing page <span class="hint">— style each surface separately</span></label>
+          <div class="seg pageseg" id="pageSeg">
+            <button data-page="overlay">Overlay</button>
+            <button data-page="live">Live</button>
+            <button data-page="dashboard" class="on">Dashboard</button>
+          </div>
+        </div>
+
         <div class="field">
           <label>Presets <span class="hint">— pick a vibe; it re-skins everything</span></label>
           <div class="swatches" id="swatches"></div>
         </div>
 
         <div class="field">
-          <label>Custom colors</label>
+          <label>Custom colors <span class="hint">— click a swatch or type a hex</span></label>
           <div class="colorrow" id="colorrow"></div>
         </div>
 
@@ -633,17 +645,26 @@
       });
 
       // ───────────────────────── theme & settings ─────────────────────────
-      // `work` is the theme being edited (full var set); we preview by applying
-      // it to :root live, and only POST it on Save.
+      // Editing model. When `sync` is on we edit one `shared` theme; when off we
+      // edit `perPage[selPage]` independently per surface. `cur()` is the full
+      // var set currently being edited; we preview it on :root live, POST on Save.
+      const PAGES = ["overlay", "live", "dashboard"];
       let PRESETS = [];
-      let work = {};
-      let savedTheme = null;       // last persisted { sync, shared, presetId }
-      let activePreset = null;
+      let sync = true;
+      let shared = {};                         // theme used when sync is on
+      let perPage = { overlay: {}, live: {}, dashboard: {} }; // per-surface themes
+      let selPage = "dashboard";               // surface being edited when sync off
+      let presetId = null;                     // saved shared preset (UI highlight)
+      let activePreset = null;                 // preset matching the current target
       const COLOR_FIELDS = [
         { key: "--accent", label: "Accent" },
         { key: "--accent2", label: "Secondary" },
         { key: "--pink", label: "Highlight" },
         { key: "--bg", label: "Background" },
+        { key: "--text", label: "Text" },
+        { key: "--muted", label: "Muted" },
+        { key: "--aurora1", label: "Aurora 1" },
+        { key: "--aurora2", label: "Aurora 2" },
       ];
       // normalize a CSS color to #rrggbb for <input type=color> (best-effort).
       const toHex = (c) => {
@@ -655,15 +676,18 @@
         return "#" + m.slice(0, 3).map((n) => (+n).toString(16).padStart(2, "0")).join("");
       };
 
-      function preview() { applyTheme("dashboard", work); }
+      // The theme object currently being edited.
+      const cur = () => (sync ? shared : perPage[selPage]);
+      function preview() { applyTheme("dashboard", cur()); }
 
       // Custom colors drive the matching gradient-ring stop too, so the ring
       // re-colors with the palette instead of lagging on the old accents.
       function setVar(key, val) {
-        work[key] = val;
-        if (key === "--accent") work["--g1"] = val;
-        if (key === "--pink") work["--g2"] = val;
-        if (key === "--accent2") work["--g3"] = val;
+        const t = cur();
+        t[key] = val;
+        if (key === "--accent") t["--g1"] = val;
+        if (key === "--pink") t["--g2"] = val;
+        if (key === "--accent2") t["--g3"] = val;
       }
 
       function renderSwatches() {
@@ -676,29 +700,49 @@
         }).join("");
       }
       function renderColors() {
-        $("colorrow").innerHTML = COLOR_FIELDS.map((f) =>
-          `<label class="ci"><input type="color" data-key="${f.key}" value="${toHex(work[f.key])}"><span>${f.label}</span></label>`
-        ).join("");
+        const t = cur();
+        $("colorrow").innerHTML = COLOR_FIELDS.map((f) => {
+          const hex = toHex(t[f.key]);
+          return `<label class="ci"><input type="color" data-key="${f.key}" value="${hex}"><input type="text" class="hex" data-key="${f.key}" value="${hex}" maxlength="7" spellcheck="false"><span>${f.label}</span></label>`;
+        }).join("");
+      }
+      function renderAll() { renderSwatches(); renderColors(); }
+
+      // Reflect the sync flag: show/hide the per-page selector + update the note.
+      function updateMode() {
+        $("pageField").style.display = sync ? "none" : "block";
+        for (const b of $("pageSeg").querySelectorAll("button")) b.classList.toggle("on", b.dataset.page === selPage);
+        $("sheetNote").textContent = sync
+          ? "Changes preview live. Save to apply to your overlay & /live."
+          : `Editing the ${selPage} theme — each page is styled separately. Save to apply.`;
       }
 
       function applyPreset(p) {
         activePreset = p.id;
-        work = { ...p.vars };
-        renderSwatches(); renderColors(); preview();
+        const v = { ...p.vars };
+        if (sync) shared = v; else perPage[selPage] = v;
+        renderAll(); preview();
       }
 
       async function openSettings() {
         if (!PRESETS.length) {
           try { PRESETS = (await (await fetch("/api/presets.json")).json()).presets || []; } catch {}
         }
-        // seed the editor from whatever is currently live on the server
-        try {
-          const t = (await (await fetch("/api/theme.json?page=dashboard", { cache: "no-store" })).json());
-          work = { ...t.vars };
-        } catch { work = {}; }
-        activePreset = savedTheme?.presetId ?? null;
-        $("syncToggle").checked = savedTheme ? savedTheme.sync !== false : true;
-        renderSwatches(); renderColors();
+        // a full default var set, used to back-fill any partial saved theme
+        let base = {};
+        try { base = (await (await fetch("/api/theme.json?page=dashboard", { cache: "no-store" })).json()).vars || {}; } catch {}
+        // load the persisted theme settings (localhost-only route)
+        let st = null;
+        try { st = (await (await fetch("/api/settings.json", { cache: "no-store" })).json()).theme; } catch {}
+        sync = st ? st.sync !== false : true;
+        shared = (st && st.shared && Object.keys(st.shared).length) ? { ...base, ...st.shared } : { ...base };
+        perPage = {};
+        for (const p of PAGES) perPage[p] = st?.perPage?.[p] ? { ...base, ...st.perPage[p] } : { ...shared };
+        presetId = st?.presetId ?? null;
+        selPage = "dashboard";
+        activePreset = sync ? presetId : null;
+        $("syncToggle").checked = sync;
+        updateMode(); renderAll(); preview();
         $("settingsModal").classList.add("open");
         $("settingsModal").setAttribute("aria-hidden", "false");
       }
@@ -716,10 +760,30 @@
         const p = PRESETS.find((x) => x.id === el.dataset.id); if (p) applyPreset(p);
       });
       $("colorrow").addEventListener("input", (e) => {
-        const inp = e.target.closest("input[type=color]"); if (!inp) return;
-        activePreset = null; setVar(inp.dataset.key, inp.value);
+        const t = e.target; const key = t.dataset && t.dataset.key; if (!key) return;
+        let val = t.value.trim();
+        if (t.type === "text") {
+          if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(val)) return; // wait for a valid hex
+          if (val.length === 4) val = "#" + val.slice(1).split("").map((c) => c + c).join("");
+        }
+        activePreset = null; setVar(key, val);
+        // keep the color picker and hex box in lockstep
+        const ci = t.closest(".ci");
+        if (t.type === "color") ci.querySelector("input.hex").value = val;
+        else ci.querySelector("input[type=color]").value = val;
         for (const x of document.querySelectorAll(".sw")) x.classList.remove("on");
         preview();
+      });
+      $("pageSeg").addEventListener("click", (e) => {
+        const b = e.target.closest("button"); if (!b) return;
+        selPage = b.dataset.page; activePreset = null;
+        updateMode(); renderAll(); preview();
+      });
+      $("syncToggle").addEventListener("change", () => {
+        sync = $("syncToggle").checked;
+        if (!sync) for (const p of PAGES) perPage[p] = { ...shared }; // start each page from the shared look
+        activePreset = sync ? presetId : null;
+        updateMode(); renderAll(); preview();
       });
       $("randomize").onclick = () => {
         if (!PRESETS.length) return;
@@ -730,10 +794,11 @@
         if (def) applyPreset(def);
       };
       $("saveTheme").onclick = async () => {
-        const body = { theme: { sync: $("syncToggle").checked, shared: work, presetId: activePreset || undefined } };
+        const theme = { sync };
+        if (sync) { theme.shared = shared; theme.presetId = activePreset || undefined; }
+        else { theme.perPage = perPage; }
         try {
-          const r = await (await fetch("/api/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).json();
-          savedTheme = r.theme;
+          await (await fetch("/api/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ theme }) })).json();
           $("sheetNote").textContent = "Saved — your overlay & /live will update within ~10s.";
           setTimeout(closeSettings, 700);
         } catch {
