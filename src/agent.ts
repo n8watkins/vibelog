@@ -353,36 +353,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
   const timers: NodeJS.Timeout[] = [];
   if (opts.demo) {
-    // No git/ccusage — just animate plausible stats so the overlay looks alive.
-    state.branch = "main";
-    state.stats = { ...state.stats, linesAdded: 842, linesRemoved: 219, filesChanged: 13, commits: 4, features: 3, bugs: 2, claudeTokens: 1_240_000, costUsd: 4.12, subAgents: 2, prompts: 37, streak: 6, vibeScore: 462 };
-    render();
-    timers.push(setInterval(() => {
-      state.stats.linesAdded += Math.floor(Math.random() * 12);
-      const dt = Math.floor(Math.random() * 4000);
-      state.stats.claudeTokens += dt;
-      state.stats.costUsd += dt * 0.0000033;
-      render();
-    }, 2000));
-    // Stream new feed entries so the chat-style /live build feed visibly moves.
-    const demoMarks = [
-      "✨ added cost-per-session to the live HUD",
-      "🐛 fixed feed not auto-scrolling on new entry",
-      "✨ sub-agent counter wired to the Task hook",
-      "• switched activity chart to tokens/day",
-      "✨ chat feed streams newest at the bottom",
-      "🐛 guarded malformed request paths",
-    ];
-    let di = 0;
-    timers.push(setInterval(() => {
-      const text = demoMarks[di % demoMarks.length]!;
-      di++;
-      if (text.startsWith("✨")) state.stats.features += 1;
-      if (text.startsWith("🐛")) state.stats.bugs += 1;
-      session!.prompts += 1 + Math.floor(Math.random() * 2);
-      session!.buildLog = [{ text, ts: new Date().toISOString() }, ...session!.buildLog].slice(0, BUILD_LOG_MAX);
-      render();
-    }, 9000));
+    runDemoLoop(session, state, render, timers);
   } else {
     await pollGit();
     void pollTokens();
@@ -437,6 +408,84 @@ function demoSession(): Session {
 /** ISO timestamp `m` minutes ago — for plausible demo feed timestamps. */
 function ago(m: number): string {
   return new Date(Date.now() - m * 60_000).toISOString();
+}
+
+/**
+ * Fake but coherent demo data — a looping stream of features being built across
+ * a handful of projects, with the projects ticker reordering as focus shifts.
+ * Pure UI prototype (no git/ccusage/AI); the loop resets so it visibly restarts.
+ * Writes session-backed fields (nowBuilding/buildLog/features/prompts/subAgents)
+ * to `session` so render() carries them; stats render() doesn't own go on state.
+ */
+function runDemoLoop(
+  session: Session,
+  state: LiveState,
+  render: () => void,
+  timers: NodeJS.Timeout[],
+): void {
+  state.branch = "main";
+  const base = ["VibeLog", "pooled-engine", "ask-me-cutely", "date-planner", "website-template"];
+  state.projects = base.map((name, i) => ({
+    name,
+    status: i === 0 ? "active" : "idle",
+    note: i === 0 ? "now" : `${i * 7 + 3}m ago`,
+  }));
+  state.stats.commits = 4;
+  state.stats.claudeTokens = 120_000;
+  state.stats.costUsd = 0.4;
+  state.stats.streak = 6;
+  session.features = 1;
+  session.bugs = 0;
+  session.subAgents = 1;
+  session.prompts = 6;
+  session.nowBuilding = { title: "Live stats card on the overlay", mode: "coding" };
+  session.buildLog = [{ text: "Live stats card on the overlay", ts: new Date().toISOString() }];
+  render();
+
+  // Smooth token/cost burn so the numbers feel alive.
+  timers.push(setInterval(() => {
+    const dt = 800 + Math.floor(Math.random() * 3500);
+    state.stats.claudeTokens += dt;
+    state.stats.costUsd += dt * 0.0000033;
+    render();
+  }, 2000));
+
+  // The looping feature stream — each feature belongs to a project that bubbles
+  // to the top of the ticker when it's worked on.
+  const script: { project: string; feature: string }[] = [
+    { project: "pooled-engine", feature: "Batch warm-pool allocator" },
+    { project: "ask-me-cutely", feature: "Cuteness prompt rephraser" },
+    { project: "VibeLog", feature: "Projects ticker animation" },
+    { project: "date-planner", feature: "Itinerary auto-builder" },
+    { project: "pooled-engine", feature: "GPU autoscaling guardrails" },
+    { project: "ask-me-cutely", feature: "Emoji tone slider" },
+    { project: "VibeLog", feature: "Now-building generated feed" },
+    { project: "website-template", feature: "Dark-mode hero section" },
+  ];
+  let i = 0;
+  timers.push(setInterval(() => {
+    if (i > 0 && i % script.length === 0) {
+      // restart the loop so the demo visibly resets
+      session.buildLog = [];
+      session.features = 0;
+    }
+    const step = script[i % script.length]!;
+    i++;
+    session.features += 1;
+    session.prompts += 1 + Math.floor(Math.random() * 2);
+    if (Math.random() < 0.35) session.subAgents += 1;
+    if (Math.random() < 0.4) state.stats.commits += 1;
+    session.nowBuilding = { title: step.feature, mode: "coding" };
+    session.buildLog = [{ text: step.feature, ts: new Date().toISOString() }, ...session.buildLog].slice(0, 6);
+    // Bubble this project to the top; the rest slide down.
+    const moved = state.projects.find((p) => p.name === step.project) ?? { name: step.project, status: "active" as const };
+    const rest = state.projects.filter((p) => p.name !== step.project);
+    state.projects = [
+      { ...moved, status: "active", note: "now" },
+      ...rest.map((p, idx) => ({ ...p, status: "idle" as const, note: `${idx * 6 + 4}m ago` })),
+    ];
+    render();
+  }, 4500));
 }
 
 export type { Session };

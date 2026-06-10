@@ -10,27 +10,18 @@
         --border: rgba(167, 134, 255, 0.34);
         --text: #f3f0ff;
         --muted: #a99fce;
-        --accent: #a06bff;     /* neon purple */
+        --accent: #a06bff;
         --accent2: #22d3a6;
         --pink: #ff5cf0;
-        --add: #34e3b0;
-        --rem: #ff6b81;
         --radius: 16px;
         --gap: 14px;
         --glow: 0 0 22px rgba(160, 107, 255, 0.35);
         --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
       }
-
       * { box-sizing: border-box; }
-      html, body {
-        margin: 0; height: 100%;
-        background: transparent; /* OBS composites over your scene */
-        font-family: var(--font); color: var(--text);
-        overflow: hidden;
-      }
+      html, body { margin: 0; height: 100%; background: transparent; font-family: var(--font); color: var(--text); overflow: hidden; }
 
-      /* ?preview — fake stream scene so you can eyeball the HUD in a browser */
       body.preview {
         background:
           radial-gradient(1000px 600px at 72% 8%, #2c1a5e, transparent),
@@ -40,18 +31,15 @@
 
       #hud {
         position: fixed; left: 0; right: 0; bottom: 0;
-        display: flex; align-items: stretch; gap: var(--gap);
-        padding: 20px;
+        display: flex; align-items: stretch; gap: var(--gap); padding: 20px;
         opacity: 0; transform: translateY(10px);
         transition: opacity 0.45s ease, transform 0.45s ease;
       }
       #hud.live { opacity: 1; transform: none; }
 
-      /* ---- camera frame: neon-bordered space for your webcam ---------------- */
+      /* ---- camera frame ---------------------------------------------------- */
       .cam {
-        flex: 0 0 440px;       /* larger camera */
-        min-height: 210px;     /* taller HUD overall */
-        position: relative;
+        flex: 0 0 420px; min-height: 232px; position: relative;
         border-radius: var(--radius);
         border: 1.5px solid rgba(167, 134, 255, 0.55);
         box-shadow: var(--glow), inset 0 0 28px rgba(160, 107, 255, 0.12);
@@ -63,137 +51,120 @@
       }
       .cam::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; border-radius: 14px 0 0 0; }
       .cam::after { bottom: -2px; right: -2px; border-left: 0; border-top: 0; border-radius: 0 0 14px 0; }
-      .cam .tag {
-        position: absolute; top: 10px; left: 12px;
-        font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
-        color: var(--muted); display: flex; align-items: center; gap: 6px;
-      }
+      .cam .tag { position: absolute; top: 11px; left: 13px; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 6px; }
       .cam .tag .rec { width: 7px; height: 7px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 8px var(--pink); animation: pulse 1.4s infinite; }
       body.preview .cam { background: linear-gradient(135deg, #241640, #0f0c1c); }
-      body.preview .cam .ph {
-        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-        color: rgba(169, 159, 206, 0.5); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
-      }
+      body.preview .cam .ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(169, 159, 206, 0.5); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; }
       body.preview .cam .ph::after { content: "your camera"; }
 
       /* ---- cards ----------------------------------------------------------- */
       .card {
-        flex: 1; min-width: 0; min-height: 210px;  /* taller */
-        background: var(--glass);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
+        flex: 1; min-width: 0; min-height: 232px;
+        background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius);
         padding: 15px 18px;
         backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
         box-shadow: var(--glow), 0 10px 34px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-        display: flex; flex-direction: column; gap: 10px;
-        position: relative; overflow: hidden;
+        display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden;
       }
-      /* neon top edge */
       .card::before {
         content: ""; position: absolute; top: 0; left: 14px; right: 14px; height: 1.5px;
-        background: linear-gradient(90deg, transparent, var(--accent), var(--pink), transparent);
-        opacity: 0.8;
+        background: linear-gradient(90deg, transparent, var(--accent), var(--pink), transparent); opacity: 0.8;
       }
-      .card.project { flex: 0 0 220px; }   /* narrower data boxes */
+      .card.projects { flex: 0 0 270px; }
       .card.now { flex: 1; }
-      .card.stats { flex: 0 0 430px; }     /* wider — room for more stats */
+      .card.stats { flex: 0 0 300px; }
 
       .label {
-        font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+        font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
         color: var(--accent); text-shadow: 0 0 10px rgba(160, 107, 255, 0.5);
-        display: flex; align-items: center; gap: 7px; font-weight: 600;
+        display: flex; align-items: center; gap: 7px;
       }
       .label .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); box-shadow: 0 0 9px var(--accent2); }
-      .label .dot.paused { background: #f5b14c; box-shadow: 0 0 9px #f5b14c; }
       @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-      .project-name { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .branch { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-
-      .card.now { justify-content: center; }
-      .now-title {
-        font-size: 24px; font-weight: 700; line-height: 1.22; letter-spacing: -0.01em;
-        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-        text-shadow: 0 0 18px rgba(160, 107, 255, 0.3);
+      /* ---- projects ticker ------------------------------------------------- */
+      .ticker { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+      .ticker li {
+        display: flex; align-items: center; gap: 9px; padding: 8px 11px; border-radius: 11px;
+        background: rgba(255, 255, 255, 0.02); border: 1px solid transparent;
       }
-      .card.now .label { position: absolute; top: 15px; left: 18px; }
-      .mode {
-        align-self: flex-start; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-        padding: 4px 11px; border-radius: 999px; color: #fff;
-        background: linear-gradient(90deg, var(--accent), var(--pink));
-        box-shadow: 0 0 16px rgba(255, 92, 240, 0.45);
+      .ticker li.active {
+        background: linear-gradient(90deg, rgba(160, 107, 255, 0.18), rgba(255, 92, 240, 0.05));
+        border-color: rgba(167, 134, 255, 0.5);
+        box-shadow: 0 0 16px rgba(160, 107, 255, 0.28);
       }
+      .ticker .pdot { width: 8px; height: 8px; border-radius: 50%; background: #4a4570; flex: 0 0 auto; }
+      .ticker li.active .pdot { background: var(--accent2); box-shadow: 0 0 9px var(--accent2); animation: pulse 1.4s infinite; }
+      .ticker .pname { font-size: 15px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+      .ticker li:not(.active) .pname { color: #b9b1d6; font-weight: 550; }
+      .ticker .pnote { font-family: var(--mono); font-size: 11px; color: var(--muted); flex: 0 0 auto; }
+      .ticker li.active .pnote { color: var(--accent2); }
 
-      /* latest milestones — capped, never scrolls (this is an overlay) */
-      .log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
-      .log li {
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        color: #ddd5f3; animation: slidein 0.35s ease;
+      /* ---- now building feed ----------------------------------------------- */
+      .feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+      .feed li { display: flex; align-items: baseline; gap: 10px; }
+      .feed .ftext { font-size: 15px; color: #c4bbe2; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+      .feed .fwhen { font-family: var(--mono); font-size: 11px; color: var(--muted); flex: 0 0 auto; }
+      .feed li.current .ftext {
+        font-size: 23px; font-weight: 700; color: var(--text); letter-spacing: -0.01em;
+        white-space: normal; text-shadow: 0 0 18px rgba(160, 107, 255, 0.3);
       }
-      .log li.dim { opacity: 0.5; }
-      @keyframes slidein { from { opacity: 0; transform: translateX(-7px); } to { opacity: 1; transform: none; } }
+      .feed li.current { margin-bottom: 4px; }
+      .feed li.current .bdot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 10px var(--pink); animation: pulse 1.3s infinite; flex: 0 0 auto; align-self: center; }
 
-      .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px 18px; font-family: var(--mono); margin-top: 2px; }
+      /* ---- stats ----------------------------------------------------------- */
+      .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px 18px; font-family: var(--mono); margin-top: 2px; }
       .stat { display: flex; flex-direction: column; }
-      .stat .v { font-size: 20px; font-weight: 700; text-shadow: 0 0 14px rgba(160, 107, 255, 0.3); }
+      .stat .v { font-size: 21px; font-weight: 700; text-shadow: 0 0 14px rgba(160, 107, 255, 0.3); }
       .stat .k { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-family: var(--font); margin-top: 2px; }
-      .v.add { color: var(--add); } .v.rem { color: var(--rem); } .v.tok { color: #c9aaff; } .v.cost { color: var(--accent2); }
-      .v.streak { color: #ff9d4d; } .v.score { color: var(--pink); }
+      .v.tok { color: #c9aaff; } .v.cost { color: var(--accent2); } .v.streak { color: #ff9d4d; }
 
-      .timer { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-      .empty { color: var(--muted); font-style: italic; font-size: 13px; }
+      .timer { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: auto; }
     </style>
   </head>
   <body>
     <div id="hud">
       <div class="cam"><span class="tag"><span class="rec"></span> live</span><span class="ph"></span></div>
 
-      <div class="card project">
-        <div class="label"><span class="dot" id="proj-dot"></span>Project</div>
-        <div class="project-name" id="proj-name">—</div>
-        <div class="branch" id="proj-branch"></div>
+      <div class="card projects">
+        <div class="label"><span class="dot"></span> Projects</div>
+        <ul class="ticker" id="projects"></ul>
         <div class="timer" id="timer"></div>
       </div>
 
       <div class="card now">
         <div class="label">Now Building</div>
-        <div class="now-title" id="now-title">—</div>
-        <span class="mode" id="now-mode" hidden></span>
+        <ul class="feed" id="build"></ul>
       </div>
 
       <div class="card stats">
         <div class="label">Live Stats</div>
         <div class="stat-grid">
-          <div class="stat"><span class="v add" id="s-feat">0</span><span class="k">features</span></div>
-          <div class="stat"><span class="v rem" id="s-bugs">0</span><span class="k">fixes</span></div>
+          <div class="stat"><span class="v" id="s-feat">0</span><span class="k">features built</span></div>
           <div class="stat"><span class="v" id="s-commits">0</span><span class="k">commits</span></div>
+          <div class="stat"><span class="v" id="s-prompts">0</span><span class="k">prompts</span></div>
+          <div class="stat"><span class="v" id="s-agents">0</span><span class="k">sub-agents</span></div>
           <div class="stat"><span class="v tok" id="s-tok">0</span><span class="k">tokens</span></div>
           <div class="stat"><span class="v cost" id="s-cost">$0</span><span class="k">spend</span></div>
-          <div class="stat"><span class="v" id="s-agents">0</span><span class="k">sub-agents</span></div>
-          <div class="stat"><span class="v" id="s-prompts">0</span><span class="k">prompts</span></div>
           <div class="stat"><span class="v tok" id="s-tpm">0</span><span class="k">tok / min</span></div>
-          <div class="stat"><span class="v cost" id="s-cph">$0</span><span class="k">spend / hr</span></div>
           <div class="stat"><span class="v streak" id="s-streak">0</span><span class="k">🔥 day streak</span></div>
-          <div class="stat"><span class="v score" id="s-score">0</span><span class="k">⚡ vibe score</span></div>
-          <div class="stat"><span class="v add" id="s-lph">0</span><span class="k">lines / hr</span></div>
         </div>
       </div>
     </div>
 
     <script>
       const $ = (id) => document.getElementById(id);
+      if (new URLSearchParams(location.search).has("preview")) document.body.classList.add("preview");
 
-      if (new URLSearchParams(location.search).has("preview")) {
-        document.body.classList.add("preview");
-      }
-
-      function fmt(n) {
-        if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-        if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
-        return String(n);
-      }
+      const fmt = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n));
       const money = (n) => (n >= 100 ? "$" + Math.round(n) : "$" + (n || 0).toFixed(2));
-
+      function since(ts) {
+        if (!ts) return "";
+        const s = Math.max(0, Math.floor((Date.now() - new Date(ts)) / 1000));
+        if (s < 60) return "now";
+        const m = Math.floor(s / 60);
+        return m < 60 ? m + "m" : Math.floor(m / 60) + "h";
+      }
       function elapsed(startedAt) {
         if (!startedAt) return "";
         const s = Math.max(0, Math.floor((Date.now() - new Date(startedAt)) / 1000));
@@ -201,60 +172,89 @@
         return (h ? h + "h " : "") + String(m).padStart(2, "0") + "m " + String(sec).padStart(2, "0") + "s";
       }
 
+      // FLIP: animate rows sliding to new positions; new rows fade/slide in.
+      function flipRender(el, items, makeLi) {
+        const old = new Map();
+        for (const li of el.children) old.set(li.dataset.key, li.getBoundingClientRect());
+        el.innerHTML = "";
+        for (const it of items) el.appendChild(makeLi(it));
+        for (const li of el.children) {
+          const prev = old.get(li.dataset.key);
+          if (prev) {
+            const dy = prev.top - li.getBoundingClientRect().top;
+            if (dy) li.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }],
+              { duration: 520, easing: "cubic-bezier(0.2,0.8,0.2,1)" });
+          } else if (old.size) {
+            li.animate([{ opacity: 0, transform: "translateY(-12px)" }, { opacity: 1, transform: "none" }],
+              { duration: 460, easing: "ease" });
+          }
+        }
+      }
+
       let last = "", state = null;
 
       function paint(d) {
         $("hud").classList.toggle("live", !!d.isLive);
+        if (!d.isLive) return;
 
-        const dot = $("proj-dot");
-        dot.classList.toggle("paused", d.project?.status === "paused");
-        $("proj-name").textContent = d.project?.name ?? d.sessionTitle ?? "Vibe coding";
-        $("proj-branch").textContent = d.branch ? "⌥ " + d.branch : "";
+        // projects ticker
+        flipRender($("projects"), d.projects ?? [], (p) => {
+          const li = document.createElement("li");
+          li.dataset.key = p.name;
+          if (p.status === "active") li.className = "active";
+          li.innerHTML = `<span class="pdot"></span><span class="pname"></span><span class="pnote"></span>`;
+          li.querySelector(".pname").textContent = p.name;
+          li.querySelector(".pnote").textContent = p.note ?? "";
+          return li;
+        });
 
-        if (d.nowBuilding) {
-          $("now-title").textContent = d.nowBuilding.title;
-          $("now-title").classList.remove("empty");
-          const mode = $("now-mode");
-          mode.textContent = d.nowBuilding.mode;
-          mode.hidden = false;
-        } else {
-          $("now-title").textContent = "Getting set up…";
-          $("now-title").classList.add("empty");
-          $("now-mode").hidden = true;
+        // now-building feed — newest (current) on top, big; previous dimmed below
+        const feed = (d.buildLog ?? []).map((e) => (typeof e === "string" ? { text: e, ts: null } : e)).slice(0, 5);
+        const buildEl = $("build");
+        const oldB = new Map();
+        for (const li of buildEl.children) oldB.set(li.dataset.key, li.getBoundingClientRect());
+        buildEl.innerHTML = "";
+        feed.forEach((e, idx) => {
+          const li = document.createElement("li");
+          li.dataset.key = (e.ts ?? "") + "|" + e.text;
+          li.className = idx === 0 ? "current" : "";
+          li.innerHTML = idx === 0
+            ? `<span class="bdot"></span><span class="ftext"></span>`
+            : `<span class="ftext"></span><span class="fwhen"></span>`;
+          li.querySelector(".ftext").textContent = e.text;
+          const w = li.querySelector(".fwhen"); if (w) w.textContent = since(e.ts);
+          buildEl.appendChild(li);
+        });
+        for (const li of buildEl.children) {
+          const prev = oldB.get(li.dataset.key);
+          if (prev) {
+            const dy = prev.top - li.getBoundingClientRect().top;
+            if (dy) li.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 520, easing: "cubic-bezier(0.2,0.8,0.2,1)" });
+          } else if (oldB.size) {
+            li.animate([{ opacity: 0, transform: "translateY(-14px)" }, { opacity: 1, transform: "none" }], { duration: 480, easing: "ease" });
+          }
         }
 
         const s = d.stats ?? {};
         $("s-feat").textContent = fmt(s.features ?? 0);
-        $("s-bugs").textContent = fmt(s.bugs ?? 0);
         $("s-commits").textContent = fmt(s.commits ?? 0);
+        $("s-prompts").textContent = fmt(s.prompts ?? 0);
+        $("s-agents").textContent = fmt(s.subAgents ?? 0);
         $("s-tok").textContent = fmt(s.claudeTokens ?? 0);
         $("s-cost").textContent = money(s.costUsd ?? 0);
-        $("s-agents").textContent = fmt(s.subAgents ?? 0);
-        $("s-prompts").textContent = fmt(s.prompts ?? 0);
-
         $("s-streak").textContent = fmt(s.streak ?? 0);
-        $("s-score").textContent = fmt(s.vibeScore ?? 0);
-
-        // Burn rate + velocity — derived from session elapsed time.
         const mins = d.startedAt ? Math.max(1, (Date.now() - new Date(d.startedAt)) / 60000) : 0;
-        const netLines = (s.linesAdded ?? 0) - (s.linesRemoved ?? 0);
         $("s-tpm").textContent = mins ? fmt(Math.round((s.claudeTokens ?? 0) / mins)) : "0";
-        $("s-cph").textContent = mins ? money((s.costUsd ?? 0) / (mins / 60)) : "$0";
-        $("s-lph").textContent = mins ? fmt(Math.round(netLines / (mins / 60))) : "0";
       }
 
       async function tick() {
         try {
-          const res = await fetch("/state.json", { cache: "no-store" });
-          const d = await res.json();
+          const d = await (await fetch("/state.json", { cache: "no-store" })).json();
           state = d;
           const sig = JSON.stringify(d);
           if (sig !== last) { last = sig; paint(d); }
-        } catch {
-          $("hud").classList.remove("live");
-        }
+        } catch { $("hud").classList.remove("live"); }
       }
-
       setInterval(tick, 1000);
       setInterval(() => { if (state?.isLive) $("timer").textContent = elapsed(state.startedAt); }, 1000);
       tick();

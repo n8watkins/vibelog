@@ -51,10 +51,15 @@ export type BuildLogEntry = {
   ts: string;
 };
 
+/** A project in the overlay ticker — ranked, [0] is the one in focus now. */
+export type ProjectTick = { name: string; status: "active" | "idle"; note?: string };
+
 export type LiveState = {
   isLive: boolean;
   sessionTitle: string | null;
   project: { name: string; status: "active" | "paused" } | null;
+  /** Ranked projects for the overlay ticker (most-recently-active first). */
+  projects: ProjectTick[];
   nowBuilding: { title: string; mode: BuildMode } | null;
   /** Newest first, capped to BUILD_LOG_MAX entries. */
   buildLog: BuildLogEntry[];
@@ -89,6 +94,7 @@ export function emptyState(): LiveState {
     isLive: false,
     sessionTitle: null,
     project: null,
+    projects: [],
     nowBuilding: null,
     buildLog: [],
     stats: emptyStats(),
