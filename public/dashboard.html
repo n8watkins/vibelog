@@ -145,7 +145,8 @@
       .alltime { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
       .alltime .a { display: flex; flex-direction: column; gap: 1px; }
       .alltime .a .v { font-family: var(--mono); font-size: 20px; font-weight: 700; }
-      .alltime .a .v.tok { color: #c9aaff; } .alltime .a .v.cost { color: var(--accent2); }
+      .alltime .a .v.tok { color: #c9aaff; } .alltime .a .v.cost { color: var(--accent2); } .alltime .a .v.live { color: var(--pink); }
+      .week .livedot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 6px var(--pink); margin-right: 5px; vertical-align: 1px; }
       .alltime .a .k { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
     </style>
   </head>
@@ -168,6 +169,11 @@
       <div class="sub" id="subtitle"></div>
 
       <div class="controls">
+        <div class="seg" id="modeSeg">
+          <button data-mode="ai" class="on">AI coding</button>
+          <button data-mode="stream">Streaming</button>
+          <button data-mode="vibe">VibeLog</button>
+        </div>
         <div class="seg" id="rangeSeg">
           <button data-days="31">Month</button>
           <button data-days="371" class="on">Year</button>
@@ -227,9 +233,30 @@
         commit: '<svg class="ic ic-commit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.4"/><path d="M2 12h5.6M16.4 12H22"/></svg>',
       };
 
-      // view state — range (days) + project scope, controlled by the chips above.
+      // view state — chart mode, range (days), project scope.
+      let MODE_SEL = "ai"; // ai | stream | vibe
       let DAYS_SEL = 371;
       let PROJ_SEL = "all";
+
+      const dhm = (m) => { const h = Math.floor(m / 60); return h ? `${h}h ${m % 60}m` : `${m}m`; };
+
+      // VibeLog score for a day: a 0–100 blend of AI coding, commits, stream
+      // time, and shipped features — the "was this a good vibe session" number.
+      function combo(u) {
+        if (!u) return 0;
+        const tok = Math.min(1, Math.log10((u.tokens || 0) + 1) / 7);
+        const com = Math.min(1, (u.commits || 0) / 10);
+        const str = Math.min(1, (u.stream || 0) / 240);
+        const feat = Math.min(1, (u.features || 0) / 4);
+        return Math.round((tok * 0.4 + com * 0.2 + str * 0.3 + feat * 0.1) * 100);
+      }
+
+      // The metric each mode colors the calendar by.
+      const MODES = {
+        ai: { val: (u) => (u && u.tokens) || 0, title: "Activity — Claude tokens per day", word: "AI coding" },
+        stream: { val: (u) => (u && u.stream) || 0, title: "Activity — minutes live-streaming", word: "streaming" },
+        vibe: { val: (u) => combo(u), title: "Activity — VibeLog score", word: "vibe" },
+      };
 
       function chip(label, value) {
         const d = document.createElement("div");
@@ -278,11 +305,12 @@
       // Aggregate the days currently in view (range + project scope).
       function renderAllTime(usage) {
         const days = Object.keys(usage);
-        let tokens = 0, cost = 0, commits = 0, active = 0;
+        let tokens = 0, cost = 0, commits = 0, stream = 0, active = 0, streamDays = 0;
         for (const d of days) {
           const u = usage[d] || {};
-          tokens += u.tokens || 0; cost += u.cost || 0; commits += u.commits || 0;
+          tokens += u.tokens || 0; cost += u.cost || 0; commits += u.commits || 0; stream += u.stream || 0;
           if ((u.tokens || 0) > 0 || (u.commits || 0) > 0) active++;
+          if ((u.stream || 0) > 0) streamDays++;
         }
         const el = $("alltime");
         el.innerHTML = "";
@@ -295,7 +323,8 @@
           a(fmt(tokens), "tokens", "tok"),
           a("$" + Math.round(cost).toLocaleString(), "spend", "cost"),
           a(fmt(commits), "commits"),
-          a(active ? fmt(Math.round(tokens / active)) : "0", "tokens / active day"),
+          a((stream / 60).toFixed(stream >= 600 ? 0 : 1) + "h", "live", "live"),
+          a(streamDays, "stream days"),
         );
       }
 
@@ -335,10 +364,15 @@
           const dow = DOW[new Date(d.date + "T00:00:00").getDay()];
           const row = document.createElement("div"); row.className = "d";
           const active = !!d.firstTs;
+          const live = (d.stream || 0) > 0;
+          const dot = live ? '<span class="livedot" title="streamed"></span>' : "";
+          const meta = active
+            ? (live ? dhm(d.stream) + " live" : dur(d.activeMinutes) + ` · ${ICONS.spark}${d.features.length}`)
+            : "—";
           row.innerHTML =
-            `<div class="${active ? "" : "off"}">${dow} ${d.date.slice(5)}</div>` +
+            `<div class="${active ? "" : "off"}">${dot}${dow} ${d.date.slice(5)}</div>` +
             `<div><div class="bar" style="width:${Math.round((d.activeMinutes / max) * 100)}%;${active ? "" : "opacity:.25"}"></div></div>` +
-            `<div class="meta">${active ? dur(d.activeMinutes) + ` · ${ICONS.spark}${d.features.length}` : "—"}</div>`;
+            `<div class="meta">${meta}</div>`;
           el.append(row);
         }
         const t = $("weekTotals");
@@ -346,31 +380,33 @@
         t.append(
           chip("active days", `${w.activeDays}/7`),
           chip("shipped", w.features.length),
-          chip("fixed", w.bugs.length),
+          chip("live", dhm(w.streamMinutes || 0)),
           chip("total time", dur(w.activeMinutes)),
         );
       }
 
-      // A square per day, colored by intensity relative to the busiest day in
-      // range. Metric is tokens for "all projects", or commits when a single
-      // repo is in focus — that's the honest per-project signal.
-      function renderHeat(chart, usage, metric) {
-        const val = (d) => (usage[d.date]?.[metric]) || 0;
+      // A square per day, colored by the active mode's metric (AI tokens /
+      // stream minutes / VibeLog score), relative to the busiest day in range.
+      function renderHeat(chart, usage, project) {
+        const mode = MODES[MODE_SEL];
+        const val = (d) => mode.val(usage[d.date]);
         const max = Math.max(1, ...chart.map(val));
         const first = new Date(chart[0].date + "T00:00:00");
         const pad = first.getDay();
         const heat = $("heat");
         heat.innerHTML = "";
         for (let i = 0; i < pad; i++) { const c = document.createElement("div"); c.className = "cell pad"; heat.append(c); }
-        let active = 0, totalTok = 0, totalCost = 0, totalCommits = 0;
+        let active = 0, totalTok = 0, totalCost = 0, totalCommits = 0, totalStream = 0;
         for (const day of chart) {
           const u = usage[day.date] || {};
           const v = val(day);
           const lvl = levelFor(v, max);
-          if (v > 0) { active++; totalTok += u.tokens || 0; totalCost += u.cost || 0; totalCommits += u.commits || 0; }
+          if (v > 0) active++;
+          totalTok += u.tokens || 0; totalCost += u.cost || 0;
+          totalCommits += u.commits || 0; totalStream += u.stream || 0;
           const c = document.createElement("div");
           c.className = "cell" + (lvl ? " l" + lvl : "");
-          c.title = `${day.date} · ${fmt(u.tokens || 0)} tok · $${(u.cost || 0).toFixed(2)} · ${u.commits || 0} commits · ${u.features || 0} feat`;
+          c.title = `${day.date} · ${fmt(u.tokens || 0)} tok · ${u.commits || 0} commits · ${dhm(u.stream || 0)} live · vibe ${combo(u)}`;
           heat.append(c);
         }
         // month labels aligned to week columns (one span per week)
@@ -392,10 +428,15 @@
         let streak = 0;
         for (let i = chart.length - 1; i >= 0; i--) { if (val(chart[i]) > 0) streak++; else break; }
         const span = chart.length >= 360 ? "last year" : chart.length >= 28 ? "last month" : `last ${chart.length} days`;
-        $("heatSummary").innerHTML = `${ICONS.flame} ${streak}-day streak · ${active}/${chart.length} active`;
-        $("heatCaption").innerHTML = metric === "commits"
-          ? `Each square = one day · ${span} · ${ICONS.commit} ${totalCommits} commits · ${fmt(totalTok)} tokens · darker = more commits.`
-          : `Each square = one day · ${span} · ${fmt(totalTok)} tokens (~$${Math.round(totalCost)}) · darker = more AI coding.`;
+        const label = MODE_SEL === "stream" ? "streamed" : MODE_SEL === "vibe" ? "vibing" : "active";
+        $("heatTitle").textContent = mode.title + (project ? ` · ${project}` : "");
+        $("heatSummary").innerHTML = `${ICONS.flame} ${streak}-day streak · ${active}/${chart.length} ${label}`;
+        const caption = MODE_SEL === "stream"
+          ? `Each square = one day · ${span} · ${dhm(totalStream)} live · darker = longer streams.`
+          : MODE_SEL === "vibe"
+            ? `Each square = one day · ${span} · blend of tokens, commits, stream time & features · darker = better session.`
+            : `Each square = one day · ${span} · ${fmt(totalTok)} tokens (~$${Math.round(totalCost)}) · darker = more AI coding.`;
+        $("heatCaption").innerHTML = caption;
       }
 
       async function tick() {
@@ -413,16 +454,21 @@
           renderProjects(d.projects, d.activeProject);
           renderToday(d.today, live);
           renderWeek(d.week);
-          const metric = d.activeProject ? "commits" : "tokens";
-          $("heatTitle").textContent = d.activeProject
-            ? `Activity — commits to ${d.activeProject}`
-            : "Activity — Claude tokens per day";
-          renderHeat(d.chart, d.usageByDay || {}, metric);
+          renderHeat(d.chart, d.usageByDay || {}, d.activeProject);
           renderAllTime(d.usageByDay || {});
         } catch (e) {
           $("liveText").textContent = "Agent offline";
         }
       }
+
+      // Chart mode (AI coding / Streaming / VibeLog) — recolors the calendar.
+      $("modeSeg").addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        MODE_SEL = b.dataset.mode;
+        for (const x of $("modeSeg").children) x.classList.toggle("on", x === b);
+        tick();
+      });
 
       // Range toggle (Month / Year).
       $("rangeSeg").addEventListener("click", (e) => {

@@ -8,7 +8,14 @@ import { localDateString } from "./ccusage.ts";
  * Pure + seeded → identical every render, and easy to test.
  */
 
-export type DayUsage = { tokens: number; cost: number; commits: number; features: number };
+export type DayUsage = {
+  tokens: number;
+  cost: number;
+  commits: number;
+  features: number;
+  /** Minutes spent live-streaming that day (day-level, not per-project). */
+  stream: number;
+};
 
 export type DemoProject = {
   name: string;
@@ -66,7 +73,12 @@ function pickProjects(rng: () => number, n: number): typeof PROJECTS {
   return out;
 }
 
-type Cell = { date: string; per: Record<string, { tokens: number; commits: number; features: number }> };
+type Cell = {
+  date: string;
+  per: Record<string, { tokens: number; commits: number; features: number }>;
+  /** Minutes live-streaming that day — the streaming dimension of the chart. */
+  stream: number;
+};
 
 /**
  * Build one contiguous year of per-project daily activity. Activity ramps up
@@ -86,7 +98,8 @@ function buildYear(end: Date): Cell[] {
     if (Math.sin((i / DAYS) * Math.PI * 6) > 0.86) pActive *= 0.15; // vacation dead zones
 
     const per: Cell["per"] = {};
-    if (rng() < pActive) {
+    const coding = rng() < pActive;
+    if (coding) {
       const n = rng() < 0.4 ? 2 : 1;
       for (const p of pickProjects(rng, n)) {
         const heat = 0.4 + rng() * 3.2 + (rng() < 0.1 ? 4 + rng() * 6 : 0); // M tokens
@@ -96,7 +109,15 @@ function buildYear(end: Date): Cell[] {
         per[p.name] = { tokens, commits, features };
       }
     }
-    cells.push({ date, per });
+
+    // Streaming: shows up to go live most coding days (and occasionally without
+    // coding), more so recently and on Thu–Sun. A session runs ~1–5h.
+    let stream = 0;
+    let pStream = (coding ? 0.62 : 0.1) * (0.55 + recency);
+    if (dow >= 4 || dow === 0) pStream *= 1.25; // Thu/Fri/Sat/Sun heavier
+    if (rng() < pStream) stream = 60 + Math.round(rng() * 180) + (rng() < 0.18 ? 120 : 0);
+
+    cells.push({ date, per, stream });
   }
   return cells;
 }
@@ -165,7 +186,13 @@ export function demoDashboard(opts: { days: number; project: string | null; end?
       commits += x.commits;
       features += x.features;
     }
-    usageByDay[c.date] = { tokens, cost: +((tokens / 1e6) * COST_PER_MTOK).toFixed(2), commits, features };
+    usageByDay[c.date] = {
+      tokens,
+      cost: +((tokens / 1e6) * COST_PER_MTOK).toFixed(2),
+      commits,
+      features,
+      stream: c.stream,
+    };
     chart.push({ date: c.date, features: Array(features).fill("f"), bugs: [] });
   }
   return { usageByDay, chart, projects: demoProjects(end), activeProject: proj };
@@ -185,9 +212,10 @@ export function demoWeek(end = new Date()) {
     return {
       date: c.date,
       activeMinutes: active ? 55 + Math.round(commits * 22) : 0,
-      firstTs: active ? c.date + "T10:00:00Z" : null,
+      firstTs: active || c.stream > 0 ? c.date + "T10:00:00Z" : null,
       features: Array(features).fill("f"),
       bugs: [] as string[],
+      stream: c.stream,
     };
   });
   return {
@@ -196,6 +224,7 @@ export function demoWeek(end = new Date()) {
     features: days.flatMap((d) => d.features),
     bugs: [] as string[],
     activeMinutes: days.reduce((s, d) => s + d.activeMinutes, 0),
+    streamMinutes: days.reduce((s, d) => s + d.stream, 0),
     start: days[0]?.date ?? "",
     end: days[6]?.date ?? "",
   };
