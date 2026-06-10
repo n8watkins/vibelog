@@ -1,6 +1,8 @@
 # VibeLog — Theming & Settings Spec
 
-`docs/THEMING.md` — status: **ready to build (Phase 1 approved-pending)**
+`docs/THEMING.md` — status: **Phases 1–3 shipped** (gradient desync, theme persistence
++ public read / localhost write, dashboard Settings UI with presets/randomize/custom/sync).
+Remaining: T4 custom-color polish, T5 per-page (sync-off) UI, Phase 4 profile/integrations.
 
 Covers roadmap items **T1–T5** and **S1** from `docs/VISION.md`. The moving gradient, the theme
 engine, and the settings persistence all share one mechanism: **a theme is a JSON object of CSS

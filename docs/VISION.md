@@ -40,7 +40,9 @@ public callers on read-only public routes; every write stays localhost-only. See
 - **Prompt → feature summary** via Gemini Flash-Lite with a template fallback — `src/summarize.ts`.
 - **Three surfaces**: `/overlay` (OBS), `/dashboard` (private, localhost), `/live` (public page),
   plus a GitHub-style activity calendar with AI / Streaming / VibeLog-score modes.
-- **Moving-gradient borders** on overlay + /live (currently synced — see roadmap item T1).
+- **Theming engine** (shipped): desynced moving-gradient borders on overlay/dashboard/live,
+  10 curated presets + Randomize + custom colors + cross-page sync, a dashboard Settings sheet,
+  persisted to `~/.vibelog/settings.json` (localhost writes, public theme read). See `docs/THEMING.md`.
 
 ---
 
@@ -51,22 +53,18 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 
 ### 3.1 Theming & look-and-feel
 
-- **T1 [NOW] — Fix & desync the moving gradient.** Today all cards share one color, one start
-  corner, one near-harmonic timing, so they move in lockstep and look wrong. Fix: per-card
-  **different colors** (hue-rotate), **different start corners** (per-card start angle), **slower**
-  movement, and **desynced phase** (large negative animation-delays + mutually-prime durations).
-  Pure CSS, OBS-safe. See `docs/THEMING.md`.
-- **T2 [NOW] — Extend the gradient to the dashboard panels** (with the T1 timing fixes). Dashboard
-  has no ring today.
-- **T3 [NOW] — Theming engine.** A theme = a JSON object of CSS variables that re-skins the
-  **entire page** (background, accents, gradient stops, glass, aurora, heatmap ramp). Ship **~10
-  curated presets** that each define a full palette. A **Randomize** button picks from the curated
-  presets (good combos, never arbitrary RGB). See `docs/THEMING.md`.
-- **T4 [NEXT] — Custom color combinations** entered by the user, validated against a strict
-  allowlist so a custom palette can never inject CSS into overlay-bound pages.
-- **T5 [NEXT] — Per-page themes + sync toggle.** Themes apply to overlay, dashboard, and /live.
-  A "sync across pages" toggle: on → one shared theme; off → each page can differ (e.g. a different
-  color for your internal dashboard than the public overlay).
+- **T1 [DONE] — Fix & desync the moving gradient.** Per-card different colors (hue-rotate),
+  different start corners (per-card start angle), slower movement, desynced phase (negative delays +
+  mutually-prime durations). Pure CSS, OBS-safe.
+- **T2 [DONE] — Gradient extended to the dashboard panels** (with the T1 timing fixes).
+- **T3 [DONE] — Theming engine.** A theme = a JSON object of CSS variables re-skinning the entire
+  page. 10 curated presets + a Randomize button (curated, never arbitrary RGB). Persisted to
+  `~/.vibelog/settings.json`; public theme-read route, localhost-only write. See `docs/THEMING.md`.
+- **T4 [PARTLY DONE] — Custom color combinations.** Four custom color pickers ship in the Settings
+  sheet, validated against a strict allowlist so a palette can never inject CSS into overlay pages.
+  Remaining polish: more var coverage + hex entry.
+- **T5 [PARTLY DONE] — Per-page themes + sync toggle.** The sync toggle ships and the data model +
+  resolver already support per-page (sync-off) themes; remaining: a UI to edit each page separately.
 - **T6 [NOW] — Icon pass.** Use on-brand neon icons everywhere we currently use bare text/emoji.
 
 ### 3.2 Settings & profile
