@@ -60,11 +60,12 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 - **T3 [DONE] — Theming engine.** A theme = a JSON object of CSS variables re-skinning the entire
   page. 10 curated presets + a Randomize button (curated, never arbitrary RGB). Persisted to
   `~/.vibelog/settings.json`; public theme-read route, localhost-only write. See `docs/THEMING.md`.
-- **T4 [PARTLY DONE] — Custom color combinations.** Four custom color pickers ship in the Settings
-  sheet, validated against a strict allowlist so a palette can never inject CSS into overlay pages.
-  Remaining polish: more var coverage + hex entry.
-- **T5 [PARTLY DONE] — Per-page themes + sync toggle.** The sync toggle ships and the data model +
-  resolver already support per-page (sync-off) themes; remaining: a UI to edit each page separately.
+- **T4 [DONE] — Custom color combinations.** Eight custom color pickers (accent/secondary/highlight/
+  background/text/muted/aurora1/aurora2) with hex entry ship in the Settings sheet, validated against a
+  strict allowlist so a palette can never inject CSS into overlay pages.
+- **T5 [DONE] — Per-page themes + sync toggle.** Sync toggle + per-page (sync-off) editing both ship:
+  an "Editing page" selector (Overlay/Live/Dashboard) appears when sync is off so each surface gets
+  its own theme, loaded via the localhost `GET /api/settings.json` and saved as `perPage`.
 - **T6 [NOW] — Icon pass.** Use on-brand neon icons everywhere we currently use bare text/emoji.
 
 ### 3.2 Settings & profile
