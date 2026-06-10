@@ -81,6 +81,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     state.stats.features = session!.features;
     state.stats.bugs = session!.bugs;
     state.stats.subAgents = session!.subAgents;
+    state.stats.prompts = session!.prompts;
     state.startedAt = session!.startedAt;
     state.updatedAt = new Date().toISOString();
     void writeState(state);
@@ -171,8 +172,13 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   async function onPrompt(rawPrompt: string): Promise<void> {
     const firstLine = rawPrompt.split("\n").map((l) => l.trim()).find(Boolean) ?? "";
     const title = redact(firstLine).slice(0, 120);
+    session!.prompts += 1;
     await appendEvent({ type: "prompt_submitted", title });
-    if (!title) return;
+    if (!title) {
+      await persistSession();
+      render();
+      return;
+    }
     session!.nowBuilding = { title, mode: session!.nowBuilding?.mode ?? "coding" };
     await persistSession();
     render();
@@ -335,7 +341,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   if (opts.demo) {
     // No git/ccusage — just animate plausible stats so the overlay looks alive.
     state.branch = "main";
-    state.stats = { ...state.stats, linesAdded: 842, linesRemoved: 219, filesChanged: 13, commits: 4, features: 3, bugs: 2, claudeTokens: 1_240_000, costUsd: 4.12, subAgents: 2 };
+    state.stats = { ...state.stats, linesAdded: 842, linesRemoved: 219, filesChanged: 13, commits: 4, features: 3, bugs: 2, claudeTokens: 1_240_000, costUsd: 4.12, subAgents: 2, prompts: 37 };
     render();
     timers.push(setInterval(() => {
       state.stats.linesAdded += Math.floor(Math.random() * 12);
@@ -359,6 +365,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
       di++;
       if (text.startsWith("✨")) state.stats.features += 1;
       if (text.startsWith("🐛")) state.stats.bugs += 1;
+      session!.prompts += 1 + Math.floor(Math.random() * 2);
       session!.buildLog = [{ text, ts: new Date().toISOString() }, ...session!.buildLog].slice(0, BUILD_LOG_MAX);
       render();
     }, 9000));
@@ -405,6 +412,7 @@ function demoSession(): Session {
     features: 3,
     bugs: 2,
     subAgents: 2,
+    prompts: 37,
     tokenBaseline: null,
     costBaseline: null,
   };

@@ -68,7 +68,7 @@ test("formatReport renders stats block and sections", () => {
   const s = summarizeDay(events, DATE);
   const out = formatReport(
     s,
-    { linesAdded: 842, linesRemoved: 219, filesChanged: 13, commits: 4, features: 2, bugs: 1, claudeTokens: 1_240_000, costUsd: 4.12, subAgents: 2 },
+    { linesAdded: 842, linesRemoved: 219, filesChanged: 13, commits: 4, features: 2, bugs: 1, claudeTokens: 1_240_000, costUsd: 4.12, subAgents: 2, prompts: 37 },
     "VibeLog",
   );
   assert.match(out, /Vibe report — 2026-06-06/);

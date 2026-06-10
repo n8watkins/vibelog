@@ -37,6 +37,8 @@ export type LiveStats = {
   costUsd: number;
   /** Sub-agents spawned this session (Task tool invocations). */
   subAgents: number;
+  /** Prompts submitted to Claude this session. */
+  prompts: number;
 };
 
 /** One entry in the build feed. `text` includes its emoji icon; `ts` is ISO. */
@@ -72,6 +74,7 @@ export function emptyStats(): LiveStats {
     claudeTokens: 0,
     costUsd: 0,
     subAgents: 0,
+    prompts: 0,
   };
 }
 

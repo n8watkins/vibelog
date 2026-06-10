@@ -16,6 +16,8 @@ export type Session = {
   bugs: number;
   /** Sub-agents (Task tool calls) spawned this session. */
   subAgents: number;
+  /** Prompts submitted to Claude this session. */
+  prompts: number;
   /** Today's Claude token total captured at session start; session tokens =
    *  current today total − this. Null until the first token poll sets it. */
   tokenBaseline: number | null;
