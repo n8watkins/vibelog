@@ -33,6 +33,10 @@ const OVERLAY_FILE = path.join(PUBLIC_DIR, "overlay.html");
 const LIVE_FILE = path.join(PUBLIC_DIR, "live.html");
 const LANDING_FILE = path.join(PUBLIC_DIR, "landing.html");
 const DASHBOARD_FILE = path.join(PUBLIC_DIR, "dashboard.html");
+const SHOTS_DIR = path.join(PUBLIC_DIR, "shots");
+// Allowlisted product screenshots used by the landing page (and the OG image).
+// Exact basenames only — no path traversal, no arbitrary static serving.
+const SHOT_FILES = new Set(["overlay.png", "live.png", "dashboard.png"]);
 
 /**
  * Routes a remote viewer is allowed to see. The agent binds 0.0.0.0 and
@@ -42,6 +46,9 @@ const DASHBOARD_FILE = path.join(PUBLIC_DIR, "dashboard.html");
  */
 const PUBLIC_GET_ROUTES = new Set([
   "/", "/overlay", "/live", "/landing", "/state.json",
+  // Static product screenshots shown on the landing page + used as the OG image,
+  // so they must be fetchable by remote/unfurl bots. Read-only PNGs only.
+  "/shots/overlay.png", "/shots/live.png", "/shots/dashboard.png",
   // The overlay runs in OBS with no auth, so it must be able to read its theme
   // and the preset list publicly. Only the resolved theme vars are exposed —
   // never profile/integration/secret data. Writes (POST /api/settings) stay
@@ -344,6 +351,17 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         const html = await readFile(LANDING_FILE, "utf8");
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
         res.end(html);
+        return;
+      }
+
+      // Product screenshots for the landing page / OG image. Allowlisted
+      // basenames only (see SHOT_FILES) so this can't serve arbitrary files.
+      if (req.method === "GET" && route.startsWith("/shots/")) {
+        const name = route.slice("/shots/".length);
+        if (!SHOT_FILES.has(name)) { sendJson(res, 404, { error: "not found" }); return; }
+        const buf = await readFile(path.join(SHOTS_DIR, name));
+        res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=3600" });
+        res.end(buf);
         return;
       }
 
