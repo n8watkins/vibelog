@@ -31,6 +31,7 @@ const SOCIAL_POLL_MS = 180_000;
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
 const OVERLAY_FILE = path.join(PUBLIC_DIR, "overlay.html");
 const LIVE_FILE = path.join(PUBLIC_DIR, "live.html");
+const LANDING_FILE = path.join(PUBLIC_DIR, "landing.html");
 const DASHBOARD_FILE = path.join(PUBLIC_DIR, "dashboard.html");
 
 /**
@@ -40,7 +41,7 @@ const DASHBOARD_FILE = path.join(PUBLIC_DIR, "dashboard.html");
  * end/hooks) and the private /dashboard are localhost-only — see isRemote().
  */
 const PUBLIC_GET_ROUTES = new Set([
-  "/", "/overlay", "/live", "/state.json",
+  "/", "/overlay", "/live", "/landing", "/state.json",
   // The overlay runs in OBS with no auth, so it must be able to read its theme
   // and the preset list publicly. Only the resolved theme vars are exposed —
   // never profile/integration/secret data. Writes (POST /api/settings) stay
@@ -333,6 +334,14 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
       if (req.method === "GET" && route === "/live") {
         const html = await readFile(LIVE_FILE, "utf8");
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+        res.end(html);
+        return;
+      }
+
+      // Static marketing landing page (X2). No live data, fully public.
+      if (req.method === "GET" && route === "/landing") {
+        const html = await readFile(LANDING_FILE, "utf8");
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
         res.end(html);
         return;
