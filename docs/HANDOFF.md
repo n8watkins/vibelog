@@ -22,7 +22,9 @@ download it, set it up in minutes, and stream their public development. See `doc
 - **CLI:** `src/cli.ts` (commander) — `vibe start`, `vibe demo`, `vibe share`,
   `vibe twitch login`, etc.
 - **Pages (static, no framework):** `public/overlay.html`, `public/live.html`,
-  `public/dashboard.html`. Look is driven entirely by **CSS custom properties** on `:root`.
+  `public/dashboard.html`, `public/landing.html` (marketing, X2). Look is driven entirely by
+  **CSS custom properties** on `:root`. Product screenshots live in `public/shots/` and are served
+  by an allowlisted `GET /shots/<name>.png` handler (exact basenames in `SHOT_FILES`, no traversal).
 - **State contract:** `src/state.ts` (`LiveState`) → `~/.vibelog/state.json` → served at
   `/state.json`, read by overlay + live.
 - **Data sources:** `src/ccusage.ts` (tokens/cost), `src/claude-projects.ts` +
@@ -58,6 +60,15 @@ download it, set it up in minutes, and stream their public development. See `doc
   Randomize + custom colors + cross-page sync, a dashboard **Settings sheet** (gear icon),
   `~/.vibelog/settings.json` persistence, public `GET /api/theme.json` + localhost
   `POST /api/settings`. See `docs/THEMING.md`. 55 tests pass, typecheck clean.
+- **X2 Landing page (DONE this session):** dynamic neon marketing page at `GET /landing`
+  (`public/landing.html`) built around **real product screenshots** (`public/shots/{overlay,live,
+  dashboard}.png`, served via an allowlisted `GET /shots/<name>.png` route). Hero shows the real
+  overlay in an OBS-style frame; full-width stream showcase, scrolling integration marquee, bento
+  feature grid, alternating image/text zigzag of the three surfaces, step timeline, privacy band,
+  and **interactive theme swatches that live-recolor the page**; scroll-reveal via
+  IntersectionObserver (all motion gated by `prefers-reduced-motion`). OG image set to
+  `/shots/live.png`. `/` still serves the OBS overlay (unchanged). Commits: `ecb5747` (initial),
+  `49dd16e` (dynamic redesign), `77064e0` (docs). 55 tests pass, typecheck clean.
 
 ## 5. What's NEXT (pick from `docs/VISION.md §5` build order)
 
@@ -66,9 +77,11 @@ In rough priority, with entry points:
 1. **T4/T5 theming polish** — broaden custom-var coverage + a per-page (sync-off) edit UI in the
    dashboard Settings sheet. Backend + resolver already support per-page; only the UI is missing.
    Files: `public/dashboard.html` (Settings module near the bottom `<script>`), `src/theme.ts`.
-2. **X2 Landing page** — ✅ DONE. Shipped at `GET /landing` (`public/landing.html`): static neon
-   marketing page (hero + mocked overlay, 12-feature grid, 3-step setup, surfaces, privacy band,
-   theming strip, CTA, footer), OG/Twitter meta. `/` still serves the OBS overlay.
+2. **X2 Landing page** — ✅ DONE (see §4). Dynamic page at `GET /landing` with real product
+   screenshots, zigzag flow, and live-recolor theme swatches. To **refresh the screenshots** after
+   any UI redesign, re-run the three captures in §6 against the demo server and overwrite
+   `public/shots/*.png`. Possible follow-ups (optional): compress the PNGs (~1.3 MB total), point
+   the "Clone on GitHub" CTA at the real repo URL (currently `https://github.com/`).
 3. **S2/S3 Profile + Integrations hub** — profile fields (bio/Twitter/channel header) + connect
    Twitch/YouTube/Discord/GitHub from the dashboard. Data model is **already stubbed** in the
    `Settings` type (`src/theme.ts` → `profile`, `integrations`). Add a localhost
@@ -96,6 +109,14 @@ In rough priority, with entry points:
   `--virtual-time-budget` so async fetches settle. `/dashboard#settings` deep-links the sheet open.
 - **Restart the agent** after editing any `src/*.ts` (HTML is served fresh from disk, no restart
   needed). Kill the holder of `:4545` via `ss -ltnp | grep :4545` if `pkill` misses it.
+- **Gotcha — restarting in one shell line:** a `kill $PID && nohup pnpm vibe demo &` compound can
+  abort mid-way (the kill returns non-zero / signals the shell). Restart as **separate steps**, or
+  launch the demo with the Bash tool's `run_in_background` and poll `ss -ltnp | grep :4545` until UP.
+- **Refresh landing screenshots** (`public/shots/*.png`) against a running demo:
+  `CH="/mnt/c/Program Files/Google/Chrome/Application/chrome.exe"`;
+  `"$CH" --headless=new --disable-gpu --hide-scrollbars --default-background-color=00000000 --virtual-time-budget=3000 --window-size=1280,720 --screenshot="C:\\Users\\natha\\Downloads\\o.png" "http://localhost:4545/overlay?preview"` (overlay — keep the transparent flag + `?preview` for the camera placeholder);
+  same for `/live` (1320×900) and `/dashboard` (1440×1080); then `cp` each from Downloads into `public/shots/`.
+  (No PIL/ImageMagick on this box — to view just a page region, screenshot a tall `--window-size` and `Read` the PNG.)
 
 ## 7. Conventions (enforced)
 
