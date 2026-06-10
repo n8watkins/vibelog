@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+import { readSecrets } from "./secrets.ts";
 
 /**
  * Turn a raw coding prompt into a short "Now Building" feature label for the
@@ -14,7 +12,6 @@ import path from "node:path";
  * never the prompt, headers, or key.
  */
 
-const SECRETS_FILE = path.join(os.homedir(), ".vibelog", "secrets.json");
 const DEFAULT_MODEL = "gemini-3.1-flash-lite";
 const TIMEOUT_MS = 2500;
 
@@ -24,21 +21,6 @@ const SYSTEM_INSTRUCTION =
   "label: max 8 words, no quotes, no trailing punctuation, no code, no file " +
   "paths, no secrets. Example input: 'can you add discord oauth to the login " +
   "page' -> 'Adding Discord OAuth to login'.";
-
-type Secrets = { geminiApiKey?: string; geminiModel?: string };
-
-let secretsCache: { at: number; data: Secrets } | null = null;
-async function loadSecrets(): Promise<Secrets> {
-  if (secretsCache && Date.now() - secretsCache.at < 30_000) return secretsCache.data;
-  let data: Secrets = {};
-  try {
-    data = JSON.parse(await readFile(SECRETS_FILE, "utf8")) as Secrets;
-  } catch {
-    // no secrets file / unreadable — template-only mode
-  }
-  secretsCache = { at: Date.now(), data };
-  return data;
-}
 
 /** Strip a model reply down to a clean label: no quotes, no trailing punctuation, capped. */
 export function sanitizeLabel(raw: string): string {
@@ -102,7 +84,7 @@ export type Summary = { text: string; source: "gemini" | "template" };
 /** Best-effort feature label for a prompt. Never throws. */
 export async function summarize(prompt: string): Promise<Summary> {
   const fallback = templateSummary(prompt);
-  const { geminiApiKey, geminiModel } = await loadSecrets();
+  const { geminiApiKey, geminiModel } = await readSecrets();
   if (!geminiApiKey) return { text: fallback, source: "template" };
   try {
     const out = sanitizeLabel(await callGemini(prompt, geminiApiKey, geminiModel || DEFAULT_MODEL));

@@ -56,6 +56,8 @@ export type ProjectTick = { name: string; status: "active" | "idle"; note?: stri
 
 export type LiveState = {
   isLive: boolean;
+  /** True while OBS reports an active stream output (from the obs-websocket bridge). */
+  streaming: boolean;
   sessionTitle: string | null;
   project: { name: string; status: "active" | "paused" } | null;
   /** Ranked projects for the overlay ticker (most-recently-active first). */
@@ -92,6 +94,7 @@ export function emptyStats(): LiveStats {
 export function emptyState(): LiveState {
   return {
     isLive: false,
+    streaming: false,
     sessionTitle: null,
     project: null,
     projects: [],

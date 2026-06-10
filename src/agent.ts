@@ -18,6 +18,9 @@ import { appendEvent, readConfig, readSession, writeSession, writeState, type Se
 import { demoDashboard, demoToday, demoWeek } from "./demodata.ts";
 import { getProjectActivity, type ProjectActivity } from "./projects.ts";
 import { summarize } from "./summarize.ts";
+import { connectOBS, type OBSHandle } from "./obs.ts";
+import { streamMinutesByDay } from "./stream.ts";
+import { readSecrets } from "./secrets.ts";
 
 const GIT_POLL_MS = 5_000;
 const TOKEN_POLL_MS = 30_000;
@@ -357,6 +360,8 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         const costPerToken = sumTok > 0 ? sumCost / sumTok : 0.000002;
         const activity = await cachedProjectActivity(costPerToken);
         const chart = summarizeRange(events, days);
+        // Real stream minutes per day from OBS live_started/live_ended events.
+        const streamByDay = streamMinutesByDay(events);
 
         // Scope the heatmap: a single project (colored by commits) or all
         // projects (real ccusage tokens, with per-day commits summed across repos).
@@ -364,13 +369,13 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
           ? activity.projects.find((p) => p.name === project)
           : null;
 
-        const usageByDay: Record<string, { tokens: number; cost: number; commits: number; features: number }> = {};
+        const usageByDay: Record<string, { tokens: number; cost: number; commits: number; features: number; stream: number }> = {};
         if (sel) {
           const pd = activity.byDay[sel.name] ?? {};
           for (const d of chart) {
             const x = pd[d.date];
             const t = x?.tokens ?? 0;
-            usageByDay[d.date] = { tokens: t, cost: +(t * costPerToken).toFixed(2), commits: x?.commits ?? 0, features: 0 };
+            usageByDay[d.date] = { tokens: t, cost: +(t * costPerToken).toFixed(2), commits: x?.commits ?? 0, features: 0, stream: streamByDay[d.date] ?? 0 };
           }
         } else {
           // Total commits per day across all projects, for the all-projects strip.
@@ -380,14 +385,17 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
           }
           for (const d of chart) {
             const u = usage[d.date];
-            usageByDay[d.date] = { tokens: u?.tokens ?? 0, cost: u?.cost ?? 0, commits: commitsByDay[d.date] ?? 0, features: 0 };
+            usageByDay[d.date] = { tokens: u?.tokens ?? 0, cost: u?.cost ?? 0, commits: commitsByDay[d.date] ?? 0, features: 0, stream: streamByDay[d.date] ?? 0 };
           }
         }
+
+        const week = summarizeWeek(events, today);
+        const weekStream = week.days.reduce((s, d) => s + (streamByDay[d.date] ?? 0), 0);
 
         sendJson(res, 200, {
           live: state,
           today: summarizeDay(events, today),
-          week: summarizeWeek(events, today),
+          week: { ...week, streamMinutes: weekStream },
           chart,
           usageByDay,
           projects: activity.projects,
@@ -443,6 +451,28 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
   await new Promise<void>((resolve) => server.listen(port, "0.0.0.0", resolve));
 
+  // OBS websocket bridge: learn when streaming actually starts/stops so we can
+  // track "did I show up today" (logged to events → per-day stream minutes).
+  let obs: OBSHandle | null = null;
+  async function connectStreamCapture(): Promise<void> {
+    const s = await readSecrets();
+    if (s.obs?.enabled === false) return;
+    const url = s.obs?.url ?? "ws://127.0.0.1:4455";
+    let live = false;
+    obs = connectOBS({
+      url,
+      password: s.obs?.password,
+      onLog: (m) => console.log(`  [obs] ${m}`),
+      onLive: (active) => {
+        if (active === live) return;
+        live = active;
+        state.streaming = active;
+        void appendEvent({ type: active ? "live_started" : "live_ended" });
+        render();
+      },
+    });
+  }
+
   const timers: NodeJS.Timeout[] = [];
   if (opts.demo) {
     runDemoLoop(session, state, render, timers);
@@ -450,6 +480,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     await pollGit();
     void pollTokens();
     void refreshHistory();
+    void connectStreamCapture();
     timers.push(setInterval(() => void pollGit(), GIT_POLL_MS));
     timers.push(setInterval(() => void pollTokens(), TOKEN_POLL_MS));
     timers.push(setInterval(() => void refreshHistory(), 60_000));
@@ -457,6 +488,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
   const shutdown = () => {
     timers.forEach(clearInterval);
+    obs?.close();
     state.isLive = false;
     void writeState(state);
     process.exit(0);
