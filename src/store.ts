@@ -26,6 +26,9 @@ export type Session = {
 
 export type Config = {
   defaultProject: string | null;
+  /** Optional channel links shown on /dashboard next to the live pill. */
+  twitch?: string | null;
+  youtube?: string | null;
 };
 
 async function ensureDir(): Promise<void> {

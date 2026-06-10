@@ -45,13 +45,18 @@ async function callAgent(pathname: string, body: unknown): Promise<void> {
 
 program
   .command("init")
-  .description("Set defaults (default project name)")
+  .description("Set defaults (default project name, channel links)")
   .option("-p, --project <name>", "default project name")
-  .action(async (opts: { project?: string }) => {
+  .option("--twitch <url>", "Twitch channel URL (shown on the dashboard)")
+  .option("--youtube <url>", "YouTube channel URL (shown on the dashboard)")
+  .action(async (opts: { project?: string; twitch?: string; youtube?: string }) => {
     const cfg = (await readConfig()) ?? { defaultProject: null };
     if (opts.project) cfg.defaultProject = opts.project;
+    if (opts.twitch !== undefined) cfg.twitch = opts.twitch || null;
+    if (opts.youtube !== undefined) cfg.youtube = opts.youtube || null;
     await writeConfig(cfg);
     console.log(`Saved. Default project: ${cfg.defaultProject ?? "(none)"}`);
+    if (cfg.twitch || cfg.youtube) console.log(`Channels: ${[cfg.twitch, cfg.youtube].filter(Boolean).join("  ")}`);
   });
 
 program

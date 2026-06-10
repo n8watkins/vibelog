@@ -78,36 +78,43 @@
       .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
       .chip { font-family: var(--mono); font-size: 13px; padding: 8px 13px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); }
       .chip b { color: var(--text); } .chip span { color: var(--muted); }
-      .footer { text-align: center; color: var(--muted); font-size: 12px; padding: 24px 0 0; }
+      .footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0 0; }
+
+      /* topbar right: channel links + live pill */
+      .topright { display: flex; align-items: center; gap: 10px; }
+      .social { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
+                border-radius: 9px; border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+                color: var(--muted); transition: all 0.15s ease; }
+      .social svg { width: 17px; height: 17px; fill: currentColor; }
+      .social.tw:hover { color: #fff; background: #9146ff; border-color: #9146ff; box-shadow: 0 0 16px rgba(145,70,255,0.5); }
+      .social.yt:hover { color: #fff; background: #ff0033; border-color: #ff0033; box-shadow: 0 0 16px rgba(255,0,51,0.45); }
+      .social.off { opacity: 0.32; pointer-events: none; }
+
+      /* all-time aggregate strip under the heatmap */
+      .alltime { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+      .alltime .a { display: flex; flex-direction: column; gap: 1px; }
+      .alltime .a .v { font-family: var(--mono); font-size: 20px; font-weight: 700; }
+      .alltime .a .v.tok { color: #c9aaff; } .alltime .a .v.cost { color: var(--accent2); }
+      .alltime .a .k { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
     </style>
   </head>
   <body>
     <div class="wrap">
       <div class="topbar">
-        <div class="brand"><span class="spark"></span> VibeLog · Dashboard</div>
-        <span class="pill" id="livePill"><span class="dot"></span> <span id="liveText">Offline</span></span>
+        <div class="brand"><span class="spark"></span> VibeLog</div>
+        <div class="topright">
+          <a class="social tw off" id="tw" target="_blank" rel="noopener" title="Twitch">
+            <svg viewBox="0 0 24 24"><path d="M4 2 2.5 6v14h5v3h3l3-3h4L23 13V2H4Zm17 10-3 3h-5l-3 3v-3H6V4h15v8Z"/><path d="M16 7h2v5h-2zm-5 0h2v5h-2z"/></svg>
+          </a>
+          <a class="social yt off" id="yt" target="_blank" rel="noopener" title="YouTube">
+            <svg viewBox="0 0 24 24"><path d="M23 7.5a3 3 0 0 0-2.1-2.1C19 5 12 5 12 5s-7 0-8.9.4A3 3 0 0 0 1 7.5 31 31 0 0 0 .6 12 31 31 0 0 0 1 16.5a3 3 0 0 0 2.1 2.1C5 19 12 19 12 19s7 0 8.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 23.4 12 31 31 0 0 0 23 7.5ZM9.8 15.3V8.7l5.7 3.3-5.7 3.3Z"/></svg>
+          </a>
+          <span class="pill" id="livePill"><span class="dot"></span> <span id="liveText">Offline</span></span>
+        </div>
       </div>
 
-      <h1 class="title" id="title">Today</h1>
+      <h1 class="title">Dashboard</h1>
       <div class="sub" id="subtitle"></div>
-
-      <div class="panel">
-        <h3>Today</h3>
-        <div class="chips" id="todayChips"></div>
-        <div class="stats" id="codeStats" style="margin-top:18px"></div>
-      </div>
-
-      <div class="row">
-        <div class="panel">
-          <h3>Shipped today</h3>
-          <div id="todaySections"></div>
-        </div>
-        <div class="panel">
-          <h3>This week</h3>
-          <div class="week" id="week"></div>
-          <div class="chips" id="weekTotals" style="margin-top:16px"></div>
-        </div>
-      </div>
 
       <div class="panel">
         <h3>Activity — Claude tokens per day</h3>
@@ -123,6 +130,20 @@
           <span id="heatSummary" style="margin-left:auto"></span>
         </div>
         <div class="sub" id="heatCaption" style="margin-top:10px"></div>
+        <div class="alltime" id="alltime"></div>
+      </div>
+
+      <div class="row">
+        <div class="panel">
+          <h3>This session</h3>
+          <div class="chips" id="todayChips"></div>
+          <div class="stats" id="codeStats" style="margin-top:16px"></div>
+        </div>
+        <div class="panel">
+          <h3>This week</h3>
+          <div class="week" id="week"></div>
+          <div class="chips" id="weekTotals" style="margin-top:14px"></div>
+        </div>
       </div>
 
       <div class="footer">private dashboard · localhost only · powered by <strong>VibeLog</strong></div>
@@ -176,23 +197,40 @@
           stat(fmt(s.commits || 0), "commits"),
           stat(fmt(s.subAgents || 0), "sub-agents"),
         );
+      }
 
-        const sec = $("todaySections");
-        sec.innerHTML = "";
-        const groups = [
-          ["Shipped", t.features, "✨"], ["Fixed", t.bugs, "🐛"],
-          ["Decisions", t.decisions, "•"], ["Polish", t.polish, "✦"], ["Notes", t.notes, "·"],
-        ];
-        let any = false;
-        for (const [name, items, icon] of groups) {
-          if (!items.length) continue;
-          any = true;
-          const h = document.createElement("div"); h.className = "sech"; h.textContent = name; sec.append(h);
-          const ul = document.createElement("ul"); ul.className = "seclist";
-          for (const it of items) { const li = document.createElement("li"); li.innerHTML = `<span>${icon}</span><span>${it}</span>`; ul.append(li); }
-          sec.append(ul);
+      // Aggregate every day ccusage knows about — the "token tracker" view.
+      function renderAllTime(usage) {
+        const days = Object.keys(usage);
+        let tokens = 0, cost = 0, active = 0;
+        for (const d of days) {
+          const u = usage[d] || {};
+          tokens += u.tokens || 0; cost += u.cost || 0;
+          if ((u.tokens || 0) > 0) active++;
         }
-        if (!any) { sec.innerHTML = `<div class="empty">Nothing logged yet today — go ship something ✨</div>`; }
+        const el = $("alltime");
+        el.innerHTML = "";
+        const a = (v, k, cls = "") => {
+          const d = document.createElement("div"); d.className = "a";
+          d.innerHTML = `<div class="v ${cls}">${v}</div><div class="k">${k}</div>`;
+          return d;
+        };
+        el.append(
+          a(fmt(tokens), "tokens all-time", "tok"),
+          a("$" + Math.round(cost).toLocaleString(), "spend all-time", "cost"),
+          a(active, "days tracked"),
+          a(active ? fmt(Math.round(tokens / active)) : "0", "tokens / active day"),
+        );
+      }
+
+      function renderSocials(s) {
+        const set = (id, url) => {
+          const el = $(id);
+          if (url) { el.href = url; el.classList.remove("off"); }
+          else { el.removeAttribute("href"); el.classList.add("off"); }
+        };
+        set("tw", s?.twitch);
+        set("yt", s?.youtube);
       }
 
       function renderWeek(w) {
@@ -254,12 +292,15 @@
           const live = d.live || {};
           $("liveText").textContent = live.isLive ? "Live" : "Offline";
           $("livePill").className = "pill" + (live.isLive ? " live" : "");
-          $("title").textContent = live.project?.name || live.sessionTitle || "Today";
-          $("subtitle").textContent = (live.nowBuilding?.title ? "› " + live.nowBuilding.title : "")
+          const proj = live.project?.name || live.sessionTitle;
+          $("subtitle").textContent = (proj ? proj : "No active session")
+            + (live.nowBuilding?.title ? "  ·  › " + live.nowBuilding.title : "")
             + (live.branch ? `   ⌥ ${live.branch}` : "");
+          renderSocials(d.socials);
           renderToday(d.today, live);
           renderWeek(d.week);
           renderHeat(d.chart, d.usageByDay || {});
+          renderAllTime(d.usageByDay || {});
         } catch (e) {
           $("liveText").textContent = "Agent offline";
         }

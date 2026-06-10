@@ -14,7 +14,7 @@ import {
   type BuildMode,
   type LiveState,
 } from "./state.ts";
-import { appendEvent, readSession, writeSession, writeState, type Session } from "./store.ts";
+import { appendEvent, readConfig, readSession, writeSession, writeState, type Session } from "./store.ts";
 
 const GIT_POLL_MS = 5_000;
 const TOKEN_POLL_MS = 30_000;
@@ -278,6 +278,9 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
           chart: summarizeRange(events, days),
           // Per-day Claude usage (tokens/cost) — the honest axis for the heatmap.
           usageByDay: await cachedUsageByDay(),
+          socials: opts.demo
+            ? { twitch: "https://twitch.tv/yourchannel", youtube: "https://youtube.com/@yourchannel" }
+            : await readConfig().then((c) => ({ twitch: c?.twitch ?? null, youtube: c?.youtube ?? null })),
         });
         return;
       }
