@@ -78,12 +78,10 @@
       .stat .v.rem { color: var(--rem); }
       .stat .k { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
 
-      /* Build feed — a chat-style stream: oldest at top, newest at the bottom. */
-      .feed-panel { display: flex; flex-direction: column; max-height: 460px; }
-      .feed { list-style: none; margin: 0; padding: 2px 0; display: flex; flex-direction: column;
-              gap: 10px; overflow-y: auto; flex: 1; scroll-behavior: smooth; }
-      .feed::-webkit-scrollbar { width: 6px; }
-      .feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+      /* Build feed — shows the latest activity only (no scroll; this is a HUD,
+         not a history browser). Newest lands at the bottom. */
+      .feed-panel { display: flex; flex-direction: column; }
+      .feed { list-style: none; margin: 0; padding: 2px 0; display: flex; flex-direction: column; gap: 10px; }
       .feed li {
         display: flex; gap: 10px; align-items: baseline; font-size: 15px; line-height: 1.4;
         padding: 9px 12px; border-radius: 11px;
@@ -181,7 +179,6 @@
       const seen = new Set(); // feed keys already rendered (so only new ones animate)
 
       function paint(d) {
-        const wasOffline = document.body.classList.contains("offline");
         document.body.classList.toggle("offline", !d.isLive);
         if (!d.isLive) { seen.clear(); return; }
 
@@ -200,7 +197,7 @@
           $("mode").hidden = true;
         }
 
-        renderFeed(d.buildLog ?? [], wasOffline);
+        renderFeed(d.buildLog ?? []);
 
         const s = d.stats ?? {};
         $("s-feat").textContent = fmt(s.features ?? 0);
@@ -211,40 +208,27 @@
         $("s-agents").textContent = fmt(s.subAgents ?? 0);
       }
 
-      // Chat-style: state.buildLog is newest-first; render oldest→newest so new
-      // entries land at the bottom and scroll into view. Only unseen keys animate.
-      function renderFeed(buildLog, replay) {
+      const FEED_SHOWN = 4; // latest milestones to show — no scroll, no history
+
+      // state.buildLog is newest-first. Show only the latest few, oldest→newest
+      // so the newest sits at the bottom. New entries animate in; we rebuild the
+      // (small) list each paint and prune the rest.
+      function renderFeed(buildLog) {
         const log = $("log");
-        const chrono = buildLog
+        const latest = buildLog
+          .slice(0, FEED_SHOWN)
           .map((e) => (typeof e === "string" ? { text: e, ts: null } : e))
-          .slice()
           .reverse();
 
-        if (!chrono.length) {
-          if (!log.querySelector(".empty")) {
-            log.innerHTML = '<li class="empty">No milestones yet — stay tuned</li>';
-          }
+        if (!latest.length) {
+          log.innerHTML = '<li class="empty">No milestones yet — stay tuned</li>';
           return;
         }
-        const empty = log.querySelector(".empty");
-        if (empty) empty.remove();
-        if (replay) { log.innerHTML = ""; seen.clear(); }
-
-        // Refresh relative times on existing rows.
-        for (const li of log.children) {
-          const w = li.querySelector(".when");
-          if (w && li.dataset.ts) w.textContent = since(li.dataset.ts);
-        }
-
-        let appended = false;
-        for (const e of chrono) {
+        log.innerHTML = "";
+        for (const e of latest) {
           const key = (e.ts ?? "") + "|" + e.text;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          appended = true;
           const li = document.createElement("li");
-          li.className = "fresh";
-          li.dataset.ts = e.ts ?? "";
+          if (!seen.has(key)) { li.className = "fresh"; seen.add(key); }
           const txt = document.createElement("span");
           txt.className = "txt";
           txt.textContent = e.text;
@@ -254,7 +238,6 @@
           li.append(txt, when);
           log.appendChild(li);
         }
-        if (appended) log.scrollTop = log.scrollHeight;
       }
 
       async function tick() {
