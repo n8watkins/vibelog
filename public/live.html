@@ -122,6 +122,8 @@
       @media (max-width: 820px) { .lower { grid-template-columns: 1fr; } }
       .panel { padding: 18px 20px; }
       .panel h3 { margin: 0 0 14px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; color: var(--accent); text-shadow: 0 0 10px rgba(160,107,255,0.5); }
+      /* On-brand neon header glyph (line-art, teal glow to pair with the purple labels). */
+      .hic { width: 13px; height: 13px; vertical-align: -2px; margin-right: 8px; color: var(--accent2); filter: drop-shadow(0 0 5px rgba(34, 211, 166, 0.55)); }
 
       .ticker { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
       .ticker li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 11px; background: rgba(255,255,255,0.02); border: 1px solid transparent; transition: all 0.4s; }
@@ -188,11 +190,11 @@
 
       <section class="lower">
         <div class="panel glass">
-          <h3>Projects</h3>
+          <h3><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3 3 7.5 12 12l9-4.5L12 3Z"/><path d="M3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5"/></svg>Projects</h3>
           <ul class="ticker" id="projects"></ul>
         </div>
         <div class="panel glass">
-          <h3>Build Feed</h3>
+          <h3><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 12h4l2.5-7 4 14L17 12h4"/></svg>Build Feed</h3>
           <ul class="feed" id="log"></ul>
         </div>
       </section>

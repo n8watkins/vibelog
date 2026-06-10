@@ -105,6 +105,8 @@
         display: flex; align-items: center; gap: 7px;
       }
       .label .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); box-shadow: 0 0 9px var(--accent2); }
+      /* On-brand neon header glyph (line-art, teal glow; flex gap handles spacing). */
+      .hic { width: 12px; height: 12px; flex: none; color: var(--accent2); filter: drop-shadow(0 0 5px rgba(34, 211, 166, 0.6)); }
       @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
       /* ---- projects ticker ------------------------------------------------- */
@@ -166,18 +168,18 @@
       <div class="cam"><span class="tag" id="camtag"><span class="rec"></span> <span id="camtagtext">live</span></span><span class="ph"></span></div>
 
       <div class="card projects">
-        <div class="label"><span class="dot"></span> Projects</div>
+        <div class="label"><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3 3 7.5 12 12l9-4.5L12 3Z"/><path d="M3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5"/></svg> Projects</div>
         <ul class="ticker" id="projects"></ul>
         <div class="timer" id="timer"></div>
       </div>
 
       <div class="card now">
-        <div class="label">Now Building</div>
+        <div class="label"><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 12h4l2.5-7 4 14L17 12h4"/></svg> Now Building</div>
         <ul class="feed" id="build"></ul>
       </div>
 
       <div class="card stats">
-        <div class="label">Live Stats</div>
+        <div class="label"><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 21V11M12 21V4M19 21v-7"/></svg> Live Stats</div>
         <div class="stat-grid">
           <div class="stat"><span class="v" id="s-feat">0</span><span class="k">features built</span></div>
           <div class="stat"><span class="v" id="s-commits">0</span><span class="k">commits</span></div>

@@ -130,6 +130,8 @@
       .ic-flame { color: #ff7a3d; filter: drop-shadow(0 0 5px rgba(255, 122, 61, 0.75)); }
       .ic-spark { color: var(--accent2); filter: drop-shadow(0 0 5px rgba(34, 211, 166, 0.65)); }
       .ic-commit { color: #c9aaff; filter: drop-shadow(0 0 4px rgba(160, 107, 255, 0.55)); }
+      /* On-brand neon header glyph (line-art, teal glow to pair with the purple labels). */
+      .hic { width: 13px; height: 13px; vertical-align: -2px; margin-right: 8px; color: var(--accent2); filter: drop-shadow(0 0 5px rgba(34, 211, 166, 0.55)); }
 
       /* range + project controls */
       .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 1px 0 2px; }
@@ -285,17 +287,17 @@
 
       <div class="row">
         <div class="panel">
-          <h3>This session</h3>
+          <h3><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 21V11M12 21V4M19 21v-7"/></svg>This session</h3>
           <div class="chips" id="todayChips"></div>
           <div class="stats" id="codeStats" style="margin-top:16px"></div>
         </div>
         <div class="panel">
-          <h3>This week</h3>
+          <h3><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>This week</h3>
           <div class="week" id="week"></div>
           <div class="chips" id="weekTotals" style="margin-top:14px"></div>
         </div>
         <div class="panel">
-          <h3>Channel</h3>
+          <h3><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/></svg>Channel</h3>
           <div id="social"></div>
         </div>
       </div>
@@ -329,7 +331,7 @@
         </div>
 
         <div class="sheet-actions">
-          <button class="btn" id="randomize">🎲 Randomize</button>
+          <button class="btn" id="randomize"><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Randomize</button>
           <label class="toggle"><input type="checkbox" id="syncToggle" checked> <span>Sync all pages</span></label>
           <span class="grow"></span>
           <button class="btn ghost" id="resetTheme">Reset</button>
