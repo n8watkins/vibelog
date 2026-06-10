@@ -184,6 +184,41 @@
       .alltime .a .v.tok { color: #c9aaff; } .alltime .a .v.cost { color: var(--accent2); } .alltime .a .v.live { color: var(--pink); }
       .week .livedot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 6px var(--pink); margin-right: 5px; vertical-align: 1px; }
       .alltime .a .k { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+
+      /* ---- theme & settings ---- */
+      .gear { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--muted); cursor: pointer; transition: color 0.2s, border-color 0.2s, transform 0.3s; }
+      .gear svg { width: 17px; height: 17px; fill: currentColor; }
+      .gear:hover { color: var(--accent); border-color: var(--accent); transform: rotate(45deg); }
+      .modal { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(4, 3, 10, 0.62); backdrop-filter: blur(6px); }
+      .modal.open { display: flex; }
+      .sheet { width: min(560px, 96vw); max-height: 88vh; overflow-y: auto; }
+      .sheet-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+      .sheet-top h3 { margin: 0; }
+      .x { background: none; border: 0; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer; padding: 0 4px; }
+      .x:hover { color: var(--text); }
+      .field { margin: 16px 0; }
+      .field > label { display: block; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--accent); margin-bottom: 10px; }
+      .field .hint { color: var(--muted); font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 11px; }
+      .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; }
+      .sw { cursor: pointer; border-radius: 10px; padding: 7px; border: 1.5px solid transparent; background: rgba(255,255,255,0.03); transition: border-color 0.15s, transform 0.15s; }
+      .sw:hover { transform: translateY(-2px); }
+      .sw.on { border-color: var(--text); }
+      .sw .bar { height: 22px; border-radius: 6px; display: flex; overflow: hidden; }
+      .sw .bar i { flex: 1; }
+      .sw .nm { display: block; font-size: 9.5px; text-align: center; margin-top: 5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .colorrow { display: flex; flex-wrap: wrap; gap: 14px; }
+      .colorrow .ci { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+      .colorrow .ci span { font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+      .colorrow input[type=color] { width: 40px; height: 30px; border: 1px solid var(--border); border-radius: 8px; background: none; cursor: pointer; padding: 2px; }
+      .sheet-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+      .sheet-actions .grow { flex: 1; }
+      .btn { font: inherit; font-size: 13px; font-weight: 700; padding: 8px 15px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--text); cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+      .btn:hover { border-color: var(--accent); }
+      .btn.primary { background: linear-gradient(135deg, var(--accent), var(--pink)); border-color: transparent; color: #fff; box-shadow: 0 0 16px rgba(160,107,255,0.4); }
+      .btn.ghost { color: var(--muted); }
+      .toggle { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none; }
+      .toggle input { accent-color: var(--accent); width: 15px; height: 15px; }
+      .sheet-note { font-size: 11.5px; color: var(--muted); margin-top: 10px; }
     </style>
   </head>
   <body>
@@ -198,6 +233,9 @@
             <svg viewBox="0 0 24 24"><path d="M23 7.5a3 3 0 0 0-2.1-2.1C19 5 12 5 12 5s-7 0-8.9.4A3 3 0 0 0 1 7.5 31 31 0 0 0 .6 12 31 31 0 0 0 1 16.5a3 3 0 0 0 2.1 2.1C5 19 12 19 12 19s7 0 8.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 23.4 12 31 31 0 0 0 23 7.5ZM9.8 15.3V8.7l5.7 3.3-5.7 3.3Z"/></svg>
           </a>
           <span class="pill" id="livePill"><span class="dot"></span> <span id="liveText">Offline</span></span>
+          <button class="gear" id="gear" title="Theme &amp; settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm9 4a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L18 2h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 3 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L8 22h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z"/></svg>
+          </button>
         </div>
       </div>
 
@@ -257,6 +295,35 @@
           <h3>Channel</h3>
           <div id="social"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- ───────────────────────── theme & settings ───────────────────────── -->
+    <div class="modal" id="settingsModal" aria-hidden="true">
+      <div class="sheet panel">
+        <div class="sheet-top">
+          <h3>Theme &amp; settings</h3>
+          <button class="x" id="closeSettings" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="field">
+          <label>Presets <span class="hint">— pick a vibe; it re-skins everything</span></label>
+          <div class="swatches" id="swatches"></div>
+        </div>
+
+        <div class="field">
+          <label>Custom colors</label>
+          <div class="colorrow" id="colorrow"></div>
+        </div>
+
+        <div class="sheet-actions">
+          <button class="btn" id="randomize">🎲 Randomize</button>
+          <label class="toggle"><input type="checkbox" id="syncToggle" checked> <span>Sync all pages</span></label>
+          <span class="grow"></span>
+          <button class="btn ghost" id="resetTheme">Reset</button>
+          <button class="btn primary" id="saveTheme">Save</button>
+        </div>
+        <div class="sheet-note" id="sheetNote">Changes preview live. Save to apply to your overlay &amp; /live.</div>
       </div>
     </div>
 
@@ -564,6 +631,118 @@
         for (const x of $("rangeSeg").children) x.classList.toggle("on", x === b);
         tick();
       });
+
+      // ───────────────────────── theme & settings ─────────────────────────
+      // `work` is the theme being edited (full var set); we preview by applying
+      // it to :root live, and only POST it on Save.
+      let PRESETS = [];
+      let work = {};
+      let savedTheme = null;       // last persisted { sync, shared, presetId }
+      let activePreset = null;
+      const COLOR_FIELDS = [
+        { key: "--accent", label: "Accent" },
+        { key: "--accent2", label: "Secondary" },
+        { key: "--pink", label: "Highlight" },
+        { key: "--bg", label: "Background" },
+      ];
+      // normalize a CSS color to #rrggbb for <input type=color> (best-effort).
+      const toHex = (c) => {
+        if (!c) return "#000000";
+        if (/^#[0-9a-f]{6}$/i.test(c.trim())) return c.trim();
+        const d = document.createElement("div"); d.style.color = c; document.body.appendChild(d);
+        const m = getComputedStyle(d).color.match(/\d+/g); d.remove();
+        if (!m) return "#000000";
+        return "#" + m.slice(0, 3).map((n) => (+n).toString(16).padStart(2, "0")).join("");
+      };
+
+      function preview() { applyTheme("dashboard", work); }
+
+      // Custom colors drive the matching gradient-ring stop too, so the ring
+      // re-colors with the palette instead of lagging on the old accents.
+      function setVar(key, val) {
+        work[key] = val;
+        if (key === "--accent") work["--g1"] = val;
+        if (key === "--pink") work["--g2"] = val;
+        if (key === "--accent2") work["--g3"] = val;
+      }
+
+      function renderSwatches() {
+        $("swatches").innerHTML = PRESETS.map((p) => {
+          const v = p.vars;
+          return `<div class="sw${p.id === activePreset ? " on" : ""}" data-id="${p.id}">
+            <div class="bar" style="background:${v["--bg"]}">
+              <i style="background:${v["--accent"]}"></i><i style="background:${v["--pink"]}"></i><i style="background:${v["--accent2"]}"></i>
+            </div><span class="nm">${p.name}</span></div>`;
+        }).join("");
+      }
+      function renderColors() {
+        $("colorrow").innerHTML = COLOR_FIELDS.map((f) =>
+          `<label class="ci"><input type="color" data-key="${f.key}" value="${toHex(work[f.key])}"><span>${f.label}</span></label>`
+        ).join("");
+      }
+
+      function applyPreset(p) {
+        activePreset = p.id;
+        work = { ...p.vars };
+        renderSwatches(); renderColors(); preview();
+      }
+
+      async function openSettings() {
+        if (!PRESETS.length) {
+          try { PRESETS = (await (await fetch("/api/presets.json")).json()).presets || []; } catch {}
+        }
+        // seed the editor from whatever is currently live on the server
+        try {
+          const t = (await (await fetch("/api/theme.json?page=dashboard", { cache: "no-store" })).json());
+          work = { ...t.vars };
+        } catch { work = {}; }
+        activePreset = savedTheme?.presetId ?? null;
+        $("syncToggle").checked = savedTheme ? savedTheme.sync !== false : true;
+        renderSwatches(); renderColors();
+        $("settingsModal").classList.add("open");
+        $("settingsModal").setAttribute("aria-hidden", "false");
+      }
+      function closeSettings() {
+        $("settingsModal").classList.remove("open");
+        $("settingsModal").setAttribute("aria-hidden", "true");
+        applyTheme("dashboard"); // discard unsaved preview, re-pull saved theme
+      }
+
+      $("gear").onclick = openSettings;
+      $("closeSettings").onclick = closeSettings;
+      $("settingsModal").addEventListener("click", (e) => { if (e.target.id === "settingsModal") closeSettings(); });
+      $("swatches").addEventListener("click", (e) => {
+        const el = e.target.closest(".sw"); if (!el) return;
+        const p = PRESETS.find((x) => x.id === el.dataset.id); if (p) applyPreset(p);
+      });
+      $("colorrow").addEventListener("input", (e) => {
+        const inp = e.target.closest("input[type=color]"); if (!inp) return;
+        activePreset = null; setVar(inp.dataset.key, inp.value);
+        for (const x of document.querySelectorAll(".sw")) x.classList.remove("on");
+        preview();
+      });
+      $("randomize").onclick = () => {
+        if (!PRESETS.length) return;
+        applyPreset(PRESETS[Math.floor(Math.random() * PRESETS.length)]);
+      };
+      $("resetTheme").onclick = () => {
+        const def = PRESETS.find((p) => p.id === "aurora-purple");
+        if (def) applyPreset(def);
+      };
+      $("saveTheme").onclick = async () => {
+        const body = { theme: { sync: $("syncToggle").checked, shared: work, presetId: activePreset || undefined } };
+        try {
+          const r = await (await fetch("/api/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).json();
+          savedTheme = r.theme;
+          $("sheetNote").textContent = "Saved — your overlay & /live will update within ~10s.";
+          setTimeout(closeSettings, 700);
+        } catch {
+          $("sheetNote").textContent = "Couldn't save (is the agent running locally?).";
+        }
+      };
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("settingsModal").classList.contains("open")) closeSettings(); });
+
+      if (location.hash === "#settings") openSettings();
 
       tick();
       setInterval(tick, 4000);
