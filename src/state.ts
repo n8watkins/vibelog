@@ -39,6 +39,10 @@ export type LiveStats = {
   subAgents: number;
   /** Prompts submitted to Claude this session. */
   prompts: number;
+  /** Current daily shipping streak (from the event log). */
+  streak: number;
+  /** Today's vibe score (from the event log). */
+  vibeScore: number;
 };
 
 /** One entry in the build feed. `text` includes its emoji icon; `ts` is ISO. */
@@ -75,6 +79,8 @@ export function emptyStats(): LiveStats {
     costUsd: 0,
     subAgents: 0,
     prompts: 0,
+    streak: 0,
+    vibeScore: 0,
   };
 }
 

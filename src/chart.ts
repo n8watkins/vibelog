@@ -60,7 +60,7 @@ const RESET = "\x1b[0m";
 const DIM = "\x1b[2m";
 
 /** Trailing run of days (ending at the most recent) with any activity. */
-function currentStreak(stats: DayStat[]): number {
+export function currentStreak(stats: DayStat[]): number {
   let n = 0;
   for (let i = stats.length - 1; i >= 0; i--) {
     if (stats[i]!.score > 0) n++;

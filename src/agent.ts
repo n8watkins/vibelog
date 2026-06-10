@@ -5,7 +5,7 @@ import path from "node:path";
 import { getBranch, getStats } from "./git.ts";
 import { getClaudeUsageToday, dailyUsageMap, sessionTokenDelta, localDateString } from "./ccusage.ts";
 import { readEvents, summarizeDay, summarizeWeek } from "./report.ts";
-import { summarizeRange } from "./chart.ts";
+import { summarizeRange, currentStreak } from "./chart.ts";
 import { redact } from "./redact.ts";
 import {
   BUILD_LOG_MAX,
@@ -108,6 +108,18 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     }
   }
 
+  /** Streak + today's vibe score from the event log (gamified overlay stats). */
+  async function refreshHistory(): Promise<void> {
+    try {
+      const range = summarizeRange(await readEvents(), 371);
+      state.stats.streak = currentStreak(range);
+      state.stats.vibeScore = range[range.length - 1]?.score ?? 0;
+      render();
+    } catch {
+      // event log unreadable — keep last good values
+    }
+  }
+
   async function pollTokens(): Promise<void> {
     const usage = await getClaudeUsageToday();
     if (usage === null) return; // ccusage unavailable — leave at 0
@@ -157,6 +169,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     await persistSession();
     await appendEvent({ type: "mark", kind, text });
     render();
+    void refreshHistory();
   }
 
   async function endSession(): Promise<void> {
@@ -182,6 +195,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     session!.nowBuilding = { title, mode: session!.nowBuilding?.mode ?? "coding" };
     await persistSession();
     render();
+    void refreshHistory();
   }
 
   /** PostToolUse → log + refresh git promptly so stats feel live after edits.
@@ -341,7 +355,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   if (opts.demo) {
     // No git/ccusage — just animate plausible stats so the overlay looks alive.
     state.branch = "main";
-    state.stats = { ...state.stats, linesAdded: 842, linesRemoved: 219, filesChanged: 13, commits: 4, features: 3, bugs: 2, claudeTokens: 1_240_000, costUsd: 4.12, subAgents: 2, prompts: 37 };
+    state.stats = { ...state.stats, linesAdded: 842, linesRemoved: 219, filesChanged: 13, commits: 4, features: 3, bugs: 2, claudeTokens: 1_240_000, costUsd: 4.12, subAgents: 2, prompts: 37, streak: 6, vibeScore: 462 };
     render();
     timers.push(setInterval(() => {
       state.stats.linesAdded += Math.floor(Math.random() * 12);
@@ -372,8 +386,10 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   } else {
     await pollGit();
     void pollTokens();
+    void refreshHistory();
     timers.push(setInterval(() => void pollGit(), GIT_POLL_MS));
     timers.push(setInterval(() => void pollTokens(), TOKEN_POLL_MS));
+    timers.push(setInterval(() => void refreshHistory(), 60_000));
   }
 
   const shutdown = () => {

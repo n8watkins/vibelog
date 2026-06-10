@@ -138,6 +138,7 @@
       .stat .v { font-size: 20px; font-weight: 700; text-shadow: 0 0 14px rgba(160, 107, 255, 0.3); }
       .stat .k { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-family: var(--font); margin-top: 2px; }
       .v.add { color: var(--add); } .v.rem { color: var(--rem); } .v.tok { color: #c9aaff; } .v.cost { color: var(--accent2); }
+      .v.streak { color: #ff9d4d; } .v.score { color: var(--pink); }
 
       .timer { font-family: var(--mono); font-size: 11px; color: var(--muted); }
       .empty { color: var(--muted); font-style: italic; font-size: 13px; }
@@ -172,6 +173,9 @@
           <div class="stat"><span class="v" id="s-prompts">0</span><span class="k">prompts</span></div>
           <div class="stat"><span class="v tok" id="s-tpm">0</span><span class="k">tok / min</span></div>
           <div class="stat"><span class="v cost" id="s-cph">$0</span><span class="k">spend / hr</span></div>
+          <div class="stat"><span class="v streak" id="s-streak">0</span><span class="k">🔥 day streak</span></div>
+          <div class="stat"><span class="v score" id="s-score">0</span><span class="k">⚡ vibe score</span></div>
+          <div class="stat"><span class="v add" id="s-lph">0</span><span class="k">lines / hr</span></div>
         </div>
       </div>
     </div>
@@ -228,10 +232,15 @@
         $("s-agents").textContent = fmt(s.subAgents ?? 0);
         $("s-prompts").textContent = fmt(s.prompts ?? 0);
 
-        // Burn rate — derived from session elapsed time.
+        $("s-streak").textContent = fmt(s.streak ?? 0);
+        $("s-score").textContent = fmt(s.vibeScore ?? 0);
+
+        // Burn rate + velocity — derived from session elapsed time.
         const mins = d.startedAt ? Math.max(1, (Date.now() - new Date(d.startedAt)) / 60000) : 0;
+        const netLines = (s.linesAdded ?? 0) - (s.linesRemoved ?? 0);
         $("s-tpm").textContent = mins ? fmt(Math.round((s.claudeTokens ?? 0) / mins)) : "0";
         $("s-cph").textContent = mins ? money((s.costUsd ?? 0) / (mins / 60)) : "$0";
+        $("s-lph").textContent = mins ? fmt(Math.round(netLines / (mins / 60))) : "0";
       }
 
       async function tick() {
