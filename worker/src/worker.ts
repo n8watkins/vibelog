@@ -14,6 +14,8 @@
  *   GET  /api/theme.json       — { vars: snapshot.theme } (ignores ?page=)
  *   GET  /                     — live.html (served via static assets binding)
  *   GET  /live                 — live.html (served via static assets binding)
+ *   GET  /embed                — embed.html (the G4 widget, via assets binding)
+ *   GET  /embed.js             — loader script (auto-served from worker/public/)
  *
  * Security notes:
  *   - Only POST /publish writes; it is token-gated with a constant-time compare.
@@ -78,6 +80,7 @@ export type RouteKind =
   | "profile"
   | "theme"
   | "page"
+  | "embed"
   | "not_found";
 
 /**
@@ -94,6 +97,9 @@ export function routeKind(method: string, pathname: string): RouteKind {
   if (m === "GET" && p === "/api/profile.json") return "profile";
   if (m === "GET" && p === "/api/theme.json") return "theme";
   if (m === "GET" && (p === "/" || p === "/live")) return "page";
+  // The G4 embed widget. /embed.js is a real file served directly by the
+  // static-assets binding; only the extensionless /embed page needs a rewrite.
+  if (m === "GET" && p === "/embed") return "embed";
   return "not_found";
 }
 
@@ -274,14 +280,17 @@ export default {
         return jsonResponse(body);
       }
 
-      case "page": {
-        // Serve live.html from static assets binding.
-        // Rewrite both "/" and "/live" to "/live.html" so Wrangler finds the file.
+      case "page":
+      case "embed": {
+        // Serve a static HTML page from the assets binding. "/" and "/live" map
+        // to live.html; "/embed" maps to embed.html (the G4 widget). The extra
+        // hop (vs. letting assets auto-serve) lets us rewrite the extensionless
+        // route and stamp a consistent Cache-Control.
+        const file = kind === "embed" ? "/embed.html" : "/live.html";
         const assetUrl = new URL(request.url);
-        assetUrl.pathname = "/live.html";
+        assetUrl.pathname = file;
         const assetReq = new Request(assetUrl.toString(), request);
         const assetRes = await env.ASSETS.fetch(assetReq);
-        // Add cache header to the page response
         const headers = new Headers(assetRes.headers);
         headers.set("Cache-Control", "public, max-age=30");
         return new Response(assetRes.body, {

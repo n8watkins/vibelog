@@ -128,6 +128,16 @@ describe("worker round-trip: publish then serve", () => {
     }
   });
 
+  it("serves embed.html on /embed via the assets binding", async () => {
+    const env = makeEnv(makeKV());
+    const res = await worker.fetch(new Request("https://w.example/embed"), env);
+    assert.equal(res.status, 200);
+    const body = await res.text();
+    // The ASSETS stub echoes the rewritten pathname — proves /embed → /embed.html.
+    assert.match(body, /embed\.html/);
+    assert.equal(res.headers.get("cache-control"), "public, max-age=30");
+  });
+
   it("a later publish overwrites the stored snapshot", async () => {
     const kv = makeKV();
     const env = makeEnv(kv);

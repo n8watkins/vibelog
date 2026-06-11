@@ -101,6 +101,15 @@ describe("routeKind", () => {
     assert.equal(routeKind("GET", "/live/"), "page");
   });
 
+  it("maps GET /embed to embed (the G4 widget page)", () => {
+    assert.equal(routeKind("GET", "/embed"), "embed");
+    assert.equal(routeKind("GET", "/embed/"), "embed");
+  });
+
+  it("does NOT route /embed.js through the worker (assets serve it directly)", () => {
+    assert.equal(routeKind("GET", "/embed.js"), "not_found");
+  });
+
   it("returns not_found for unknown GET", () => {
     assert.equal(routeKind("GET", "/unknown"), "not_found");
   });

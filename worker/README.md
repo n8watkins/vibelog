@@ -28,10 +28,17 @@ the Worker's origin. The Worker rewrites `GET /` and `GET /live` to
 `/live.html` before forwarding to the `ASSETS` binding, so the client page is
 served byte-for-byte identically to what `src/agent.ts` serves.
 
-When `public/live.html` is updated, re-copy it:
+The same applies to the embed widget (G4): `worker/public/embed.html` and
+`worker/public/embed.js` are copies of the root `public/` files, served at
+`/embed` and `/embed.js` (the `/embed.js` loader derives its origin at runtime,
+so the same file works on `*.workers.dev` and the custom domain).
+
+When `public/live.html` (or `public/embed.{html,js}`) is updated, re-copy:
 
 ```bash
-cp public/live.html worker/public/live.html
+cp public/live.html  worker/public/live.html
+cp public/embed.html worker/public/embed.html
+cp public/embed.js   worker/public/embed.js
 ```
 
 Then re-deploy (`wrangler deploy` from the `worker/` directory).
