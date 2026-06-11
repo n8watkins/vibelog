@@ -107,11 +107,13 @@ export type Publisher = {
   tick(snapshot: Snapshot, opts: { live: boolean }): void;
 
   /**
-   * Fire an unconditional publish (startup / shutdown). Still non-blocking
-   * and never throws. Ignores throttle but still checks dedup (hash unchanged
-   * → skip). Updates lastHash/lastAt on success.
+   * Fire an unconditional publish (startup / shutdown). Ignores throttle but
+   * still checks dedup (hash unchanged → skip). Updates lastHash/lastAt on
+   * success. Never throws. Returns a promise that resolves when the POST
+   * settles, so a caller (e.g. shutdown) can await it under a timeout; callers
+   * that don't care can simply ignore the result.
    */
-  publishNow(snapshot: Snapshot): void;
+  publishNow(snapshot: Snapshot): Promise<void>;
 };
 
 /**
@@ -184,18 +186,15 @@ export function createPublisher(config: PublisherConfig): Publisher {
       })();
     },
 
-    publishNow(snapshot: Snapshot): void {
+    async publishNow(snapshot: Snapshot): Promise<void> {
       const hash = hashSnapshot(snapshot);
       // Dedup still applies for publishNow (avoid redundant final POSTs)
       if (hash === lastHash) return;
-      const capturedHash = hash;
-      void (async () => {
-        const ok = await post(snapshot);
-        if (ok) {
-          lastHash = capturedHash;
-          lastAt = Date.now();
-        }
-      })();
+      const ok = await post(snapshot);
+      if (ok) {
+        lastHash = hash;
+        lastAt = Date.now();
+      }
     },
   };
 }
@@ -203,5 +202,7 @@ export function createPublisher(config: PublisherConfig): Publisher {
 /** No-op publisher for when publish config is absent. */
 export const noopPublisher: Publisher = {
   tick(): void {},
-  publishNow(): void {},
+  publishNow(): Promise<void> {
+    return Promise.resolve();
+  },
 };

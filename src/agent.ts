@@ -144,6 +144,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
   let state: LiveState = emptyState();
   let publisher: Publisher = noopPublisher;
+  let publishEnabled = false;
 
   function render(): void {
     state.isLive = true;
@@ -158,8 +159,12 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     state.startedAt = session!.startedAt;
     state.updatedAt = new Date().toISOString();
     void writeState(state);
-    // Snapshot publish — non-blocking; throttle+dedup inside the publisher
-    void buildSnapshot().then((snap) => publisher.tick(snap, { live: state.isLive }));
+    // Snapshot publish — non-blocking; throttle+dedup inside the publisher.
+    // Skip building the snapshot entirely when no publisher is configured
+    // (the common case) so render() stays a cheap local-only operation.
+    if (publishEnabled) {
+      void buildSnapshot().then((snap) => publisher.tick(snap, { live: state.isLive }));
+    }
   }
 
   async function persistSession(): Promise<void> {
@@ -804,6 +809,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         liveCadenceSec: pubCfg.liveCadenceSec,
         idleCadenceSec: pubCfg.idleCadenceSec,
       });
+      publishEnabled = true;
       // Initial publish — buildSnapshot() runs after the first pollers below
       // so defer it until after the await pollGit() call.
     }
@@ -819,10 +825,10 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     timers.push(setInterval(() => void pollSocial(), SOCIAL_POLL_MS));
 
     // Initial publish (after first git poll so stats are populated).
-    if (pubCfg?.url && pubCfg?.token) {
+    if (publishEnabled) {
       void buildSnapshot().then((snap) => publisher.publishNow(snap));
       // Safety-net: republish on the idle cadence even when state is quiet.
-      const idleSec = pubCfg.idleCadenceSec ?? 900;
+      const idleSec = pubCfg?.idleCadenceSec ?? 900;
       timers.push(setInterval(
         () => void buildSnapshot().then((snap) => publisher.tick(snap, { live: state.isLive })),
         idleSec * 1000,
@@ -830,13 +836,24 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     }
   }
 
-  const shutdown = () => {
+  const shutdown = async () => {
     timers.forEach(clearInterval);
     obs?.close();
     state.isLive = false;
     void writeState(state);
-    // Best-effort final publish before exit (fire-and-forget with built-in timeout).
-    void buildSnapshot().then((snap) => publisher.publishNow(snap));
+    // Best-effort final publish (state is now offline). Give the POST a brief
+    // window to land, but never let it block shutdown past the timeout.
+    if (publishEnabled) {
+      try {
+        const snap = await buildSnapshot();
+        await Promise.race([
+          publisher.publishNow(snap),
+          new Promise<void>((r) => setTimeout(r, 1500)),
+        ]);
+      } catch {
+        // never block a clean exit on the publisher
+      }
+    }
     process.exit(0);
   };
   process.on("SIGINT", shutdown);
