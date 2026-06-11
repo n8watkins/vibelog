@@ -1,0 +1,39 @@
+# wrangler.toml — VibeLog public Worker (PR3 / Task C)
+#
+# Before deploying, the user must:
+#   1. `cd worker && npm install`          (install @cloudflare/workers-types)
+#   2. `wrangler kv namespace create SNAPSHOTS`
+#      → copy the returned id into kv_namespaces[0].id below
+#   3. `wrangler secret put PUBLISH_TOKEN` (enter a strong random secret)
+#   4. `wrangler deploy`
+#
+# See worker/README.md for the full step-by-step deploy guide.
+
+name       = "vibelog-live"
+main       = "src/worker.ts"
+# Workers with static assets require Wrangler ≥ 3.60.  Pin to compat date ≥ 2024-09.
+compatibility_date = "2024-09-23"
+
+# ---------------------------------------------------------------------------
+# Static assets — serves worker/public/ at the Worker's origin.
+# Wrangler copies these files at deploy time; no build step needed.
+# live.html is committed to worker/public/ (a copy of public/live.html).
+# The Worker rewrites / and /live to /live.html before forwarding to ASSETS.
+# ---------------------------------------------------------------------------
+[assets]
+directory = "./public"
+binding   = "ASSETS"
+
+# ---------------------------------------------------------------------------
+# KV namespace — the snapshot store
+# ---------------------------------------------------------------------------
+[[kv_namespaces]]
+binding = "SNAPSHOTS"
+# TODO: replace with the real id after running:
+#   wrangler kv namespace create SNAPSHOTS
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# ---------------------------------------------------------------------------
+# Secret
+# PUBLISH_TOKEN is set via `wrangler secret put PUBLISH_TOKEN` (not stored here).
+# ---------------------------------------------------------------------------

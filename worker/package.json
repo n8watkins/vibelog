@@ -1,0 +1,19 @@
+{
+  "name": "vibelog-worker",
+  "version": "0.0.1",
+  "private": true,
+  "description": "VibeLog Cloudflare Worker — public snapshot host (PR3/Task C)",
+  "type": "module",
+  "scripts": {
+    "test": "node --test --import tsx src/worker.test.ts",
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "typescript": "^5.6.3",
+    "tsx": "^4.19.2",
+    "wrangler": "^3.95.0"
+  }
+}
