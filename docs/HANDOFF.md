@@ -7,8 +7,8 @@ hosting cost economics**, read `docs/PLATFORM_PLAN.md` (two tracks: A = "VibeLog
 domain, 24/7" — buildable now; B = the multi-tenant product). If anything here disagrees with
 `docs/VISION.md`, that file wins.
 
-> **Current state (2026-06-11):** `master @ 7cf194a`, **20 commits ahead of `origin/master` and
-> NOT pushed** (push only when the user asks). **100 src tests + 33 worker tests pass, typecheck clean.**
+> **Current state (2026-06-11):** `master @ 3a827aa`, **pushed to `origin/master`** (this session's
+> 20+ commits are live on GitHub). **100 src tests + 33 worker tests pass, typecheck clean.**
 > The whole local product is DONE, and this session **BUILT the V1 MVP code** (PR1–PR3, all merged to
 > master): the provider-flexible summarizer, the snapshot publisher, and the thin Cloudflare Worker+KV.
 > **The deploy is intentionally ON HOLD** (Nathan: "not yet") — no Cloudflare account/login yet, so
