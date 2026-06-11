@@ -141,6 +141,48 @@ function jsonResponse(body: string, status = 200): Response {
   return new Response(body, { status, headers: JSON_HEADERS });
 }
 
+/**
+ * Serve a JSON GET through Cloudflare's edge cache (`caches.default`) so repeated
+ * viewer polls don't re-read KV. The public page polls /state.json every ~1.5s;
+ * without this every poll is a KV read (the free tier allows 100k reads/day, so
+ * a few all-day tabs could approach it). With this, within the JSON_HEADERS
+ * max-age window the response is served straight from the edge — zero KV reads —
+ * and we only hit KV on a cache miss (≈ once per TTL per data-center).
+ *
+ * The cache key is normalised to the pathname (query dropped) so /api/theme.json
+ * variants (?page=live|overlay|…) share one entry. Staleness is bounded by the
+ * 30s TTL — comfortably under the publish cadence (≥300s), so viewers still see
+ * a new snapshot within ~30s of it landing.
+ *
+ * Defensive: `caches` only exists in the Workers runtime. Under `node --test`
+ * (where the round-trip tests drive this handler) it's undefined, so we fall
+ * back to building the body directly — the tests still exercise the KV path.
+ */
+async function cachedJson(
+  request: Request,
+  ctx: ExecutionContext | undefined,
+  build: () => Promise<string>
+): Promise<Response> {
+  const hasEdgeCache = typeof caches !== "undefined" && !!caches.default;
+  if (!hasEdgeCache) return jsonResponse(await build());
+
+  const cache = caches.default;
+  const keyUrl = new URL(request.url);
+  keyUrl.search = "";
+  const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
+
+  const hit = await cache.match(cacheKey);
+  if (hit) return hit;
+
+  const res = jsonResponse(await build());
+  // Populate the cache off the response path when we can (waitUntil); otherwise
+  // await so the write isn't dropped.
+  const put = cache.put(cacheKey, res.clone());
+  if (ctx?.waitUntil) ctx.waitUntil(put);
+  else await put;
+  return res;
+}
+
 function errorResponse(status: number, message: string): Response {
   return new Response(JSON.stringify({ error: message }), {
     status,
@@ -243,7 +285,10 @@ async function getSnapshot(env: Env): Promise<Snapshot | null> {
 // ---------------------------------------------------------------------------
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  // ctx is optional only so the round-trip tests can call fetch(req, env) under
+  // plain Node; the Workers runtime always passes it. A 3-arg fn is assignable
+  // to ExportedHandler's required-ctx signature.
+  async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const kind = routeKind(request.method, url.pathname);
 
@@ -262,23 +307,23 @@ export default {
       case "publish":
         return handlePublish(request, env);
 
-      case "state": {
-        const snap = await getSnapshot(env);
-        const body = snap ? extractState(snap) : EMPTY_STATE;
-        return jsonResponse(body);
-      }
+      case "state":
+        return cachedJson(request, ctx, async () => {
+          const snap = await getSnapshot(env);
+          return snap ? extractState(snap) : EMPTY_STATE;
+        });
 
-      case "profile": {
-        const snap = await getSnapshot(env);
-        const body = snap ? extractProfile(snap) : EMPTY_PROFILE;
-        return jsonResponse(body);
-      }
+      case "profile":
+        return cachedJson(request, ctx, async () => {
+          const snap = await getSnapshot(env);
+          return snap ? extractProfile(snap) : EMPTY_PROFILE;
+        });
 
-      case "theme": {
-        const snap = await getSnapshot(env);
-        const body = snap ? extractTheme(snap) : EMPTY_THEME;
-        return jsonResponse(body);
-      }
+      case "theme":
+        return cachedJson(request, ctx, async () => {
+          const snap = await getSnapshot(env);
+          return snap ? extractTheme(snap) : EMPTY_THEME;
+        });
 
       case "page":
       case "embed": {

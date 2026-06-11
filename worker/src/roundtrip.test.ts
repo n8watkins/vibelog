@@ -149,3 +149,68 @@ describe("worker round-trip: publish then serve", () => {
     assert.deepEqual(await state.json(), next.state);
   });
 });
+
+describe("edge cache: repeated GETs are served without re-reading KV", () => {
+  // Stub the Workers `caches.default` (absent under plain Node) with an in-memory
+  // Cache keyed on the normalised URL, matching what cachedJson() does.
+  function withCachesStub(fn: () => Promise<void>): () => Promise<void> {
+    return async () => {
+      const store = new Map<string, Response>();
+      (globalThis as { caches?: unknown }).caches = {
+        default: {
+          async match(req: Request) {
+            const r = store.get(new URL(req.url).toString());
+            return r ? r.clone() : undefined;
+          },
+          async put(req: Request, res: Response) {
+            store.set(new URL(req.url).toString(), res.clone());
+          },
+        },
+      };
+      try {
+        await fn();
+      } finally {
+        delete (globalThis as { caches?: unknown }).caches;
+      }
+    };
+  }
+
+  it(
+    "second /state.json poll hits the edge cache, not KV",
+    withCachesStub(async () => {
+      const kv = makeKV();
+      let gets = 0;
+      const counting = { ...kv, get: async (k: string) => { gets++; return kv.get(k); } };
+      const env = makeEnv(counting as unknown as ReturnType<typeof makeKV>);
+      await post(env, JSON.stringify(SNAPSHOT), TOKEN);
+
+      const r1 = await worker.fetch(new Request("https://w.example/state.json"), env);
+      assert.deepEqual(await r1.json(), SNAPSHOT.state);
+      assert.equal(gets, 1, "first GET reads KV (cache miss)");
+
+      const r2 = await worker.fetch(new Request("https://w.example/state.json"), env);
+      assert.deepEqual(await r2.json(), SNAPSHOT.state);
+      assert.equal(gets, 1, "second GET served from edge cache — no extra KV read");
+
+      // A different JSON route is a different cache key → its own KV read.
+      await worker.fetch(new Request("https://w.example/api/profile.json"), env);
+      assert.equal(gets, 2, "profile route is a separate cache key");
+    })
+  );
+
+  it(
+    "?page= variants of /api/theme.json share one cache entry",
+    withCachesStub(async () => {
+      const kv = makeKV();
+      let gets = 0;
+      const counting = { ...kv, get: async (k: string) => { gets++; return kv.get(k); } };
+      const env = makeEnv(counting as unknown as ReturnType<typeof makeKV>);
+      await post(env, JSON.stringify(SNAPSHOT), TOKEN);
+
+      await worker.fetch(new Request("https://w.example/api/theme.json?page=live"), env);
+      const r = await worker.fetch(new Request("https://w.example/api/theme.json?page=overlay"), env);
+      assert.deepEqual(await r.json(), { vars: SNAPSHOT.theme });
+      assert.equal(gets, 1, "query is dropped from the cache key, so both share one entry");
+    })
+  );
+});
