@@ -126,12 +126,30 @@ download it, set it up in minutes, and stream their public development. See `doc
   `PUBLIC_GET_ROUTES` (verified: remote 200 for both, 403 for `/api/settings.json` + `POST /api/settings`).
   New dep `@resvg/resvg-js` (prebuilt, no build step). Commit `56f8afa`. 72 tests pass, typecheck clean.
 
-## 5. What's NEXT (pick from `docs/VISION.md §5` build order)
+## 5. What's NEXT
 
-> **Status: the entire NOW/NEXT-buildable bucket is COMPLETE** (items 1–6 below, all ✅). What's
-> left is (a) small **optional polish** — safe to pick up with no new decision — and (b) the
-> **[LATER]** bucket, which needs a direction call from the user *before* building. If the user
-> gives no specific focus, the best low-risk next task is one of the polish items.
+> **🎯 DECIDED PRIORITY (2026-06-11): build the V1 MVP.** This session set the whole hosted-platform
+> direction and produced a build-ready plan. The next agent is the **orchestrator** — read
+> `docs/MVP_PLAN.md` in full (esp. §7 scope, §8 orchestration) plus `docs/VISION.md §6` and
+> `docs/PLATFORM_PLAN.md §7`. **No platform code exists yet.**
+>
+> **V1 MVP** = *"Nathan's VibeLog, live on a public URL, 24/7, for $0"* = local-LLM summarizer +
+> publisher + thin Cloudflare Worker+KV + (last) custom domain. Build order, tests, security
+> checklist, and the parallel-subagent + model-tier plan are all in `docs/MVP_PLAN.md`.
+>
+> **Decided defaults (do NOT re-ask):** summarizer `provider:"auto"` (local→Gemini→template) per
+> Nathan's "be flexible"; storage = Cloudflare **KV**; MVP cadence ~300s live / ~900s idle,
+> write-on-change; **no domain needed to build/test** (free `*.workers.dev` first); **don't buy
+> `vibelog.app`** (Phase 2+). Orchestrate with **Opus** (contract/integration/security review) +
+> **Sonnet** (the A/B/C feature builds). **First buildable step: PR1 — the local-LLM summarizer**
+> (`src/summarize.ts`), which needs nothing external.
+>
+> **Open for Nathan (non-blocking, only gate the *last* step):** the subdomain label
+> (`vibelog.`/`live.`/`building.`) and whether he already owns `natebuilds.dev`; a free Cloudflare
+> account is needed before PR3 deploys.
+>
+> The legacy NOW/NEXT product bucket (below) is all ✅ DONE; the remaining optional polish and the
+> [LATER] bucket are now subsumed by the platform plan (see `docs/VISION.md §6`, `LATER_TRIAGE.md`).
 
 **Optional polish (no decision needed — entry points):**
 - ~~**Bundle a font for share cards**~~ — ✅ DONE (`3f8155b`). `public/fonts/{DejaVuSans,
