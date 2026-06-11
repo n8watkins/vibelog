@@ -224,6 +224,9 @@ plan when we reach it. Priority order is fixed: **ship the V1 MVP for Nathan fir
 > **V1 MVP = "Nathan's VibeLog, live on his own domain, 24/7, for $0."** = Track A1 + the local-LLM
 > option. A visitor hits `vibelog.natebuilds.dev` and sees Nathan's stats even when his laptop is off.
 > That's the whole MVP — no accounts, no billing, no multi-tenancy, no embed.
+>
+> **The detailed, build-ready spec for this is `docs/MVP_PLAN.md`** (components, PR order, tests,
+> security checklist, decisions). The summary below is just the scope.
 
 **V1 MVP scope (and nothing more):**
 1. **Local-LLM summarizer** — provider abstraction (Gemini | local OpenAI-compatible | template),
@@ -263,8 +266,15 @@ Done = MVP live, $0/mo.
 
 ### 7.4 What I need from Nathan to start Phase 1
 
-1. A **free Cloudflare account** + move `natebuilds.dev` DNS to Cloudflare (free; enables free
-   custom-domain + SSL).
-2. The **subdomain label** (decision §7.3.6).
+**No domain is required to build/test.** Every Worker gets a free `*.workers.dev` URL — the whole MVP
+can run 24/7 there at $0, no purchase. A custom domain is only the **last-mile cosmetic step** (swap
+`*.workers.dev` → `vibelog.natebuilds.dev` via one CNAME). So:
+
+1. A **free Cloudflare account** (only hard requirement — needed to deploy the Worker).
+2. *(last step only)* **`natebuilds.dev` on Cloudflare** to put it on Nathan's brand. Until then,
+   `workers.dev` works fine.
 3. Confirm the **local-LLM flexibility** approach (§7.3.1) — or let me proceed with the recommendation.
-Everything else (login provider, pricing, Stripe, `vibelog.app`) is **Phase 2+**, not needed now.
+
+Agent can't do: buy domains, create the Cloudflare account, or run interactive logins
+(`wrangler login`) — those are Nathan's (the agent provides exact commands). **Do NOT buy `vibelog.app`
+yet** — it (+ login provider, pricing, Stripe) is **Phase 2+**, not needed for the MVP.

@@ -11,8 +11,9 @@ domain, 24/7" — buildable now; B = the multi-tenant product). If anything here
 > NOT pushed** (push only when the user asks). 72 tests pass, typecheck clean. The whole local
 > product is DONE; this session **defined the hosted-platform direction + the V1 MVP** (no platform
 > code yet). **Next decided priority: build the V1 MVP** = "Nathan's VibeLog live on his own domain,
-> 24/7, for $0" (Track A1 + local-LLM). Read `docs/VISION.md §6` + `docs/PLATFORM_PLAN.md` (esp. §7
-> phases/MVP/decisions) + `docs/FAQ.md` before planning. See §5 for the older optional-polish list.
+> 24/7, for $0" (Track A1 + local-LLM). **The build-ready spec is `docs/MVP_PLAN.md`.** Read
+> `docs/VISION.md §6` + `docs/PLATFORM_PLAN.md §7` + `docs/MVP_PLAN.md` + `docs/FAQ.md` before building.
+> See §5 for the older optional-polish list.
 
 ---
 
