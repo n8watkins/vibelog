@@ -7,7 +7,7 @@ hosting cost economics**, read `docs/PLATFORM_PLAN.md` (two tracks: A = "VibeLog
 domain, 24/7" — buildable now; B = the multi-tenant product). If anything here disagrees with
 `docs/VISION.md`, that file wins.
 
-> **Current state (2026-06-11):** `master @ fc55dcb`, **19 commits ahead of `origin/master` and
+> **Current state (2026-06-11):** `master @ 7cf194a`, **20 commits ahead of `origin/master` and
 > NOT pushed** (push only when the user asks). **100 src tests + 33 worker tests pass, typecheck clean.**
 > The whole local product is DONE, and this session **BUILT the V1 MVP code** (PR1–PR3, all merged to
 > master): the provider-flexible summarizer, the snapshot publisher, and the thin Cloudflare Worker+KV.
@@ -142,6 +142,12 @@ download it, set it up in minutes, and stream their public development. See `doc
 >   runs unchanged; `[assets]` serves `live.html`. **Deploy-ready, NOT deployed.** See `worker/README.md`.
 > - Snapshot interface frozen in `docs/SNAPSHOT_CONTRACT.md`. Security re-audit (§5 of MVP_PLAN) done:
 >   no new inbound route, token never logged, published JSON = the already-public surface only.
+>
+> **This session's commits (oldest→newest):** `93b9814` freeze contract · `d08418e`+`2c370bd` PR1
+> summarizer · `277b791`+`88fe9f6` PR3 Worker · `47446a4`+`8f2fd5a` PR2 publisher · `420bf90`
+> integration fixes (render gate + awaited shutdown flush) · `80e1a05` secrets.example publish block ·
+> `fc55dcb` worker round-trip tests · `7cf194a` this handoff. (PR1/PR2/PR3 each have a subagent commit +
+> an orchestrator `--no-ff` merge commit.)
 >
 > **Subdomain DECIDED: `vibelog.natebuilds.dev`** (subdomain, not a `/vibelog` path — a path would
 > break the contract's absolute `/state.json` etc. fetches and force a client rewrite).
