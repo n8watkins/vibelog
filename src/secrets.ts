@@ -21,6 +21,19 @@ export type Secrets = {
   youtube?: { apiKey?: string; channelId?: string; clientId?: string; clientSecret?: string };
   discord?: { clientId?: string; clientSecret?: string };
   github?: { clientId?: string; clientSecret?: string; login?: string };
+  /**
+   * Snapshot publisher config. Token is a secret — lives here (secrets.json),
+   * never in state/settings/logs. If url or token is absent the publisher is
+   * disabled (no-op); zero-config remains fully working.
+   */
+  publish?: {
+    url?: string;
+    token?: string;
+    /** Min seconds between POSTs while live. Default 300. */
+    liveCadenceSec?: number;
+    /** Min seconds between POSTs while idle. Default 900. */
+    idleCadenceSec?: number;
+  };
 };
 
 let cache: { at: number; data: Secrets } | null = null;
