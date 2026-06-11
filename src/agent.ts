@@ -36,6 +36,8 @@ const OVERLAY_FILE = path.join(PUBLIC_DIR, "overlay.html");
 const LIVE_FILE = path.join(PUBLIC_DIR, "live.html");
 const LANDING_FILE = path.join(PUBLIC_DIR, "landing.html");
 const SHARE_FILE = path.join(PUBLIC_DIR, "share.html");
+const EMBED_FILE = path.join(PUBLIC_DIR, "embed.html");
+const EMBED_JS_FILE = path.join(PUBLIC_DIR, "embed.js");
 const DASHBOARD_FILE = path.join(PUBLIC_DIR, "dashboard.html");
 const SHOTS_DIR = path.join(PUBLIC_DIR, "shots");
 // Allowlisted product screenshots used by the landing page (and the OG image).
@@ -56,6 +58,11 @@ const PUBLIC_GET_ROUTES = new Set([
   // (the four profile fields + numeric LiveState stats + theme vars) — see
   // src/share.ts. The "?kind=" query is matched on pathname, so it's covered.
   "/share", "/share/card.png",
+  // Embeddable widget (G4): the compact live card hosted in an <iframe> on the
+  // user's own site, plus the loader script that injects it. Both are read-only
+  // and render only the already-public snapshot surface (same data as /live) —
+  // /embed.js is origin-agnostic JS, /embed is the widget HTML. No write, no key.
+  "/embed", "/embed.js",
   // Static product screenshots shown on the landing page + used as the OG image,
   // so they must be fetchable by remote/unfurl bots. Read-only PNGs only.
   "/shots/overlay.png", "/shots/live.png", "/shots/dashboard.png",
@@ -442,6 +449,29 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         const html = await readFile(LIVE_FILE, "utf8");
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
         res.end(html);
+        return;
+      }
+
+      // Embeddable widget (G4). The compact live card, rendered in an <iframe>
+      // on the user's own site. Same public data contract as /live (state +
+      // profile + theme). Adds no inbound write surface.
+      if (req.method === "GET" && route === "/embed") {
+        const html = await readFile(EMBED_FILE, "utf8");
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+        res.end(html);
+        return;
+      }
+
+      // The loader script the user drops on their site (<script src=…/embed.js>).
+      // It derives the widget origin from its own src and injects the iframe, so
+      // the same file works from localhost / *.workers.dev / a custom domain.
+      if (req.method === "GET" && route === "/embed.js") {
+        const js = await readFile(EMBED_JS_FILE, "utf8");
+        res.writeHead(200, {
+          "content-type": "application/javascript; charset=utf-8",
+          "cache-control": "public, max-age=300",
+        });
+        res.end(js);
         return;
       }
 
