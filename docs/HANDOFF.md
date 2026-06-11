@@ -74,6 +74,23 @@ download it, set it up in minutes, and stream their public development. See `doc
   IntersectionObserver (all motion gated by `prefers-reduced-motion`). OG image set to
   `/shots/live.png`. `/` still serves the OBS overlay (unchanged). Commits: `ecb5747` (initial),
   `49dd16e` (dynamic redesign), `77064e0` (docs). 55 tests pass, typecheck clean.
+- **T6 neon icon pass (DONE this session):** swept overlay/live/dashboard for emoji + bare-text
+  section labels and gave them on-brand neon line-art glyphs (teal `--accent2` + glow): `🎲`→shuffle
+  on Randomize; bars/calendar/broadcast on the dashboard panel headers; layers/activity/bars on the
+  overlay labels; layers/activity on the live headers. Pure HTML/CSS. Commit `1cbe30e`.
+- **S2 Profile + S3 Integrations hub (DONE this session):** the Settings sheet now has a **profile
+  editor** (display name / Twitter / channel header / bio → `sanitizeProfile()` in `src/theme.ts`,
+  persisted to `settings.json`, served publicly via `GET /api/profile.json`, rendered on `/live` as
+  the brand + a profile bar) and a full **integrations hub** for Twitch/YouTube/Discord/GitHub. New
+  `src/oauth.ts` is a generic Authorization-Code engine (mirrors `twitch-oauth.ts`): localhost routes
+  `POST /api/oauth/<p>/start`, `GET /oauth/<p>/callback` (CSRF state), `POST /api/oauth/<p>/disconnect`.
+  App client id/secret live in `secrets.json`; tokens only in chmod-600 files (`twitch-tokens.json`
+  reused for Twitch, `oauth-tokens.json` for the rest); the dashboard sees a **derived**
+  `{ connected, configured, login }` from `integrationStatus()` — never stored, never a token.
+  `GET /api/settings.json` now returns `theme` + `profile` + `integrations`. **Per-provider setup:**
+  register an OAuth app with redirect URI `http://localhost:4545/oauth/<provider>/callback` and add
+  `clientId`/`clientSecret` under `secrets.json.<provider>` to light up its Connect button. Commits:
+  `247f20c` (profile + oauth engine), `8ddd522` (sheet + /live). 61 tests pass, typecheck clean.
 
 ## 5. What's NEXT (pick from `docs/VISION.md §5` build order)
 
@@ -81,24 +98,24 @@ In rough priority, with entry points:
 
 1. **T4/T5 theming polish** — ✅ DONE (see §4). Custom-var coverage broadened to 8 vars + hex entry,
    and the per-page (sync-off) edit UI shipped in the dashboard Settings sheet.
-2. **T6 icon pass [NOW]** — replace the remaining bare text/emoji with on-brand neon inline-SVG icons
-   (the dashboard already has a small glyph set — see the `// On-brand neon glyphs` block in
-   `public/dashboard.html`; `🎲 Randomize` in the Settings sheet is still an emoji). Sweep
-   `overlay.html`/`live.html`/`dashboard.html` for emoji and bare-text labels and give them icons.
-   Pure HTML/CSS, no server surface. Small, self-contained — do inline.
-3. **S2/S3 Profile + Integrations hub [NEXT, design-first]** — profile fields (bio/Twitter/channel
-   header) + connect Twitch/YouTube/Discord/GitHub from the dashboard. Data model is **already stubbed**
-   in the `Settings` type (`src/theme.ts` → `profile`, `integrations`), and `GET /api/settings.json`
-   now exists (currently returns only the `theme` sub-tree — extend it to include profile/integrations
-   for the dashboard, keeping it localhost-only). Reuse `src/twitch-oauth.ts` as the OAuth pattern.
-   Tokens stay in `secrets.json`; only `connected` booleans surface.
+2. **T6 icon pass** — ✅ DONE (see §4). All overlay/live/dashboard emoji + bare-text section labels
+   now use on-brand neon line-art glyphs.
+3. **S2/S3 Profile + Integrations hub** — ✅ DONE (see §4). Profile editor + full OAuth integrations
+   hub (Twitch/YouTube/Discord/GitHub) shipped; `src/oauth.ts` is the engine and `GET /api/profile.json`
+   serves the public profile. The only remaining work is **per-provider OAuth-app registration** (a
+   user step, not code): add each app's `clientId`/`clientSecret` to `~/.vibelog/secrets.json` and
+   register redirect URI `http://localhost:4545/oauth/<provider>/callback`. Until then a provider's
+   Connect button is disabled with a hint. Possible follow-up: **token refresh** for the new providers
+   (the engine stores `refreshToken`/`expiresAt` but only Twitch auto-refreshes today, in
+   `twitch-oauth.ts`); add a refresh path in `oauth.ts` when a feature actually consumes those tokens.
 4. **X2 Landing page** — ✅ DONE (see §4). Dynamic page at `GET /landing` with real product
    screenshots, zigzag flow, and live-recolor theme swatches. To **refresh the screenshots** after
    any UI redesign, re-run the three captures in §6 against the demo server and overwrite
    `public/shots/*.png`. Possible follow-ups (optional): compress the PNGs (~1.3 MB total), point
    the "Clone on GitHub" CTA at the real repo URL (currently `https://github.com/`).
-5. **G1/G2 Share page + OG/Twitter cards** — shareable page with OG meta + server-rendered preset
-   share images (daily stats / "join VibeLog").
+5. **G1/G2 Share page + OG/Twitter cards [NOW]** — shareable page with OG meta + server-rendered preset
+   share images (daily stats / "join VibeLog"). Profile (S2) now feeds the share card — display name /
+   bio / Twitter are available via `GET /api/profile.json`.
 6. **Doc reconciliation** — `README.md` is stale (says "no Gemini" but `src/summarize.ts` uses it;
    file map omits ~9 modules). `V0_SPEC.md`/`PRD.md`/`NEXT_STEPS.md` describe older directions;
    mark historical. Add an in-repo `CLAUDE.md` (streaming-safety block is in `INFRA_PLAN.md §4`)

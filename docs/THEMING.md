@@ -1,9 +1,10 @@
 # VibeLog — Theming & Settings Spec
 
-`docs/THEMING.md` — status: **Phases 1–3 shipped + T4/T5 complete** (gradient desync, theme
+`docs/THEMING.md` — status: **Phases 1–4 shipped; T1–T6 + S1–S3 complete** (gradient desync, theme
 persistence + public read / localhost write, dashboard Settings UI with presets/randomize, 8 custom
-color pickers with hex entry, sync toggle, and per-page sync-off editing via `GET /api/settings.json`).
-Remaining: T6 icon pass, Phase 4 profile/integrations.
+color pickers with hex entry, sync toggle, per-page sync-off editing, the neon icon pass, and the
+Settings-sheet **profile editor** + **integrations hub**). Profile/integration specifics live with
+S2/S3 in `docs/VISION.md §3.2`; this file remains the theming + settings-plumbing reference.
 
 Covers roadmap items **T1–T5** and **S1** from `docs/VISION.md`. The moving gradient, the theme
 engine, and the settings persistence all share one mechanism: **a theme is a JSON object of CSS
@@ -193,7 +194,11 @@ instant feedback.
   for remote, settings POST 403 for remote / 200 for localhost, allowlist strips injection.
 - **Phase 3 — Dashboard Settings UI.** Preset grid, Randomize, custom-color inputs, sync toggle,
   live preview.
-- **Phase 4 — Profile + Integrations** (`profile`/`integrations` sub-trees, `GET /api/settings.json`).
+- **Phase 4 — Profile + Integrations [DONE].** `profile` sub-tree (sanitised, public via
+  `GET /api/profile.json`, rendered on `/live`) + a full OAuth integrations hub. Integration
+  `connected` state is **derived** at runtime by `integrationStatus()` in `src/oauth.ts` (token/secret
+  presence) — it is NOT stored in `settings.json`. See `docs/VISION.md §3.2` (S2/S3) for the routes,
+  the chmod-600 token stores, and the per-provider OAuth-app setup.
 
 ---
 

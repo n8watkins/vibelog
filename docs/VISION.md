@@ -74,13 +74,20 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
   Start with the theme picker (T3), then grow it. Persist server-side in `~/.vibelog/settings.json`
   (localhost-only writes) so the overlay — which can't share localStorage with the dashboard or OBS
   — reads the same theme. See `docs/THEMING.md` for the data model + routes.
-- **S2 [NEXT] — Profile fields:** display name, **bio**, **Twitter handle**, **channel header**,
-  other socials. These render on `/live` and the share card. Data model already stubbed in
-  `settings.json` (`profile`).
-- **S3 [NEXT] — Integrations hub.** A Settings → Integrations section to connect **Twitch, YouTube,
-  Discord, GitHub** from the dashboard, with connect/disconnect buttons and a "connected" indicator.
-  Tokens stay in `secrets.json`; only `connected` booleans surface in settings. Reuses
-  `src/twitch-oauth.ts` as the pattern.
+- **S2 [DONE] — Profile fields.** Display name, bio, Twitter handle and channel header edit in the
+  dashboard Settings sheet, persist to `settings.json` (`profile`, sanitised via `sanitizeProfile`),
+  and render on `/live` (display name as the brand + a channel-header/bio/Twitter profile bar) via a
+  public `GET /api/profile.json`. textContent-only render; the four fields are the only profile data
+  ever served.
+- **S3 [DONE] — Integrations hub.** A Settings → Integrations section connects **Twitch, YouTube,
+  Discord, GitHub** from the dashboard with Connect/Disconnect + a Connected/Off pill. Full
+  Authorization-Code OAuth in `src/oauth.ts` (mirrors `src/twitch-oauth.ts`): localhost routes
+  `POST /api/oauth/<p>/start`, `GET /oauth/<p>/callback` (CSRF state), `POST /api/oauth/<p>/disconnect`.
+  App client id/secret live in `secrets.json`; issued tokens only in chmod-600 files; the dashboard
+  sees a **derived** `{ connected, configured, login }` (computed by `integrationStatus()`, never
+  stored, never a token). **Setup:** each provider needs an OAuth app registered with redirect URI
+  `http://localhost:4545/oauth/<provider>/callback` and its `clientId`/`clientSecret` in
+  `~/.vibelog/secrets.json` (`twitch`/`youtube`/`discord`/`github`) before Connect is enabled.
 
 ### 3.3 Sharing & growth
 
@@ -153,7 +160,8 @@ The docs need reconciliation; this file is step one. Outstanding:
    write route, ~10 presets + Randomize, applied across all pages.
 3. **T4 + T5** — custom colors + per-page sync toggle.
 4. **X2 — landing page** (parallelizable any time; no backend dependency).
-5. **S2 + S3** — profile fields + integrations hub UI.
+5. **S2 + S3** — ✅ DONE. Profile fields + integrations hub (full OAuth for Twitch/YouTube/Discord/
+   GitHub) shipped; see §3.2.
 6. **G1 + G2** — share page + OG/preset cards.
 7. **[LATER] bucket** — Discord, auto-post, embed widget, MCP, hosted accounts — each needs its own
    design pass and an external decision before planning.
