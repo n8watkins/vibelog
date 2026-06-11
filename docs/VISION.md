@@ -91,11 +91,19 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 
 ### 3.3 Sharing & growth
 
-- **G1 [NEXT] — Share your VibeLog.** A shareable public page (the deployed `/live` or a dedicated
-  profile route) with proper **OG / Twitter card** meta so links unfurl nicely.
-- **G2 [NEXT] — Preset share images / cards.** Pick from preset card designs: "here's my VibeLog",
-  "invite people to join VibeLog", or "today's stats" (what I built, hours live, tokens). Generated
-  on the server from live data.
+- **G1 [DONE] — Share your VibeLog.** Public `GET /share` (`public/share.html`) — a themed page
+  reusing the neon `/live` look, with **server-templated OG + `twitter:summary_large_image` meta**.
+  Absolute `og:url`/`og:image` are built from the request origin (`originOf` in `src/agent.ts`) so
+  links unfurl over the `vibe share` Cloudflare Tunnel; a spoofed Host can't smuggle a scheme/path.
+  Display name + description come from the public profile. Both `/share` routes are in
+  `PUBLIC_GET_ROUTES`.
+- **G2 [DONE] — Preset share images / cards.** `GET /share/card.png?kind=stats|join` (public) —
+  a server-rendered **1200×630 PNG** via `@resvg/resvg-js` from a themed SVG (`src/share.ts`).
+  "stats" = today's features / time-live / tokens / commits + now-building; "join" = an invite card.
+  Painted with the user's resolved theme vars, built from ONLY already-public surface (the four
+  sanitised profile fields + numeric `LiveState` stats + theme vars). Every dynamic string is
+  XML-escaped before entering the SVG and the card embeds no remote refs — neither an injection nor
+  an exfil vector. The `/share` page has a stats/join toggle, live preview, copy-link + Post-on-X.
 - **G3 [LATER] — Auto-post to Twitter/X.** Connect Twitter and optionally auto-post a daily-stats
   card. Needs Twitter API access + posting cadence/consent design.
 - **G4 [LATER] — Embeddable widget.** Let people inject their dashboard (or a compact stat strip)
@@ -162,6 +170,7 @@ The docs need reconciliation; this file is step one. Outstanding:
 4. **X2 — landing page** (parallelizable any time; no backend dependency).
 5. **S2 + S3** — ✅ DONE. Profile fields + integrations hub (full OAuth for Twitch/YouTube/Discord/
    GitHub) shipped; see §3.2.
-6. **G1 + G2** — share page + OG/preset cards.
+6. **G1 + G2** — ✅ DONE. Share page (`/share`) + server-rendered OG/Twitter card PNGs
+   (`/share/card.png?kind=stats|join`); see §3.3.
 7. **[LATER] bucket** — Discord, auto-post, embed widget, MCP, hosted accounts — each needs its own
    design pass and an external decision before planning.

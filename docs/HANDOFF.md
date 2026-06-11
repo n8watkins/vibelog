@@ -34,6 +34,10 @@ download it, set it up in minutes, and stream their public development. See `doc
   feature label), `src/demodata.ts` (seeded demo year).
 - **Theming:** `src/theme.ts` (theme model + allowlist + presets + resolver; also `sanitizeProfile`
   for the S2 profile fields), persisted to `~/.vibelog/settings.json` via `src/store.ts`.
+- **Share cards (G1/G2):** `src/share.ts` — builds a themed 1200×630 SVG and rasterises it to PNG
+  with `@resvg/resvg-js` (the only non-`commander` runtime dep; prebuilt, no build step). Served at
+  public `GET /share` (HTML page, OG/Twitter meta) + `GET /share/card.png?kind=stats|join`. All card
+  data comes from already-public surface only; every dynamic string is XML-escaped into the SVG.
 - **Integrations (S3):** `src/oauth.ts` — a generic Authorization-Code engine for Twitch/YouTube/
   Discord/GitHub + `integrationStatus()` (derives `{connected,configured,login}` from token/secret
   presence; never stored). Tokens persist to chmod-600 `~/.vibelog/twitch-tokens.json` (Twitch) and
@@ -42,8 +46,9 @@ download it, set it up in minutes, and stream their public development. See `doc
 ## 3. SECURITY INVARIANTS (do not break — keys must never hit the stream)
 
 - **Public vs local:** `isRemote(req)` in `src/agent.ts` gates tunneled/LAN callers to the
-  read-only `PUBLIC_GET_ROUTES` set (`/`, `/overlay`, `/live`, `/landing`, `/state.json`,
-  `/api/theme.json`, `/api/presets.json`, `/api/profile.json`, `/shots/*.png`). **Every write and
+  read-only `PUBLIC_GET_ROUTES` set (`/`, `/overlay`, `/live`, `/landing`, `/share`,
+  `/share/card.png`, `/state.json`, `/api/theme.json`, `/api/presets.json`, `/api/profile.json`,
+  `/shots/*.png`). **Every write and
   every key-touching route MUST stay OUT of that set** so it's localhost-only. The S3 OAuth routes
   (`POST /api/oauth/<p>/start|/disconnect`, `GET /oauth/<p>/callback`) are deliberately NOT in the
   set — the callback is a GET, so it relies on `isRemote()` 403ing remote callers (verified).
@@ -98,6 +103,17 @@ download it, set it up in minutes, and stream their public development. See `doc
   register an OAuth app with redirect URI `http://localhost:4545/oauth/<provider>/callback` and add
   `clientId`/`clientSecret` under `secrets.json.<provider>` to light up its Connect button. Commits:
   `247f20c` (profile + oauth engine), `8ddd522` (sheet + /live). 61 tests pass, typecheck clean.
+- **G1/G2 Share page + OG/Twitter cards (DONE this session):** public `GET /share`
+  (`public/share.html`) — themed page reusing the `/live` neon look, with **server-templated OG +
+  `twitter:summary_large_image` meta**. Absolute `og:url`/`og:image` come from the request origin
+  (`originOf`, which trusts the tunnel's `x-forwarded-host`/`-proto` but rejects a Host containing a
+  slash/space), so links unfurl over `vibe share`. **`GET /share/card.png?kind=stats|join`** renders a
+  1200×630 PNG with `@resvg/resvg-js` from a themed SVG (`src/share.ts`): "stats" = today's features/
+  time-live/tokens/commits + now-building; "join" = an invite card. Card data is built (`buildShareData`)
+  from ONLY public surface (4 sanitised profile fields + numeric `LiveState` stats + resolved theme
+  vars); every dynamic string is XML-escaped into the SVG; no remote refs embedded. Both routes are in
+  `PUBLIC_GET_ROUTES` (verified: remote 200 for both, 403 for `/api/settings.json` + `POST /api/settings`).
+  New dep `@resvg/resvg-js` (prebuilt, no build step). Commit `56f8afa`. 72 tests pass, typecheck clean.
 
 ## 5. What's NEXT (pick from `docs/VISION.md §5` build order)
 
@@ -120,10 +136,11 @@ In rough priority, with entry points:
    any UI redesign, re-run the three captures in §6 against the demo server and overwrite
    `public/shots/*.png`. Possible follow-ups (optional): compress the PNGs (~1.3 MB total), point
    the "Clone on GitHub" CTA at the real repo URL (currently `https://github.com/`).
-5. **G1/G2 Share page + OG/Twitter cards [NOW]** — shareable page with OG meta + server-rendered preset
-   share images (daily stats / "join VibeLog"). Profile (S2) now feeds the share card — display name /
-   bio / Twitter are available via `GET /api/profile.json`.
-6. **Doc reconciliation** — `README.md` is stale (says "no Gemini" but `src/summarize.ts` uses it;
+5. **G1/G2 Share page + OG/Twitter cards** — ✅ DONE (see §4). `/share` + `/share/card.png?kind=
+   stats|join`. Possible follow-ups (optional): bundle a font in the repo so cards render identically
+   on a machine with no system fonts (today resvg uses `loadSystemFonts` + a `DejaVu Sans` default);
+   add a "Share" entry point from `/live`/dashboard; a third card design ("here's my VibeLog").
+6. **Doc reconciliation [NOW]** — `README.md` is stale (says "no Gemini" but `src/summarize.ts` uses it;
    file map omits ~9 modules). `V0_SPEC.md`/`PRD.md`/`NEXT_STEPS.md` describe older directions;
    mark historical. Add an in-repo `CLAUDE.md` (streaming-safety block is in `INFRA_PLAN.md §4`)
    and a keyless `.env.example`.
