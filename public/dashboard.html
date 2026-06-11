@@ -178,6 +178,8 @@
       .social.tw:hover { color: #fff; background: #9146ff; border-color: #9146ff; box-shadow: 0 0 16px rgba(145,70,255,0.5); }
       .social.yt:hover { color: #fff; background: #ff0033; border-color: #ff0033; box-shadow: 0 0 16px rgba(255,0,51,0.45); }
       .social.off { opacity: 0.32; pointer-events: none; }
+      .social.share svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .social.share:hover { color: #fff; background: var(--accent); border-color: var(--accent); box-shadow: 0 0 16px rgba(160,107,255,0.5); }
 
       /* all-time aggregate strip under the heatmap */
       .alltime { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
@@ -259,6 +261,9 @@
           </a>
           <a class="social yt off" id="yt" target="_blank" rel="noopener" title="YouTube">
             <svg viewBox="0 0 24 24"><path d="M23 7.5a3 3 0 0 0-2.1-2.1C19 5 12 5 12 5s-7 0-8.9.4A3 3 0 0 0 1 7.5 31 31 0 0 0 .6 12 31 31 0 0 0 1 16.5a3 3 0 0 0 2.1 2.1C5 19 12 19 12 19s7 0 8.9-.4a3 3 0 0 0 2.1-2.1A31 31 0 0 0 23.4 12 31 31 0 0 0 23 7.5ZM9.8 15.3V8.7l5.7 3.3-5.7 3.3Z"/></svg>
+          </a>
+          <a class="social share" href="/share" target="_blank" rel="noopener" title="Share card (/share)" aria-label="Share">
+            <svg viewBox="0 0 24 24"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v13"/><path d="m8 7 4-4 4 4"/></svg>
           </a>
           <span class="pill" id="livePill"><span class="dot"></span> <span id="liveText">Offline</span></span>
           <button class="gear" id="gear" title="Theme &amp; settings" aria-label="Settings">

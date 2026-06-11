@@ -65,6 +65,17 @@
       .pill.off .dot { animation: none; box-shadow: none; }
       .timer { font-family: var(--mono); color: var(--muted); font-size: 13px; }
 
+      /* Share entry point → /share (the public card surface). On-brand ghost pill. */
+      .share-link {
+        display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+        font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+        padding: 8px 15px; border-radius: 999px; color: var(--accent);
+        background: rgba(160,107,255,0.10); border: 1px solid rgba(167,134,255,0.4);
+        box-shadow: 0 0 16px rgba(160,107,255,0.18); transition: all 0.25s;
+      }
+      .share-link:hover { background: rgba(160,107,255,0.2); box-shadow: 0 0 22px rgba(160,107,255,0.35); }
+      .share-link svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
       .socials { display: flex; gap: 16px; font-family: var(--mono); font-size: 14px; }
       .socials .so { display: flex; align-items: center; gap: 7px; color: var(--muted); }
       .socials .so b { color: var(--text); font-weight: 700; }
@@ -171,6 +182,7 @@
         <div class="brand"><span class="spark"></span> <span id="brandName">VibeLog</span></div>
         <div class="top-right">
           <div class="socials" id="socials" style="display:none"></div>
+          <a class="share-link" href="/share" title="Open a shareable card of this session"><svg viewBox="0 0 24 24"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 3v13"/><path d="m8 7 4-4 4 4"/></svg> Share</a>
           <span class="pill" id="livePill"><span class="dot"></span> <span id="pillText">Live</span></span>
           <span class="timer" id="timer"></span>
         </div>
