@@ -24,6 +24,29 @@ LOCAL agent (vibe start)                    CLOUD (thin)                  VISITO
                                                + the /state.json shape)
 ```
 
+### 0.1 The whole flow, end to end (one keystroke → a viewer's screen)
+
+1. **You code.** You commit, burn Claude tokens, stream in OBS, gain followers.
+2. **The local agent observes** (already built): git polling (`src/git.ts`), `ccusage`
+   (`src/ccusage.ts`), OBS WebSocket (`src/obs.ts`), social APIs (`src/social.ts`). A Claude-Code
+   hook posts your prompt to a localhost-only route.
+3. **It summarizes + sanitizes** (already built): prompt → short label via Gemini *or* a local LLM
+   *or* the template fallback (`src/summarize.ts`), then `redact()` + 140-char cap.
+4. **It updates `LiveState`** → `~/.vibelog/state.json` (already built). This drives the **overlay**
+   in OBS (100% local) and the local dashboard/live page.
+5. **It builds a public snapshot** (already built as `buildShareData` in `src/share.ts`): the safe
+   surface only — 4 profile fields + numeric stats + theme. No prompts, paths, diffs, or keys.
+6. **It publishes** *(NEW — Track A1)*: token-authed `POST` of that snapshot to your cloud endpoint,
+   throttled (~every 2 min / on change). Outbound only — adds no inbound local route.
+7. **The cloud stores it** *(NEW)*: a Cloudflare Worker writes the snapshot to KV.
+8. **A visitor loads `vibelog.natebuilds.dev`** *(NEW)*: the Worker reads the snapshot from KV and
+   renders the public page (reusing `public/live.html` + the `/state.json` shape), 24/7, even with
+   your laptop off. Live Twitch/YouTube embeds load *directly from those platforms* (cost you $0).
+9. **The visitor sees your stats** — no login, on your domain, with the 🔒 (auto-SSL).
+
+Steps 1–5 exist today. Track A1 is **only** steps 6–8 (publisher + thin Worker + CNAME). Track B
+later makes steps 7–8 multi-tenant (keyed by `@handle`) and adds accounts/billing/embeds.
+
 ---
 
 ## 1. Two tracks — don't conflate them
@@ -64,7 +87,7 @@ Fine for "show it live during a stream," not for an always-on portfolio piece.
    (Cloudflare/Vercel). Done — your VibeLog is live on your brand, 24/7.
 
 **"Super access"** here is just the publish token: only your agent can overwrite your stats. Viewing
-is public and needs nothing. **Cost for just you: ~$0** (Cloudflare free tier) **to ~$5/mo.**
+is public and needs nothing. **Cost for just you: $0/mo** — see §5's "$0 single-user path."
 
 ---
 
@@ -134,6 +157,14 @@ Gross margin **>90%** at every row. People pay to make it *theirs* (custom domai
 unlimited history, analytics) — proven by Linktree Pro / Substack / WakaTime. **Teams/B2B** is the
 fat-margin tier later. The free embed's **"powered by" badge is marketing, not just cost** — each
 free user is a billboard, so free users have *negative* effective cost if even ~1% convert.
+
+**$0 single-user path (just you, Track A):** Cloudflare's free tier covers a personal VibeLog
+outright — Workers **100k requests/day**, Workers KV **100k reads/day + 1k writes/day + 1 GB**,
+**free** custom domain on a Worker, and **free** Universal SSL. A personal page is nowhere near those
+limits. Two things to respect: **(1)** the publisher must **throttle writes** (publish at most ~once
+every ~2 min, or only when the snapshot actually changed) to stay under 1k KV writes/day; **(2)** the
+only real cost is the **domain renewal** (~$10–15/yr for `natebuilds.dev`) — not a Cloudflare charge.
+So: **$0/mo hosting for yourself.**
 
 **Cost guardrails (keep it flat as you grow):**
 - Keep the snapshot small (numeric stats + a few profile fields + theme + ~1yr calendar).
