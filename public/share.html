@@ -101,6 +101,21 @@
       .linkrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
       .linkrow input { flex: 1; min-width: 220px; font: 13px var(--mono); color: var(--text); background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; }
 
+      /* ---- embed-on-your-site generator ---- */
+      .embed-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; align-items: stretch; }
+      @media (max-width: 720px) { .embed-grid { grid-template-columns: 1fr; } }
+      .embed-col { display: flex; flex-direction: column; gap: 12px; }
+      .lab { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; color: var(--accent); text-shadow: 0 0 10px rgba(160,107,255,0.4); }
+      .field { display: flex; flex-direction: column; gap: 6px; }
+      .field .hint { font-size: 11px; color: var(--muted); }
+      .field input { font: 13px var(--mono); color: var(--text); background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 13px; }
+      .code { width: 100%; resize: vertical; font: 12px/1.55 var(--mono); color: var(--text); background: rgba(0,0,0,0.38); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+      .ctlrow { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+      .ctlrow label { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 7px; }
+      .num { width: 66px; font: 13px var(--mono); color: var(--text); background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; }
+      .preview { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 210px; padding: 8px; }
+      .preview iframe { border: 0; background: transparent; max-width: 100%; }
+
       .foot { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0; }
       .foot a { color: var(--accent); text-decoration: none; }
       .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none;
@@ -153,6 +168,38 @@
         </div>
       </div>
 
+      <div class="head" style="gap:6px; margin-top:6px">
+        <div class="eyebrow">Embed on your site</div>
+        <div class="desc">Drop one line on any page of your own site — a live card showing what you're building, 24/7.</div>
+      </div>
+
+      <div class="embed-grid">
+        <div class="glass card-wrap embed-col">
+          <div class="field">
+            <label class="lab" for="ebase">Your public VibeLog URL</label>
+            <input id="ebase" spellcheck="false" autocapitalize="off" autocomplete="off" />
+            <span class="hint">Where your VibeLog is hosted (e.g. https://vibelog.natebuilds.dev). Pre-filled with this page's address for the preview.</span>
+          </div>
+          <div class="field">
+            <label class="lab" for="embedCode">Embed snippet</label>
+            <textarea id="embedCode" class="code" readonly rows="3" spellcheck="false"></textarea>
+          </div>
+          <div class="ctlrow">
+            <label>Width <input id="ew" class="num" type="number" min="240" max="900" step="10" value="380" /></label>
+            <label>Height <input id="eh" class="num" type="number" min="160" max="600" step="10" value="250" /></label>
+            <span class="spacer"></span>
+            <button class="btn primary" id="copyEmbed">
+              <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy code
+            </button>
+          </div>
+        </div>
+        <div class="glass card-wrap embed-col">
+          <label class="lab">Live preview</label>
+          <div class="preview" id="preview"></div>
+        </div>
+      </div>
+
       <div class="foot">made with <a href="/landing">VibeLog</a> · stream your public development</div>
     </main>
 
@@ -189,10 +236,51 @@
         refreshCard();
       });
 
+      function showToast(msg) {
+        const t = $("toast"); t.textContent = msg;
+        t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1600);
+      }
+
       $("copy").addEventListener("click", async () => {
         try { await navigator.clipboard.writeText(shareLink); }
         catch { $("shareUrl").select(); document.execCommand("copy"); }
-        const t = $("toast"); t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1600);
+        showToast("Link copied");
+      });
+
+      // ---- Embed generator: snippet + live preview ----
+      // The snippet points at the user's PUBLIC origin (this page is only served
+      // locally, so location.origin is localhost) — pre-filled here so the live
+      // preview works immediately; the user sets it to their deployed URL.
+      const clampNum = (v, lo, hi) => Math.max(lo, Math.min(hi, parseInt(v, 10) || lo));
+      const ebase = $("ebase"), ew = $("ew"), eh = $("eh"), preview = $("preview");
+      ebase.value = origin;
+      const baseUrl = () => (ebase.value || origin).trim().replace(/\/+$/, "");
+      function dims() { return { w: clampNum(ew.value, 240, 900), h: clampNum(eh.value, 160, 600) }; }
+      function renderEmbed() {
+        const { w, h } = dims();
+        const b = baseUrl();
+        $("embedCode").value =
+          '<script src="' + b + '/embed.js" async\n' +
+          '        data-vibelog data-width="' + w + '" data-height="' + h + '"><\/script>';
+        // Live preview: an iframe matching what embed.js injects.
+        preview.innerHTML = "";
+        const f = document.createElement("iframe");
+        f.src = b + "/embed";
+        f.width = String(w); f.height = String(h);
+        f.title = "VibeLog embed preview";
+        f.setAttribute("scrolling", "no");
+        f.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox");
+        f.style.cssText = "border:0;border-radius:16px;background:transparent;max-width:100%;";
+        preview.appendChild(f);
+      }
+      for (const el of [ebase, ew, eh]) el.addEventListener("input", renderEmbed);
+      renderEmbed();
+
+      $("copyEmbed").addEventListener("click", async () => {
+        const code = $("embedCode").value;
+        try { await navigator.clipboard.writeText(code); }
+        catch { $("embedCode").select(); document.execCommand("copy"); }
+        showToast("Embed code copied");
       });
 
       // Live pill + display name + periodic card refresh from /state.json.
