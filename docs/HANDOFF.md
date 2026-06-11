@@ -133,8 +133,8 @@ download it, set it up in minutes, and stream their public development. See `doc
   DejaVuSans-Bold}.ttf` are committed; `renderCardPng` now loads ONLY them
   (`loadSystemFonts: false`, `fontFiles` resolved via `import.meta.url`), so `/share/card.png`
   rasterises to a byte-stable PNG on any machine. License: `public/fonts/LICENSE.txt`.
-- **"Share" entry point** — add a link to `/share` from `/live` (`public/live.html`) and/or the
-  dashboard so the share surface is discoverable.
+- ~~**"Share" entry point**~~ — ✅ DONE (`56eeac6`). A ghost "Share" pill in the `/live` header
+  and a share icon-button in the dashboard topbar both link to `/share`. Pure HTML/CSS, no new routes.
 - **OAuth token-refresh for non-Twitch providers** — `src/oauth.ts` stores `refreshToken`/`expiresAt`
   but only `twitch-oauth.ts` auto-refreshes; add a refresh path in `oauth.ts` when a feature consumes
   YouTube/Discord/GitHub tokens.
@@ -170,8 +170,8 @@ MCP, X4 hosted accounts / Google login, Discord D1–D3, G3 Twitter auto-post, G
 5. **G1/G2 Share page + OG/Twitter cards** — ✅ DONE (see §4). `/share` + `/share/card.png?kind=
    stats|join`. Font bundling is now also ✅ DONE (`3f8155b`): the repo ships DejaVu Sans under
    `public/fonts/` and `renderCardPng` loads only it (`loadSystemFonts: false`), so cards rasterise
-   identically on any machine. Remaining optional follow-ups: a "Share" entry point from
-   `/live`/dashboard; a third card design ("here's my VibeLog").
+   identically on any machine. A "Share" entry point from `/live` + dashboard is also ✅ DONE
+   (`56eeac6`). Remaining optional follow-up: a third card design ("here's my VibeLog").
 6. **Doc reconciliation** — ✅ DONE (this session). `README.md` rewritten (Gemini line fixed; full
    22-module file map; `demo`/`twitch login`/`/share`/`/landing` added; Safety route list +
    secrets.json model). `V0_SPEC.md`/`PRD.md`/`NEXT_STEPS.md` got HISTORICAL banners → `docs/VISION.md`.
