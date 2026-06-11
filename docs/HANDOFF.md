@@ -138,8 +138,10 @@ download it, set it up in minutes, and stream their public development. See `doc
 - **OAuth token-refresh for non-Twitch providers** — `src/oauth.ts` stores `refreshToken`/`expiresAt`
   but only `twitch-oauth.ts` auto-refreshes; add a refresh path in `oauth.ts` when a feature consumes
   YouTube/Discord/GitHub tokens.
-- **Landing polish** — compress `public/shots/*.png` (~1.3 MB total); point the landing "Clone on
-  GitHub" CTA at the real repo URL (currently `https://github.com/`).
+- **Landing polish** — GitHub CTA is ✅ DONE (`a19cf01`): the "Clone on GitHub" CTA + a new footer
+  link now point at the real repo (`https://github.com/n8watkins/vibelog`). Still open: compress
+  `public/shots/*.png` (~1.3 MB total) — deferred, this box has no pngquant/optipng/oxipng/convert
+  and a binary dep/network fetch isn't justified for the size; do it on a box that has a PNG optimiser.
 - **Third share card** ("here's my VibeLog") — add a `kind` to `SHARE_KINDS` + a `*Card()` in `src/share.ts`.
 
 **[LATER] — ask the user first (needs design + an external decision):** X1 deploy guide, X3 VibeLog
