@@ -4,6 +4,12 @@
 (canonical roadmap) and `docs/THEMING.md` (the most recently shipped subsystem).
 If anything here disagrees with `docs/VISION.md`, that file wins.
 
+> **Current state (2026-06-10):** `master @ 48af0ce`, **13 commits ahead of `origin/master` and
+> NOT pushed** (push only when the user asks). 72 tests pass, typecheck clean. The whole
+> NOW/NEXT-buildable roadmap is DONE — most recent work: **G1/G2 share page + OG cards** and a
+> **full doc reconciliation** (this session). What's left is optional polish + the [LATER] bucket
+> (needs a user decision). See §5.
+
 ---
 
 ## 1. What this is
@@ -117,7 +123,31 @@ download it, set it up in minutes, and stream their public development. See `doc
 
 ## 5. What's NEXT (pick from `docs/VISION.md §5` build order)
 
-In rough priority, with entry points:
+> **Status: the entire NOW/NEXT-buildable bucket is COMPLETE** (items 1–6 below, all ✅). What's
+> left is (a) small **optional polish** — safe to pick up with no new decision — and (b) the
+> **[LATER]** bucket, which needs a direction call from the user *before* building. If the user
+> gives no specific focus, the best low-risk next task is one of the polish items.
+
+**Optional polish (no decision needed — entry points):**
+- **Bundle a font for share cards** so they render identically on a machine with no system fonts
+  (today `renderCardPng` in `src/share.ts` uses resvg `loadSystemFonts` + a `DejaVu Sans` default).
+  Commit a `.ttf` under e.g. `public/fonts/`, load it via resvg `font: { fontFiles, defaultFontFamily }`.
+- **"Share" entry point** — add a link to `/share` from `/live` (`public/live.html`) and/or the
+  dashboard so the share surface is discoverable.
+- **OAuth token-refresh for non-Twitch providers** — `src/oauth.ts` stores `refreshToken`/`expiresAt`
+  but only `twitch-oauth.ts` auto-refreshes; add a refresh path in `oauth.ts` when a feature consumes
+  YouTube/Discord/GitHub tokens.
+- **Landing polish** — compress `public/shots/*.png` (~1.3 MB total); point the landing "Clone on
+  GitHub" CTA at the real repo URL (currently `https://github.com/`).
+- **Third share card** ("here's my VibeLog") — add a `kind` to `SHARE_KINDS` + a `*Card()` in `src/share.ts`.
+
+**[LATER] — ask the user first (needs design + an external decision):** X1 deploy guide, X3 VibeLog
+MCP, X4 hosted accounts / Google login, Discord D1–D3, G3 Twitter auto-post, G4 embed widget. See
+`docs/VISION.md §3.4–3.5` + §7 below.
+
+---
+
+**Completed-work audit trail (all ✅ DONE — kept for context):**
 
 1. **T4/T5 theming polish** — ✅ DONE (see §4). Custom-var coverage broadened to 8 vars + hex entry,
    and the per-page (sync-off) edit UI shipped in the dashboard Settings sheet.
