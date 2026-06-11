@@ -18,8 +18,10 @@ Three positioning pillars:
 
 1. **Local-first and easy.** Clone, `vibe init`, point it at your repos, drop the overlay URL into
    OBS. No account required to run the overlay locally.
-2. **Optionally deployed.** If you want a public dashboard others can visit (and share), deploy it
-   (e.g. Vercel). The overlay can stay purely local even then.
+2. **Optionally deployed.** If you want a public dashboard others can visit (and share), the local
+   agent **publishes a sanitized snapshot** to a hosted service that serves it 24/7 — the overlay
+   stays purely local even then. (This refines the old "deploy the whole app to Vercel" framing;
+   see **§6** for the publisher architecture, delivery, business model, and trust story.)
 3. **Yours to brand.** Themes, profile, socials, share cards — make your VibeLog look like *your*
    channel, not a generic widget.
 
@@ -107,8 +109,8 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 - **G3 [LATER] — Auto-post to Twitter/X.** Connect Twitter and optionally auto-post a daily-stats
   card. Needs Twitter API access + posting cadence/consent design.
 - **G4 [LATER] — Embeddable widget.** Let people inject their dashboard (or a compact stat strip)
-  as a widget on another site. Needs an embed/iframe story + a public, read-only, themed widget
-  route. Open question: where it gets embedded.
+  as a widget on another site (`<iframe>`/`<script>` on `natebuilds.dev/vibelog`). The free,
+  badge-carrying viral surface — see **§6.4**. Needs the hosted snapshot service (§6.2) underneath.
 
 ### 3.4 Discord
 
@@ -122,8 +124,9 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 
 ### 3.5 Distribution & extensibility
 
-- **X1 [NEXT] — Deploy guide.** Step-by-step for deploying the public dashboard (Vercel or similar)
-  while keeping the overlay local. Clarify what runs where (local agent vs. hosted read-only view).
+- **X1 [NEXT] — Deploy guide.** Step-by-step for standing up the hosted snapshot service (Vercel +
+  KV/blob) and pairing the local agent to it, while keeping the overlay local. Clarify what runs
+  where (local **publisher** agent vs. hosted read-only view). Now framed by the §6 platform model.
 - **X2 [DONE] — Landing page.** Static marketing page at `GET /landing` (`public/landing.html`),
   reusing the shared neon palette/aurora/travelling-gradient rings. Sticky nav, hero with a mocked
   overlay, 12-card feature grid, three-step setup, the three surfaces, a privacy band, a theming
@@ -133,9 +136,9 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
   and modify VibeLog (settings, theme, profile) directly. Next-level; needs the settings API
   (S1) to exist first.
 - **X4 [LATER] — Hosted accounts / primary login.** "Log in with Google" (or another major
-  provider), then connect all your accounts under one identity — for the deployed multi-user
-  version. This is the largest, least-defined piece; depends on a hosting/auth decision. The PRD's
-  old Supabase framing lives here, not in the local-first core.
+  provider), then claim an `@handle` and pair your local agent to publish under one identity — the
+  **owner auth** half of §6.5 (viewers never log in). The PRD's old Supabase framing lives here, not
+  in the local-first core. Custom domains (the hero upsell, §6.6) build on top of this.
 
 ### 3.6 Parked
 
@@ -171,4 +174,137 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 6. **G1 + G2** — ✅ DONE. Share page (`/share`) + server-rendered OG/Twitter card PNGs
    (`/share/card.png?kind=stats|join`); see §3.3.
 7. **[LATER] bucket** — Discord, auto-post, embed widget, MCP, hosted accounts — each needs its own
-   design pass and an external decision before planning.
+   design pass and an external decision before planning. The platform half (publisher → hosted
+   profile → embed → accounts → custom domains) is now sequenced in **§6.9**.
+
+---
+
+## 6. Product direction — from local tool to hosted platform (2026-06-11)
+
+> Captured from a product/architecture session. This is the **forward direction**; where it refines
+> the older "optionally deploy the whole app to Vercel" framing (§1 pillar 2, X1), **this wins.**
+> **Nothing here is built yet** — it's the target the [LATER] items (X1, X4, G4, G3) now serve, and
+> none of it should be built without an explicit go-ahead. The one near-term, safe piece is §6.8.
+
+### 6.1 The core split — collecting ≠ showing
+
+VibeLog does two jobs that belong in different places:
+
+- **Collecting** (must stay local): reads git, ccusage, OBS, your OAuth'd socials. Needs your
+  machine + your keys. Never moves to the cloud.
+- **Showing** (should be hosted): the public profile a viewer sees — must work **24/7, even when
+  your machine is off**.
+
+Today both live in one local process, so "showing" is trapped behind "collecting." The fix: the
+local process becomes a **publisher**.
+
+### 6.2 Architecture — the local agent as publisher
+
+```
+LOCAL (your machine, default: nothing leaves)        HOSTED (the deployable piece)      YOUR SITE
+┌───────────────────────────┐   publish              ┌──────────────────────┐  embed   ┌───────────┐
+│ agent (`vibe start`):      │ ──sanitized snapshot──▶│ stores snapshots     │◀─iframe──│ natebuilds│
+│  git/ccusage/OBS/OAuth     │   (buildShareData      │ serves /u/<handle>   │  /CNAME  │  .dev/    │
+│  → summarize → redact+cap  │    surface only)       │ + embed.js + API     │          │  vibelog  │
+│  → LiveState → overlay     │                        └──────────────────────┘          └───────────┘
+└───────────────────────────┘                                   ▲                       viewer: no login
+   secrets stay here                                       owner signs in once
+```
+
+- **Overlay** — stays 100% local, in-stream (OBS → localhost). Unchanged.
+- **Local agent** (`src/agent.ts`, what `vibe start` launches; the overlay is a page *it* serves) —
+  collects, drives the overlay, and *if the user opts in* publishes a **sanitized public snapshot**:
+  the existing `buildShareData` surface (the 4 sanitised profile fields + numeric `LiveState` stats +
+  resolved theme vars — no prompts, paths, diffs, or keys).
+- **Hosted service** (Vercel + a KV/blob store) — stores each user's latest snapshot; serves their
+  public profile + the embed widget + custom-domain support.
+- **Viewer** — sees the profile; logs into nothing.
+
+This *strengthens* the core invariant: the cloud only ever holds the already-public surface.
+
+### 6.3 What `/live` becomes
+
+The public, always-on face of a user's VibeLog, with two states:
+
+- **Live now** → "🔴 building X right now" + stream link (snapshots push more often).
+- **Offline** → degrades to the public dashboard (year calendar + stats + streak).
+
+The **private dashboard stays local** (in-progress features, raw data, settings). The public version
+is the snapshot — same UI, different data source + audience.
+
+### 6.4 Delivery — embed widget + custom subdomain (both)
+
+VibeLog ships as something you bolt onto **your own** site, not a destination:
+
+1. **Embed widget** (easy, zero-DNS) — an `<iframe>`/`<script>` on any page of your site, so
+   `natebuilds.dev/vibelog` is just a page of *your* site containing it. Works on any host. Carries
+   a small "⚡ powered by VibeLog" badge on the free tier (this is the viral loop). (= **G4**.)
+2. **Custom subdomain** (native-feeling) — CNAME `vibelog.natebuilds.dev` → the hosted app, auto-SSL.
+   The Notion/Substack "bring your own domain" model. Paid (see §6.6).
+
+### 6.5 Two auths, never confused
+
+- **Owner auth** — once, by the user: claim an `@handle`, connect socials (OAuth; tokens stay local
+  in chmod-600 files), pair the local agent so it can publish. (= **X4**.)
+- **Viewer auth** — **none.** The profile is public like a portfolio. Embedded Twitch/YouTube players
+  are public iframes: a visitor never logs in or subscribes. The owner's OAuth is *only* how the
+  agent **knows** you're live + which video id to embed — that derived `{live, platform, videoId,
+  followers}` rides in the snapshot; the embed itself is a public player needing no token.
+
+### 6.6 Business model — open-core / freemium
+
+Open-source the local agent: it's the cheap part to give away, and giving it away *is* the trust that
+fills the funnel. Charge for the hard-to-run parts — hosting, convenience, and the network.
+
+| Free + open source (local agent) | Paid (hosted cloud) |
+|---|---|
+| Collects your stats | Hosted 24/7 — profile up when your laptop's off |
+| Drives your OBS overlay | **Custom domain** (`vibelog.natebuilds.dev`) + SSL |
+| Local LLM / template / BYO-key | Remove "powered by" branding |
+| Publishes a snapshot *if you opt in* | Unlimited history + profile analytics |
+| Self-hostable end-to-end | The `@handle` network + discovery (can't self-host a network effect) |
+
+**Hero upsell = custom domain + remove branding + unlimited history** (Pro, ~$6–8/mo). **Teams/org**
+dashboards later (B2B — where the real revenue is). The free embed's "powered by" badge is the
+growth engine (Calendly/Linktree flywheel). Comps to copy: **WakaTime** (near-exact — coding-time
+tracking, public profiles, freemium history), plus Plausible / PostHog / Cal.com / Ghost / Sentry
+(open code, paid hosting).
+
+### 6.7 Trust model (a feature, not just docs)
+
+The pitch: **"Local-first. Open source. Nothing leaves your machine unless you publish — and you can
+see exactly what does."** Backed by:
+
+1. **Open source** — auditable; the answer to "is this a keylogger." It reads git *commits*, token
+   *counts*, and OBS *state* — not keystrokes. The only free-text field (prompt → label) is
+   `redact()`'d + 140-char-capped and can be turned off entirely (template mode, §6.8).
+2. **Local-first, cloud opt-in** — the default uploads nothing; publishing is a deliberate step.
+3. **Preview-the-snapshot** — a screen showing the literal JSON that would be published, before it is
+   (`/state.json` is the seed for this).
+4. **Bring-your-own-keys** — API keys + OAuth tokens stay in chmod-600 `~/.vibelog/secrets.json`,
+   read locally, never sent. You can't leak what you never receive.
+5. **Self-hostable cloud** — for the paranoid / enterprises; the ultimate "don't even trust our
+   servers" escape hatch.
+
+### 6.8 Local LLM summarizer (near-term — safe to build now)
+
+`src/summarize.ts` today = Gemini Flash-Lite (`callGemini`) + a pure-local `templateSummary()`
+fallback (no AI: strips code/filler, title-cases the first meaningful line — deterministic, runs
+when there's no key / on error / on timeout). Add a third path: an **OpenAI-compatible** backend
+(`POST {baseUrl}/v1/chat/completions`) that covers **both Ollama** (`http://localhost:11434/v1`, the
+documented default) **and LM Studio** (`http://localhost:1234/v1`) with one code path — the user
+just sets a base URL + model. Config: a `summarizer` block (`provider: gemini|local|template`,
+`baseUrl`, `model`) in `settings.json`; extend `Summary["source"]` to `"local"`; keep `sanitizeLabel`
++ the template fallback wrapping. A 3B model (`llama3.2:3b`, `qwen2.5:3b`) is plenty for one-line
+labels, making the privacy story airtight (even the label never leaves the box). **No new deps.**
+
+### 6.9 Sequencing (platform build order)
+
+1. **Local LLM summarizer (§6.8)** — small, self-contained, strengthens the free-tier privacy pitch.
+   *[ready to build on go-ahead]*
+2. **Snapshot publisher + minimal hosted profile** — agent pushes the snapshot; hosted app serves a
+   read-only `/u/<handle>`. The foundational platform step (the X1 deploy story).
+3. **Embed widget (G4)** on top of the hosted profile — the viral, free, badge-carrying surface.
+4. **Owner accounts (X4)** — `@handle` claiming + agent pairing (owner auth only).
+5. **Custom domains** — CNAME + auto-SSL; the hero paid upsell.
+6. **Teams** — B2B org dashboards, later.
