@@ -40,6 +40,11 @@ It's VibeLog itself — `src/agent.ts`, launched by `vibe start`; the overlay is
 Delivery: devs via `npm i -g vibelog` / `npx`; non-devs eventually via a packaged desktop app
 (Tauri/Electron). The local agent + overlay is the free core and needs no account.
 
+**Q: What's the V1 MVP?**
+"Nathan's VibeLog, live on his own domain, 24/7, for $0" = Track A1 + the local-LLM option. No
+accounts, billing, multi-tenancy, or embed — those are Phase 2+. Build this first. (`PLATFORM_PLAN.md
+§7.1`)
+
 **Q: What is `/live` supposed to be?**
 The public, always-on face of a user's VibeLog, with two states: **live now** ("🔴 building X" +
 stream link) and **offline** (degrades to the public dashboard — calendar, stats, streak). The
@@ -170,9 +175,16 @@ storage — pennies. Realistic ~30k users ≈ $100–150/mo, dominated by writes
 Keep the snapshot small; **publisher writes on-change + throttled**; **edge-cache reads**; **never
 proxy video through our servers** (Twitch/YouTube embeds load direct = $0). Those keep cost flat at scale.
 
-**Q: LLM onboarding default?**
+**Q: LLM onboarding default + flexibility?**
 Gemini (BYO free-tier key) = zero-friction on-ramp; nudge users to a **local LLM** as the privacy
-upgrade once comfortable; template fallback always available with no key. (`VISION.md §6.8`)
+upgrade once comfortable; template fallback always available with no key. **Flexible:** if a user
+already runs a local LLM, auto-detect Ollama/LM Studio or let them point at any OpenAI-compatible base
+URL + model. (`VISION.md §6.8`, decision in `PLATFORM_PLAN.md §7.3`)
+
+**Q: Publish cadence as price discrimination?**
+Yes — the throttle interval *is* the paywall. Free = publish only **while live**, **on-change**,
+throttled to **~5–10 min**; Pro = **~30–60 s** (near-real-time). Almost free to implement and it
+directly bounds the #1 cost driver (writes). (`VISION.md §6.6`, `PLATFORM_PLAN.md §5/§7.3`)
 
 ---
 

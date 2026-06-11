@@ -264,6 +264,7 @@ fills the funnel. Charge for the hard-to-run parts — hosting, convenience, and
 | Drives your OBS overlay | **Custom domain** (`vibelog.natebuilds.dev`) + SSL |
 | Local LLM / template / BYO-key | Remove "powered by" branding |
 | Publishes a snapshot *if you opt in* | Unlimited history + profile analytics |
+| **Slow publish cadence** (~5–10 min, only while live, on-change) | **Fast cadence** (~30–60 s, near-real-time) |
 | Self-hostable end-to-end | The `@handle` network + discovery (can't self-host a network effect) |
 
 **Hero upsell = custom domain + remove branding + unlimited history** (Pro, ~$6–8/mo). **Teams/org**
@@ -301,7 +302,9 @@ just sets a base URL + model. Config: a `summarizer` block (`provider: gemini|lo
 labels, making the privacy story airtight (even the label never leaves the box). **No new deps.**
 **Onboarding default:** Gemini (BYO free-tier key) is the zero-friction on-ramp; nudge users toward
 the **local LLM** as the privacy upgrade once they're comfortable; the template fallback is always
-there with no key at all.
+there with no key at all. **Flexibility (Nathan's ask):** if a user already runs a local LLM, let them
+use it — auto-detect a running Ollama (`:11434`) / LM Studio (`:1234`), and also let them point at any
+OpenAI-compatible base URL + model. (Decision tracked in `PLATFORM_PLAN.md §7.3`.)
 
 ### 6.9 Sequencing (platform build order)
 

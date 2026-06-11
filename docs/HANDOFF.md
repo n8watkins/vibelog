@@ -7,11 +7,12 @@ hosting cost economics**, read `docs/PLATFORM_PLAN.md` (two tracks: A = "VibeLog
 domain, 24/7" — buildable now; B = the multi-tenant product). If anything here disagrees with
 `docs/VISION.md`, that file wins.
 
-> **Current state (2026-06-10):** `master @ 48af0ce`, **13 commits ahead of `origin/master` and
-> NOT pushed** (push only when the user asks). 72 tests pass, typecheck clean. The whole
-> NOW/NEXT-buildable roadmap is DONE — most recent work: **G1/G2 share page + OG cards** and a
-> **full doc reconciliation** (this session). What's left is optional polish + the [LATER] bucket
-> (needs a user decision). See §5.
+> **Current state (2026-06-11):** `master @ 3f38aed`, **5 commits ahead of `origin/master` and
+> NOT pushed** (push only when the user asks). 72 tests pass, typecheck clean. The whole local
+> product is DONE; this session **defined the hosted-platform direction + the V1 MVP** (no platform
+> code yet). **Next decided priority: build the V1 MVP** = "Nathan's VibeLog live on his own domain,
+> 24/7, for $0" (Track A1 + local-LLM). Read `docs/VISION.md §6` + `docs/PLATFORM_PLAN.md` (esp. §7
+> phases/MVP/decisions) + `docs/FAQ.md` before planning. See §5 for the older optional-polish list.
 
 ---
 

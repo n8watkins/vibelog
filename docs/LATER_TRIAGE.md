@@ -2,6 +2,8 @@
 
 `docs/LATER_TRIAGE.md` — **advisory product triage, dated 2026-06-11. Not a commitment.**
 `docs/VISION.md` remains the canonical roadmap; if anything here disagrees with it, **VISION wins.**
+Several [LATER] items (X1/X4/G4) are now **sequenced** into the platform plan — see `VISION.md §6` +
+`PLATFORM_PLAN.md §7.2` (phases). This file stays as the deeper per-item DO-SOON/PARK/KILL rationale.
 
 This is a strategic "what's good, what's not, what to kill" pass over the entire **[LATER]**
 bucket (VISION §3.3 G3/G4, §3.4 D1–D3, §3.5 X1/X3/X4) plus a note on §3.6 Parked. Each verdict

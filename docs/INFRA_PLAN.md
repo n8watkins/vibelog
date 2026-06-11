@@ -1,6 +1,11 @@
 # VibeLog Infrastructure Plan
 
-`docs/INFRA_PLAN.md` — status: proposal
+`docs/INFRA_PLAN.md` — status: proposal (local-agent infra; **§1 prompt pipeline is now shipped**)
+
+> **Scope note (2026-06-11):** this doc covers the **local agent's** infra. The **hosted-platform**
+> direction (publisher → cloud → multi-tenant → embed/domains/billing) now lives in `VISION.md §6` +
+> `PLATFORM_PLAN.md`; the "Open Decisions" at the bottom here are partly carried into
+> `PLATFORM_PLAN.md §7.3`.
 
 VibeLog today is one local Node/tsx process (`src/agent.ts`) on `:4545` bound `0.0.0.0`, with an append-only `~/.vibelog/events.jsonl`, JSON session/state files, git polling, and `npx ccusage --json`. The overlay is a single static HTML file so OBS can load it, and `vibe share` tunnels the whole port through Cloudflare. The single most important invariant in the codebase is already documented in `state.ts` and `redact.ts`: **only user-typed names and numeric stats ever reach `LiveState` / `/state.json`; no paths, diffs, prompts, or secrets.** Every design below preserves that invariant.
 

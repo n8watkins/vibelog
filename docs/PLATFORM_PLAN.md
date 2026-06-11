@@ -214,10 +214,57 @@ Stripe account, and the `vibelog.app` domain. None of this is needed for Track A
 
 ---
 
-## 7. Suggested first PRs
+## 7. The plan-to-make-a-plan — phases, V1 MVP, open decisions
 
-1. **Local-LLM summarizer** (`VISION.md §6.8`) — small, self-contained, strengthens the privacy pitch.
-2. **Publisher module** in the agent (build snapshot via `buildShareData` → token-authed `POST`).
-3. **Thin snapshot service** (Cloudflare Worker + KV) reusing `live.html` + the `/state.json` shape.
-4. **Wire `vibelog.natebuilds.dev`** (CNAME + auto-SSL) → Track A is live.
-5. *(then B)* multi-tenancy → accounts/`@handle` → embed widget → custom-domains-for-all → billing.
+High-level sequencing only (deliberately **not** detailed code). Each phase gets its own detailed
+plan when we reach it. Priority order is fixed: **ship the V1 MVP for Nathan first.**
+
+### 7.1 V1 MVP (the clear, shippable target)
+
+> **V1 MVP = "Nathan's VibeLog, live on his own domain, 24/7, for $0."** = Track A1 + the local-LLM
+> option. A visitor hits `vibelog.natebuilds.dev` and sees Nathan's stats even when his laptop is off.
+> That's the whole MVP — no accounts, no billing, no multi-tenancy, no embed.
+
+**V1 MVP scope (and nothing more):**
+1. **Local-LLM summarizer** — provider abstraction (Gemini | local OpenAI-compatible | template),
+   with local-LLM flexibility (§7.3).
+2. **Publisher** — build the `buildShareData` snapshot, write-on-change + throttle, token-authed POST.
+3. **Thin Cloudflare Worker + KV** — `POST /publish` (token), `GET /` renders from the stored snapshot
+   (reuse `public/live.html` + the `/state.json` shape). Single key — it's just Nathan.
+4. **Wire `vibelog.natebuilds.dev`** — CNAME + auto-SSL.
+Done = MVP live, $0/mo.
+
+### 7.2 Phases (each plans-in-detail when reached)
+
+- **Phase 0 — decisions (no code).** Lock §7.3 open decisions so a fresh agent can execute.
+- **Phase 1 — V1 MVP (above).** Track A1 for Nathan. *← build this first.*
+- **Phase 2 — product V1 (smallest multi-tenant slice).** One shared Worker keyed by `@handle`
+  (`GET /u/<handle>`); owner auth (login → claim handle → issue publish token); free
+  `<handle>.vibelog.app` subdomain. Now a *second* person can use it.
+- **Phase 3 — distribution + money.** Embed widget (G4) + "powered by" badge; custom domains for all
+  (Cloudflare for SaaS); Stripe billing + plan gates (cadence, custom domain, branding, history).
+- **Phase 4 — growth.** Teams/B2B org dashboards, analytics, discovery/directory, packaged desktop
+  app, Discord. (Pull from `VISION.md §3` / `LATER_TRIAGE.md` as prioritized.)
+
+### 7.3 Open decisions to lock in Phase 0 (before detailed planning)
+
+1. **Local-LLM flexibility (Nathan wants this flexible).** Decide: (a) **auto-detect** an already-running
+   Ollama (`:11434`) / LM Studio (`:1234`) and offer it; (b) let users **point at any** OpenAI-compatible
+   base URL + model they already run; (c) the **onboarding default** = Gemini free-tier on-ramp → nudge
+   to local LLM → template fallback. Recommendation: support (a)+(b) via one OpenAI-compatible code path;
+   ship (c) as the default. (`VISION.md §6.8`)
+2. **Publish-cadence tiers (the price-discrimination lever).** Free = publish only **while live**,
+   **on-change**, throttled to **~5–10 min**. Pro = **~30–60 s** (near-real-time). The throttle interval
+   *is* the paywall — almost free to implement, and it directly bounds the #1 cost driver (writes, §5).
+3. **Storage backend** — KV (recommended for V1: read-heavy, edge-cacheable, simple) vs R2 vs D1.
+4. **Snapshot schema** — freeze it = the existing `buildShareData` output (don't widen it).
+5. **Host** — Cloudflare confirmed (zero egress + free custom-domain SSL).
+6. **Subdomain label** for Nathan — `vibelog.` / `live.` / `building.`.
+
+### 7.4 What I need from Nathan to start Phase 1
+
+1. A **free Cloudflare account** + move `natebuilds.dev` DNS to Cloudflare (free; enables free
+   custom-domain + SSL).
+2. The **subdomain label** (decision §7.3.6).
+3. Confirm the **local-LLM flexibility** approach (§7.3.1) — or let me proceed with the recommendation.
+Everything else (login provider, pricing, Stripe, `vibelog.app`) is **Phase 2+**, not needed now.
