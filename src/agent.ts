@@ -24,6 +24,7 @@ import { summarize } from "./summarize.ts";
 import { connectOBS, type OBSHandle } from "./obs.ts";
 import { streamMinutesByDay } from "./stream.ts";
 import { readSecrets } from "./secrets.ts";
+import { createPublisher, noopPublisher, type Publisher, type Snapshot } from "./publish.ts";
 import { fetchSocial, socialGrowth } from "./social.ts";
 
 const GIT_POLL_MS = 5_000;
@@ -142,6 +143,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   }
 
   let state: LiveState = emptyState();
+  let publisher: Publisher = noopPublisher;
 
   function render(): void {
     state.isLive = true;
@@ -156,6 +158,8 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     state.startedAt = session!.startedAt;
     state.updatedAt = new Date().toISOString();
     void writeState(state);
+    // Snapshot publish — non-blocking; throttle+dedup inside the publisher
+    void buildSnapshot().then((snap) => publisher.tick(snap, { live: state.isLive }));
   }
 
   async function persistSession(): Promise<void> {
@@ -278,6 +282,20 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         tokens: s.claudeTokens,
         timeLive: state.isLive ? timeLiveLabel(state.startedAt) : "—",
       },
+      theme: resolveTheme(settings, "live"),
+    };
+  }
+
+  /**
+   * Build the frozen snapshot the publisher POSTs — exactly the three fields
+   * that public/live.html fetches: state, profile, theme. No prompts, paths,
+   * diffs, or secrets ever appear here (SNAPSHOT_CONTRACT.md invariant).
+   */
+  async function buildSnapshot(): Promise<Snapshot> {
+    const settings = await readSettings();
+    return {
+      state,
+      profile: sanitizeProfile(settings?.profile),
       theme: resolveTheme(settings, "live"),
     };
   }
@@ -776,6 +794,20 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   if (opts.demo) {
     runDemoLoop(session, state, render, timers);
   } else {
+    // Set up snapshot publisher if configured (url + token present in secrets).
+    const secrets = await readSecrets();
+    const pubCfg = secrets.publish;
+    if (pubCfg?.url && pubCfg?.token) {
+      publisher = createPublisher({
+        url: pubCfg.url,
+        token: pubCfg.token,
+        liveCadenceSec: pubCfg.liveCadenceSec,
+        idleCadenceSec: pubCfg.idleCadenceSec,
+      });
+      // Initial publish — buildSnapshot() runs after the first pollers below
+      // so defer it until after the await pollGit() call.
+    }
+
     await pollGit();
     void pollTokens();
     void refreshHistory();
@@ -785,6 +817,17 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     timers.push(setInterval(() => void pollTokens(), TOKEN_POLL_MS));
     timers.push(setInterval(() => void refreshHistory(), 60_000));
     timers.push(setInterval(() => void pollSocial(), SOCIAL_POLL_MS));
+
+    // Initial publish (after first git poll so stats are populated).
+    if (pubCfg?.url && pubCfg?.token) {
+      void buildSnapshot().then((snap) => publisher.publishNow(snap));
+      // Safety-net: republish on the idle cadence even when state is quiet.
+      const idleSec = pubCfg.idleCadenceSec ?? 900;
+      timers.push(setInterval(
+        () => void buildSnapshot().then((snap) => publisher.tick(snap, { live: state.isLive })),
+        idleSec * 1000,
+      ));
+    }
   }
 
   const shutdown = () => {
@@ -792,6 +835,8 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     obs?.close();
     state.isLive = false;
     void writeState(state);
+    // Best-effort final publish before exit (fire-and-forget with built-in timeout).
+    void buildSnapshot().then((snap) => publisher.publishNow(snap));
     process.exit(0);
   };
   process.on("SIGINT", shutdown);
