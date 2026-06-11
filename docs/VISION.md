@@ -185,6 +185,8 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 > the older "optionally deploy the whole app to Vercel" framing (§1 pillar 2, X1), **this wins.**
 > **Nothing here is built yet** — it's the target the [LATER] items (X1, X4, G4, G3) now serve, and
 > none of it should be built without an explicit go-ahead. The one near-term, safe piece is §6.8.
+> The **implementation plan + hosting cost economics** live in **`docs/PLATFORM_PLAN.md`** (two
+> tracks: A = "VibeLog for me, 24/7 on a custom domain" now; B = the multi-tenant product).
 
 ### 6.1 The core split — collecting ≠ showing
 

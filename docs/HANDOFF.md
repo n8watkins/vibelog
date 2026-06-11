@@ -1,8 +1,11 @@
 # VibeLog — Agent Handoff / Start Here
 
 `docs/HANDOFF.md` — the cold-start brief. Read this first, then `docs/VISION.md`
-(canonical roadmap) and `docs/THEMING.md` (the most recently shipped subsystem).
-If anything here disagrees with `docs/VISION.md`, that file wins.
+(canonical roadmap — see new **§6**, the local-tool→hosted-platform direction) and
+`docs/THEMING.md` (most recently shipped subsystem). For the platform **implementation plan +
+hosting cost economics**, read `docs/PLATFORM_PLAN.md` (two tracks: A = "VibeLog for me on a custom
+domain, 24/7" — buildable now; B = the multi-tenant product). If anything here disagrees with
+`docs/VISION.md`, that file wins.
 
 > **Current state (2026-06-10):** `master @ 48af0ce`, **13 commits ahead of `origin/master` and
 > NOT pushed** (push only when the user asks). 72 tests pass, typecheck clean. The whole
