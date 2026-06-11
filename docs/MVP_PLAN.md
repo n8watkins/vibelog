@@ -107,3 +107,46 @@ LOCAL agent (existing)                         CLOUD (new, thin)              VI
 
 Multi-tenant keys · accounts/login/`@handle` · free `*.vibelog.app` slots · embed widget · custom
 domains for others · Stripe/billing · cadence-as-enforced-paywall · Teams. See `PLATFORM_PLAN.md §7.2`.
+
+## 8. Orchestration — parallel subagents + model tiers
+
+The lead agent acts as **orchestrator**: freeze the shared contract, fan out independent work to
+subagents (in **worktrees** to avoid collisions), then integrate + review.
+
+### 8.1 Dependency graph
+```
+STEP 0 (orchestrator): freeze the SNAPSHOT CONTRACT = the { state, profile, theme } JSON
+        (the public buildShareData surface + the shapes live.html already fetches).
+        This is the only interface A/B/C share → once frozen they run in parallel.
+                         │
+        ┌────────────────┼────────────────┐
+   TASK A (PR1)      TASK B (PR2)      TASK C (PR3)         ← parallel, separate worktrees
+   summarizer        publisher         Worker + KV
+   src/summarize.ts  src/publish.ts    worker/ (new dir)
+                     + wire agent.ts    reuses live.html
+        └────────────────┼────────────────┘
+                         ▼
+   INTEGRATE (orchestrator): point publisher → Worker URL, `wrangler deploy` to workers.dev,
+        run the §4 end-to-end verify, then the §5 SECURITY REVIEW. → MVP live.
+                         ▼
+   PR4 custom domain — manual (Nathan + orchestrator), not a code subagent.
+```
+
+### 8.2 Parallelism & collision rules
+- **A is fully isolated** (only `src/summarize.ts` + test + a `settings.json` field).
+- **C is fully isolated** (new `worker/` dir; no main-package deps).
+- **B is the only shared-file risk** — it adds `src/publish.ts` (isolated) but also a one-line wire-in
+  to `src/agent.ts`. Keep that touch to a single call site; orchestrator merges B last and resolves any
+  `agent.ts` overlap. → **A & C are safe to run truly in parallel; B merges carefully.**
+- Each subagent: build in a worktree, `tsc --noEmit` + tests green, return a diff. Orchestrator reviews
+  and merges in order A → C → B, then integrates.
+
+### 8.3 Model tiers (the "affordable" ask — Opus + Sonnet)
+| Work | Model | Why |
+|---|---|---|
+| Orchestration, **snapshot-contract design**, `agent.ts` integration, **security review** (§5) | **Opus** | cross-cutting + risky; get it right once |
+| **Task A** summarizer, **Task B** publisher, **Task C** Worker — i.e. the bulk of the build | **Sonnet** | real but bounded feature work, guarded by tests — the default workhorse |
+
+Rule of thumb: **Opus only where a wrong decision is expensive or shared; Sonnet for everything else**
+(the contained, test-guarded features). *(Optional: Haiku for purely mechanical glue — `wrangler.toml`
+scaffolding, doc/changelog edits.)* Escalate a task one tier if a subagent stalls or its tests won't go green.
