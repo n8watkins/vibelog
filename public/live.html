@@ -72,6 +72,13 @@
       .socials .so.tw { color: #b794ff; } .socials .so.yt { color: #ff6b81; }
       .socials .so .ldot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px var(--live); animation: pulse 1.4s infinite; }
 
+      /* ---- profile bar (user-set, from /api/profile.json) ---- */
+      .profilebar { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin: 2px 0 -4px; }
+      .ph-header { font-weight: 700; font-size: 15px; color: var(--text); }
+      .ph-bio { color: var(--muted); font-size: 13px; }
+      .ph-tw { color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
+      .ph-tw:hover { text-decoration: underline; }
+
       /* ---- hero ---- */
       .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 16px; padding: 8px 0; }
       .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; color: var(--pink); text-shadow: 0 0 14px rgba(255,92,240,0.45); }
@@ -161,12 +168,18 @@
   <body>
     <main class="stage" id="content">
       <div class="top">
-        <div class="brand"><span class="spark"></span> VibeLog</div>
+        <div class="brand"><span class="spark"></span> <span id="brandName">VibeLog</span></div>
         <div class="top-right">
           <div class="socials" id="socials" style="display:none"></div>
           <span class="pill" id="livePill"><span class="dot"></span> <span id="pillText">Live</span></span>
           <span class="timer" id="timer"></span>
         </div>
+      </div>
+
+      <div class="profilebar" id="profilebar" hidden>
+        <span class="ph-header" id="ph-header"></span>
+        <span class="ph-bio" id="ph-bio"></span>
+        <a class="ph-tw" id="ph-tw" target="_blank" rel="noopener" hidden></a>
       </div>
 
       <section class="hero">
@@ -219,6 +232,26 @@
       }
       applyTheme("live");
       setInterval(() => applyTheme("live"), 10000);
+
+      // Public profile (display name / channel header / bio / Twitter). Rendered
+      // via textContent only, so the four user-typed fields can't inject markup.
+      async function applyProfile() {
+        try {
+          const { profile } = await (await fetch("/api/profile.json", { cache: "no-store" })).json();
+          const p = profile || {};
+          $("brandName").textContent = p.displayName || "VibeLog";
+          $("ph-header").textContent = p.channelHeader || "";
+          $("ph-header").hidden = !p.channelHeader;
+          $("ph-bio").textContent = p.bio || "";
+          $("ph-bio").hidden = !p.bio;
+          const tw = $("ph-tw");
+          if (p.twitter) { tw.textContent = "@" + p.twitter; tw.href = "https://x.com/" + encodeURIComponent(p.twitter); tw.hidden = false; }
+          else tw.hidden = true;
+          $("profilebar").hidden = !(p.channelHeader || p.bio || p.twitter);
+        } catch { /* no profile yet — keep defaults */ }
+      }
+      applyProfile();
+      setInterval(applyProfile, 10000);
       const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
       const money = (n) => (n >= 100 ? "$" + Math.round(n) : "$" + (n || 0).toFixed(2));
       function since(ts) {
