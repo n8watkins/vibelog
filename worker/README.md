@@ -139,8 +139,11 @@ curl -s "http://localhost:8787/api/theme.json?page=live" | jq .
 From the **repo root** (uses root's tsx devDep):
 
 ```bash
-node --test --import tsx "worker/src/worker.test.ts"
+node --test --import tsx "worker/src/*.test.ts"
 ```
+
+This runs both `worker.test.ts` (pure helpers) and `roundtrip.test.ts` (drives
+the actual `fetch` handler with an in-memory KV stub: publish → store → serve).
 
 Or from inside `worker/` after `npm install`:
 
