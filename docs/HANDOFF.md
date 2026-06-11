@@ -142,7 +142,8 @@ download it, set it up in minutes, and stream their public development. See `doc
   link now point at the real repo (`https://github.com/n8watkins/vibelog`). Still open: compress
   `public/shots/*.png` (~1.3 MB total) — deferred, this box has no pngquant/optipng/oxipng/convert
   and a binary dep/network fetch isn't justified for the size; do it on a box that has a PNG optimiser.
-- **Third share card** ("here's my VibeLog") — add a `kind` to `SHARE_KINDS` + a `*Card()` in `src/share.ts`.
+- ~~**Third share card**~~ — ✅ DONE (`d375486`). `SHARE_KINDS` gained `profile` (a "My VibeLog"
+  identity card: handle + header + bio over a compact stat strip), plus a `/share` tab + tests.
 
 **[LATER] — ask the user first (needs design + an external decision):** X1 deploy guide, X3 VibeLog
 MCP, X4 hosted accounts / Google login, Discord D1–D3, G3 Twitter auto-post, G4 embed widget. See
