@@ -32,22 +32,29 @@ download it, set it up in minutes, and stream their public development. See `doc
   `src/obs.ts` + `src/stream.ts` (live time via OBS WebSocket), `src/social.ts` +
   `src/twitch-oauth.ts` (Twitch/YouTube), `src/summarize.ts` (Gemini Flash-Lite prompt →
   feature label), `src/demodata.ts` (seeded demo year).
-- **Theming:** `src/theme.ts` (theme model + allowlist + presets + resolver), persisted to
-  `~/.vibelog/settings.json` via `src/store.ts`.
+- **Theming:** `src/theme.ts` (theme model + allowlist + presets + resolver; also `sanitizeProfile`
+  for the S2 profile fields), persisted to `~/.vibelog/settings.json` via `src/store.ts`.
+- **Integrations (S3):** `src/oauth.ts` — a generic Authorization-Code engine for Twitch/YouTube/
+  Discord/GitHub + `integrationStatus()` (derives `{connected,configured,login}` from token/secret
+  presence; never stored). Tokens persist to chmod-600 `~/.vibelog/twitch-tokens.json` (Twitch) and
+  `~/.vibelog/oauth-tokens.json` (the rest). App creds read from `~/.vibelog/secrets.json`.
 
 ## 3. SECURITY INVARIANTS (do not break — keys must never hit the stream)
 
 - **Public vs local:** `isRemote(req)` in `src/agent.ts` gates tunneled/LAN callers to the
-  read-only `PUBLIC_GET_ROUTES` set (`/`, `/overlay`, `/live`, `/state.json`,
-  `/api/theme.json`, `/api/presets.json`). **Every write and every key-touching route MUST
-  stay OUT of that set** so it's localhost-only (POSTs are already denied to remote).
-- **Secrets live only in** `~/.vibelog/secrets.json` (chmod 600) and tokens in
-  `~/.vibelog/twitch-tokens.json` (chmod 600). Never log them (err.message only), never put
-  them in `LiveState`/`state.json`/`settings.json`/any overlay-bound page, never export into
-  the streamed shell.
+  read-only `PUBLIC_GET_ROUTES` set (`/`, `/overlay`, `/live`, `/landing`, `/state.json`,
+  `/api/theme.json`, `/api/presets.json`, `/api/profile.json`, `/shots/*.png`). **Every write and
+  every key-touching route MUST stay OUT of that set** so it's localhost-only. The S3 OAuth routes
+  (`POST /api/oauth/<p>/start|/disconnect`, `GET /oauth/<p>/callback`) are deliberately NOT in the
+  set — the callback is a GET, so it relies on `isRemote()` 403ing remote callers (verified).
+- **Secrets live only in** `~/.vibelog/secrets.json` (chmod 600); tokens in chmod-600
+  `~/.vibelog/twitch-tokens.json` + `~/.vibelog/oauth-tokens.json`. Never log them (err.message only),
+  never put them in `LiveState`/`state.json`/`settings.json`/any overlay-bound page, never export into
+  the streamed shell. Integration `connected` state is **derived** from token presence, never stored.
 - **Overlay-bound text** passes `redact()` + a 140-char cap (`src/redact.ts`).
-- **Theme values** are the only settings-derived data served publicly — `validateVars()` in
-  `src/theme.ts` allowlists keys and rejects `url()/@import/;{}<>` so a palette can't inject CSS.
+- **Public settings-derived data** is limited to theme vars + the four profile fields: `validateVars()`
+  (`src/theme.ts`) allowlists theme keys and rejects `url()/@import/;{}<>`; `sanitizeProfile()` caps
+  length + strips control chars and the page renders profile via textContent only (no HTML injection).
 
 ## 4. What's DONE (shipped + committed)
 
