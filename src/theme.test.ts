@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateVars, resolveTheme, DEFAULT_THEME, PRESETS, THEME_VAR_KEYS, type Settings } from "./theme.ts";
+import { validateVars, resolveTheme, sanitizeProfile, DEFAULT_THEME, PRESETS, THEME_VAR_KEYS, type Settings } from "./theme.ts";
 
 test("validateVars keeps allowlisted color/gradient values", () => {
   const out = validateVars({
@@ -78,4 +78,34 @@ test("there are ~10 presets, all with ids and the default first", () => {
   const ids = new Set(PRESETS.map((p) => p.id));
   assert.equal(ids.size, PRESETS.length, "preset ids are unique");
   for (const p of PRESETS) assert.ok(Object.keys(validateVars(p.vars)).length >= 10, `${p.id} is a full theme`);
+});
+
+test("sanitizeProfile keeps known fields, trims, and caps length", () => {
+  const out = sanitizeProfile({
+    displayName: "  Nathan Watkins  ",
+    bio: "Building VibeLog in public",
+    channelHeader: "Live coding and vibes",
+  });
+  assert.equal(out.displayName, "Nathan Watkins");
+  assert.equal(out.bio, "Building VibeLog in public");
+  assert.equal(out.channelHeader, "Live coding and vibes");
+  const long = sanitizeProfile({ bio: "x".repeat(500) });
+  assert.equal(long.bio!.length, 280, "bio is capped at 280");
+});
+
+test("sanitizeProfile normalises the Twitter handle and strips junk", () => {
+  assert.equal(sanitizeProfile({ twitter: "@nathan" }).twitter, "nathan");
+  assert.equal(sanitizeProfile({ twitter: "  @@nat_kins!  " }).twitter, "nat_kins");
+  assert.equal(sanitizeProfile({ twitter: "https://x.com/foo" }).twitter, "httpsxcomfoo");
+});
+
+test("sanitizeProfile drops unknown keys and non-string/empty values", () => {
+  const out = sanitizeProfile({ displayName: 42, evil: "<script>", bio: "   " } as Record<string, unknown>);
+  assert.deepEqual(out, {});
+});
+
+test("sanitizeProfile collapses whitespace runs and tolerates non-objects", () => {
+  assert.deepEqual(sanitizeProfile(null), {});
+  assert.deepEqual(sanitizeProfile("nope"), {});
+  assert.equal(sanitizeProfile({ bio: "a   b" }).bio, "a b");
 });

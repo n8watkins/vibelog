@@ -15,7 +15,8 @@ import {
   type LiveState,
 } from "./state.ts";
 import { appendEvent, readConfig, readSession, readSettings, writeSession, writeSettings, writeState, type Session } from "./store.ts";
-import { PRESETS, resolveTheme, validateVars, type Settings } from "./theme.ts";
+import { PRESETS, resolveTheme, sanitizeProfile, validateVars, type Settings } from "./theme.ts";
+import { beginAuth, completeAuth, disconnect, integrationStatus, isProvider } from "./oauth.ts";
 import { demoDashboard, demoToday, demoWeek, demoSocialGrowth } from "./demodata.ts";
 import { getProjectActivity, type ProjectActivity } from "./projects.ts";
 import { summarize } from "./summarize.ts";
@@ -54,6 +55,10 @@ const PUBLIC_GET_ROUTES = new Set([
   // never profile/integration/secret data. Writes (POST /api/settings) stay
   // localhost-only by NOT being listed here.
   "/api/theme.json", "/api/presets.json",
+  // The public /live page renders the user's profile (display name, bio, channel
+  // header, Twitter). These four fields are user-typed and intentionally public;
+  // sanitised + length-capped, never any integration/secret data.
+  "/api/profile.json",
 ]);
 
 /**
@@ -385,6 +390,15 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         return;
       }
 
+      // The user's public profile (display name / bio / channel header / Twitter)
+      // for the /live page. PUBLIC — but only the four sanitised, user-typed
+      // profile fields are returned; integrations/secrets never travel here.
+      if (req.method === "GET" && route === "/api/profile.json") {
+        const s = await readSettings();
+        sendJson(res, 200, { profile: sanitizeProfile(s?.profile) });
+        return;
+      }
+
       // Full persisted theme settings (sync flag + shared + per-page themes) for
       // the dashboard's Settings sheet. LOCALHOST ONLY — not in PUBLIC_GET_ROUTES,
       // so the isRemote gate above 403s any tunneled/LAN caller. Only the `theme`
@@ -392,7 +406,11 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
       if (req.method === "GET" && route === "/api/settings.json") {
         const s = await readSettings();
         const theme = s?.theme ?? { sync: true, shared: {} };
-        sendJson(res, 200, { theme });
+        sendJson(res, 200, {
+          theme,
+          profile: sanitizeProfile(s?.profile),
+          integrations: await integrationStatus(),
+        });
         return;
       }
 
@@ -509,9 +527,74 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
             if (pv) theme.perPage[p] = validateVars(pv);
           }
         }
-        const next: Settings = { ...current, version: 1, theme };
+        // Profile patch (display name / bio / channel header / Twitter). Merged
+        // over the existing profile and sanitised; only known keys survive.
+        let profile = current.profile;
+        if (body.profile && typeof body.profile === "object") {
+          profile = sanitizeProfile({ ...current.profile, ...(body.profile as object) });
+        }
+        const next: Settings = { ...current, version: 1, theme, profile };
         await writeSettings(next);
-        return sendJson(res, 200, { ok: true, theme: next.theme });
+        return sendJson(res, 200, { ok: true, theme: next.theme, profile: next.profile ?? {} });
+      }
+
+      // ── Integrations OAuth (S3) — all localhost-only ──────────────────────
+      // POST /start and /disconnect aren't GETs, and the GET /callback isn't in
+      // PUBLIC_GET_ROUTES, so the isRemote() gate already 403s any remote caller.
+      // Tokens are written only to chmod-600 files; the dashboard only ever sees
+      // derived { connected, configured, login } — see src/oauth.ts.
+
+      // Begin a connect flow → returns the provider's authorize URL.
+      if (req.method === "POST" && route.startsWith("/api/oauth/") && route.endsWith("/start")) {
+        const p = route.slice("/api/oauth/".length, -"/start".length);
+        if (!isProvider(p)) return sendJson(res, 404, { error: "unknown provider" });
+        try {
+          const redirectUri = `http://localhost:${port}/oauth/${p}/callback`;
+          const authorizeUrl = await beginAuth(p, redirectUri);
+          return sendJson(res, 200, { url: authorizeUrl });
+        } catch (err) {
+          return sendJson(res, 400, { error: err instanceof Error ? err.message : "cannot start" });
+        }
+      }
+
+      // Disconnect a provider → deletes its stored token.
+      if (req.method === "POST" && route.startsWith("/api/oauth/") && route.endsWith("/disconnect")) {
+        const p = route.slice("/api/oauth/".length, -"/disconnect".length);
+        if (!isProvider(p)) return sendJson(res, 404, { error: "unknown provider" });
+        await disconnect(p);
+        return sendJson(res, 200, { ok: true, integrations: await integrationStatus() });
+      }
+
+      // OAuth redirect target. Verifies state, exchanges the code, stores the
+      // token, and returns a tiny page that closes itself so the dashboard
+      // (which polls integration status) picks up the new connection.
+      if (req.method === "GET" && route.startsWith("/oauth/") && route.endsWith("/callback")) {
+        const p = route.slice("/oauth/".length, -"/callback".length);
+        const sendHtml = (status: number, msg: string, ok: boolean): void => {
+          const color = ok ? "#22d3a6" : "#ff8a8a";
+          res.writeHead(status, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+          res.end(
+            "<!doctype html><meta charset=utf-8><title>VibeLog</title>" +
+              "<body style=\"font:15px system-ui;background:#07060e;color:#e9e2ff;display:grid;place-items:center;height:100vh;margin:0\">" +
+              `<div style="text-align:center"><div style="font-size:38px;color:${color}">${ok ? "✓" : "!"}</div>` +
+              `<p>${msg}</p><p style="color:#a99fce;font-size:13px">You can close this tab.</p></div>` +
+              "<script>setTimeout(function(){try{window.close()}catch(e){}},1200)</script>",
+          );
+        };
+        if (!isProvider(p)) return sendHtml(404, "Unknown provider.", false);
+        const err = url.searchParams.get("error");
+        const code = url.searchParams.get("code");
+        const state = url.searchParams.get("state");
+        if (err) return sendHtml(400, `${p} authorization was denied.`, false);
+        if (!code || !state) return sendHtml(400, "Missing authorization code.", false);
+        try {
+          const redirectUri = `http://localhost:${port}/oauth/${p}/callback`;
+          const r = await completeAuth(code, state, redirectUri);
+          return sendHtml(200, `Connected ${r.provider}${r.login ? ` as ${r.login}` : ""}.`, true);
+        } catch (e) {
+          // Never surface token internals — a short reason only.
+          return sendHtml(400, `Couldn't connect ${p}. ${e instanceof Error ? e.message : ""}`.trim(), false);
+        }
       }
 
       if (req.method === "POST" && route === "/building") {

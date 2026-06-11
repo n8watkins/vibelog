@@ -40,14 +40,12 @@ export type Settings = {
     /** Last-picked preset id — for highlighting the active swatch in the UI. */
     presetId?: string;
   };
-  // --- structure reserved for later phases; no UI yet (see docs/VISION.md) ---
+  // Public, user-typed profile fields (S2) — edited in the dashboard, rendered on
+  // /live and the share card. Sanitised via sanitizeProfile() on read + write.
   profile?: { displayName?: string; bio?: string; twitter?: string; channelHeader?: string };
-  integrations?: {
-    twitch?: { connected: boolean; login?: string };
-    youtube?: { connected: boolean; channelId?: string };
-    discord?: { connected: boolean };
-    github?: { connected: boolean; login?: string };
-  };
+  // NOTE: integration "connected" state (S3) is NOT stored here — it's derived at
+  // runtime from token/secret presence by integrationStatus() in src/oauth.ts, so
+  // it can never drift from reality or be spoofed by editing settings.json.
 };
 
 /** Only chars that appear in colors and gradient functions. No ;{}<>\"' etc. */
@@ -69,6 +67,37 @@ export function validateVars(input: unknown): ThemeVars {
     if (!s || s.length > 240) continue;
     if (UNSAFE.test(s) || !SAFE_VALUE.test(s)) continue;
     out[key] = s;
+  }
+  return out;
+}
+
+/**
+ * Public-facing profile fields (all user-typed; rendered on /live and the share
+ * card). They render as textContent on the page, so there's no HTML-injection
+ * vector, but we still bound length, strip control chars, and normalise the
+ * Twitter handle. Pure; never throws. Only these four keys are ever surfaced —
+ * integrations/secrets never travel with the profile.
+ */
+export type Profile = NonNullable<Settings["profile"]>;
+const PROFILE_CAPS: Record<keyof Profile, number> = {
+  displayName: 60,
+  bio: 280,
+  twitter: 30,
+  channelHeader: 100,
+};
+
+export function sanitizeProfile(input: unknown): Profile {
+  const out: Profile = {};
+  if (!input || typeof input !== "object") return out;
+  const obj = input as Record<string, unknown>;
+  for (const key of Object.keys(PROFILE_CAPS) as (keyof Profile)[]) {
+    const v = obj[key];
+    if (typeof v !== "string") continue;
+    // Collapse any control chars (incl. newlines) to spaces, squeeze runs, trim.
+    let s = v.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim();
+    if (key === "twitter") s = s.replace(/^@+/, "").replace(/[^A-Za-z0-9_]/g, "");
+    s = s.slice(0, PROFILE_CAPS[key]);
+    if (s) out[key] = s;
   }
   return out;
 }

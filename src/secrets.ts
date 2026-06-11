@@ -16,7 +16,11 @@ export type Secrets = {
   geminiModel?: string;
   obs?: { url?: string; password?: string; enabled?: boolean };
   twitch?: { clientId?: string; clientSecret?: string; login?: string };
-  youtube?: { apiKey?: string; channelId?: string };
+  // `apiKey`/`channelId` drive the public-stats poller (social.ts); the OAuth
+  // `clientId`/`clientSecret` drive the dashboard "Connect" flow (oauth.ts).
+  youtube?: { apiKey?: string; channelId?: string; clientId?: string; clientSecret?: string };
+  discord?: { clientId?: string; clientSecret?: string };
+  github?: { clientId?: string; clientSecret?: string; login?: string };
 };
 
 let cache: { at: number; data: Secrets } | null = null;
