@@ -36,9 +36,10 @@ test("xmlEscape neutralises the chars that could break out of SVG", () => {
   assert.equal(xmlEscape(""), "");
 });
 
-test("isShareKind only accepts the two known kinds", () => {
+test("isShareKind only accepts the known kinds", () => {
   assert.ok(isShareKind("stats"));
   assert.ok(isShareKind("join"));
+  assert.ok(isShareKind("profile"));
   assert.ok(!isShareKind("evil"));
   assert.ok(!isShareKind(""));
 });
@@ -55,8 +56,8 @@ const data = (over: Partial<ShareData> = {}): ShareData => ({
   ...over,
 });
 
-test("shareCardSvg renders a 1200×630 SVG for both kinds", () => {
-  for (const kind of ["stats", "join"] as const) {
+test("shareCardSvg renders a 1200×630 SVG for every kind", () => {
+  for (const kind of ["stats", "join", "profile"] as const) {
     const svg = shareCardSvg(kind, data());
     assert.ok(svg.startsWith("<svg"), "is an svg");
     assert.match(svg, /width="1200"/);
@@ -72,6 +73,17 @@ test("shareCardSvg escapes user-typed text — no raw injection survives", () =>
   assert.ok(!svg.includes("<script>"), "raw <script> must never appear");
   assert.ok(svg.includes("&lt;script&gt;"), "displayName is escaped");
   assert.ok(svg.includes("&amp;") && svg.includes("&quot;"), "nowBuilding is escaped");
+});
+
+test("profile card escapes the handle + bio and strips a leading @", () => {
+  const svg = shareCardSvg("profile", data({
+    twitter: "@@evil</text><script>x",
+    bio: 'tag <b> & "q"',
+    channelHeader: "Building things",
+  }));
+  assert.ok(!svg.includes("<script>"), "raw <script> must never appear");
+  assert.ok(svg.includes("@evil"), "leading @s collapse to a single @");
+  assert.ok(svg.includes("&amp;") && svg.includes("&quot;"), "bio is escaped");
 });
 
 test("shareCardSvg paints with the resolved theme colors", () => {

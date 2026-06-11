@@ -19,8 +19,8 @@ import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 import { DEFAULT_THEME, type ThemeVars } from "./theme.ts";
 
-export type ShareKind = "stats" | "join";
-export const SHARE_KINDS: ShareKind[] = ["stats", "join"];
+export type ShareKind = "stats" | "join" | "profile";
+export const SHARE_KINDS: ShareKind[] = ["stats", "join", "profile"];
 export function isShareKind(s: string): s is ShareKind {
   return (SHARE_KINDS as string[]).includes(s);
 }
@@ -215,9 +215,50 @@ function joinCard(d: ShareData): string {
   return frame(d, inner);
 }
 
+/** "My VibeLog" profile card — leads with the creator's channel identity
+ *  (handle + header + bio) and treats the numbers as a supporting strip. Where
+ *  `stats` leads with today's figures and `join` is a generic invite, this is the
+ *  personal "here's my channel" card. */
+function profileCard(d: ShareData): string {
+  const accent2 = v(d.theme, "--accent2");
+  const text = v(d.theme, "--text");
+  const muted = v(d.theme, "--muted");
+  const header = xmlEscape(ellipsize(d.channelHeader || d.bio || "Building in public, live.", 30));
+  const bio = d.bio && d.bio.trim() && d.bio.trim() !== (d.channelHeader || "").trim()
+    ? xmlEscape(ellipsize(d.bio, 70))
+    : "";
+  const handleRaw = (d.twitter || "").trim().replace(/^@+/, "");
+  const handle = handleRaw ? "@" + xmlEscape(ellipsize(handleRaw, 24)) : "";
+
+  // Compact supporting strip: a few signature numbers, value over label.
+  const chips = [
+    { v: fmtNum(d.stats.features), l: "features" },
+    { v: fmtNum(d.stats.commits), l: "commits" },
+    { v: fmtNum(d.stats.tokens), l: "tokens" },
+    { v: d.stats.timeLive, l: "time live" },
+  ];
+  const chipW = 256;
+  const chipStrip = chips
+    .map((c, i) => `<g transform="translate(${78 + i * chipW} 472)">
+      <text x="0" y="0" font-size="44" font-weight="800" fill="${text}" letter-spacing="-0.5">${xmlEscape(c.v)}</text>
+      <text x="2" y="32" font-size="20" font-weight="700" letter-spacing="1.5" fill="${muted}">${xmlEscape(c.l.toUpperCase())}</text>
+    </g>`)
+    .join("\n");
+
+  const inner = `
+  ${statusPill(d)}
+  ${handle ? `<text x="78" y="206" font-size="27" font-weight="700" fill="${accent2}">${handle}</text>` : ""}
+  <text x="78" y="306" font-size="72" font-weight="800" fill="url(#flow)" letter-spacing="-2">${header}</text>
+  ${bio ? `<text x="78" y="358" font-size="30" font-weight="600" fill="${muted}">${bio}</text>` : ""}
+  ${chipStrip}`;
+  return frame(d, inner);
+}
+
 /** Build the themed SVG string for a card kind. Pure. */
 export function shareCardSvg(kind: ShareKind, d: ShareData): string {
-  return kind === "join" ? joinCard(d) : statsCard(d);
+  if (kind === "join") return joinCard(d);
+  if (kind === "profile") return profileCard(d);
+  return statsCard(d);
 }
 
 /** Absolute paths to the bundled DejaVu Sans faces (regular + bold). Resolved
