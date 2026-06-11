@@ -1,6 +1,7 @@
 # VibeLog — V1 MVP Build Plan (Phase 1, executable)
 
-`docs/MVP_PLAN.md` — status: **plan (pre-code)** · created 2026-06-11
+`docs/MVP_PLAN.md` — status: **PR1–PR3 BUILT + merged to master (deploy on hold)** · created 2026-06-11
+· See `docs/HANDOFF.md §5` for the current build state + the deploy runbook.
 
 > The detailed, build-ready plan for the **V1 MVP**. Strategy/why lives in `VISION.md §6`; phasing +
 > economics in `PLATFORM_PLAN.md`. This is the executable spec a builder follows for Phase 1.

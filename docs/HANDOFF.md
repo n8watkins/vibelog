@@ -7,13 +7,13 @@ hosting cost economics**, read `docs/PLATFORM_PLAN.md` (two tracks: A = "VibeLog
 domain, 24/7" — buildable now; B = the multi-tenant product). If anything here disagrees with
 `docs/VISION.md`, that file wins.
 
-> **Current state (2026-06-11):** `master @ 3f38aed`, **5 commits ahead of `origin/master` and
-> NOT pushed** (push only when the user asks). 72 tests pass, typecheck clean. The whole local
-> product is DONE; this session **defined the hosted-platform direction + the V1 MVP** (no platform
-> code yet). **Next decided priority: build the V1 MVP** = "Nathan's VibeLog live on his own domain,
-> 24/7, for $0" (Track A1 + local-LLM). **The build-ready spec is `docs/MVP_PLAN.md`.** Read
-> `docs/VISION.md §6` + `docs/PLATFORM_PLAN.md §7` + `docs/MVP_PLAN.md` + `docs/FAQ.md` before building.
-> See §5 for the older optional-polish list.
+> **Current state (2026-06-11):** `master @ fc55dcb`, **19 commits ahead of `origin/master` and
+> NOT pushed** (push only when the user asks). **100 src tests + 33 worker tests pass, typecheck clean.**
+> The whole local product is DONE, and this session **BUILT the V1 MVP code** (PR1–PR3, all merged to
+> master): the provider-flexible summarizer, the snapshot publisher, and the thin Cloudflare Worker+KV.
+> **The deploy is intentionally ON HOLD** (Nathan: "not yet") — no Cloudflare account/login yet, so
+> nothing is live. **The remaining work is the deploy runbook + PR4 custom domain — see §5.** Snapshot
+> interface is frozen in `docs/SNAPSHOT_CONTRACT.md`; build spec is `docs/MVP_PLAN.md`.
 
 ---
 
@@ -128,28 +128,43 @@ download it, set it up in minutes, and stream their public development. See `doc
 
 ## 5. What's NEXT
 
-> **🎯 DECIDED PRIORITY (2026-06-11): build the V1 MVP.** This session set the whole hosted-platform
-> direction and produced a build-ready plan. The next agent is the **orchestrator** — read
-> `docs/MVP_PLAN.md` in full (esp. §7 scope, §8 orchestration) plus `docs/VISION.md §6` and
-> `docs/PLATFORM_PLAN.md §7`. **No platform code exists yet.**
+> **✅ V1 MVP CODE BUILT (2026-06-11) — DEPLOY ON HOLD.** PR1–PR3 are written, reviewed, and merged
+> to `master` (not pushed). What exists now:
+> - **PR1 — provider-flexible summarizer** (`src/summarize.ts`): `provider:"auto"` (local OpenAI-
+>   compatible → Gemini → template); `detectLocalLLM()` probes Ollama `:11434` / LM Studio `:1234`
+>   (localhost only); non-secret `summarizer:{provider,baseUrl,model}` in settings.json.
+> - **PR2 — snapshot publisher** (`src/publish.ts` + minimal `agent.ts` wire-in): builds the frozen
+>   `{state,profile,theme}` snapshot and Bearer-token-POSTs it, write-on-change + throttle
+>   (300s live / 900s idle). **Outbound only** — no inbound route, `isRemote`/`PUBLIC_GET_ROUTES`
+>   untouched. Disabled (no-op) unless `secrets.json.publish.{url,token}` are set.
+> - **PR3 — thin Worker+KV** (`worker/`, self-contained, no root deps): `POST /publish` (constant-time
+>   token compare, 256KB cap) → KV `snapshot:nate`; GETs serve the snapshot back so `public/live.html`
+>   runs unchanged; `[assets]` serves `live.html`. **Deploy-ready, NOT deployed.** See `worker/README.md`.
+> - Snapshot interface frozen in `docs/SNAPSHOT_CONTRACT.md`. Security re-audit (§5 of MVP_PLAN) done:
+>   no new inbound route, token never logged, published JSON = the already-public surface only.
 >
-> **V1 MVP** = *"Nathan's VibeLog, live on a public URL, 24/7, for $0"* = local-LLM summarizer +
-> publisher + thin Cloudflare Worker+KV + (last) custom domain. Build order, tests, security
-> checklist, and the parallel-subagent + model-tier plan are all in `docs/MVP_PLAN.md`.
+> **Subdomain DECIDED: `vibelog.natebuilds.dev`** (subdomain, not a `/vibelog` path — a path would
+> break the contract's absolute `/state.json` etc. fetches and force a client rewrite).
 >
-> **Decided defaults (do NOT re-ask):** summarizer `provider:"auto"` (local→Gemini→template) per
-> Nathan's "be flexible"; storage = Cloudflare **KV**; MVP cadence ~300s live / ~900s idle,
-> write-on-change; **no domain needed to build/test** (free `*.workers.dev` first); **don't buy
-> `vibelog.app`** (Phase 2+). Orchestrate with **Opus** (contract/integration/security review) +
-> **Sonnet** (the A/B/C feature builds). **First buildable step: PR1 — the local-LLM summarizer**
-> (`src/summarize.ts`), which needs nothing external.
+> **➡️ REMAINING — the deploy runbook (do when Nathan is ready; he said "not yet"):**
+> 1. Nathan: create a **free Cloudflare account**, then `wrangler login` (interactive — agent can't).
+> 2. `cd worker && npm install` (installs wrangler + `@cloudflare/workers-types`, isolated from root).
+> 3. `wrangler kv namespace create SNAPSHOTS` (+ `--preview`) → paste the returned `id`/`preview_id`
+>    into `worker/wrangler.toml` (TODO markers are there).
+> 4. `wrangler secret put PUBLISH_TOKEN` (a strong random, e.g. `openssl rand -hex 32`).
+> 5. `wrangler deploy` → prints the free `*.workers.dev` URL.
+> 6. Put that URL + the same token into `~/.vibelog/secrets.json` `publish:{url,token}` (see
+>    `secrets.example.json`), restart `vibe start` → snapshots publish; load the workers.dev URL,
+>    stop the agent, reload → page still serves the last snapshot (proves the 24/7 claim, MVP_PLAN §4).
+> 7. **PR4 (custom domain)** — only when Nathan owns `natebuilds.dev` (he does NOT yet) and it's on
+>    Cloudflare: add the Worker custom domain `vibelog.natebuilds.dev` (one route, auto-SSL). No code.
+>    **Do NOT buy `vibelog.app`** (Phase 2+).
 >
-> **Open for Nathan (non-blocking, only gate the *last* step):** the subdomain label
-> (`vibelog.`/`live.`/`building.`) and whether he already owns `natebuilds.dev`; a free Cloudflare
-> account is needed before PR3 deploys.
+> Verification status: unit + handler round-trip tests prove publish→store→serve locally; a true
+> end-to-end (live workers.dev) is pending the deploy above.
 >
-> The legacy NOW/NEXT product bucket (below) is all ✅ DONE; the remaining optional polish and the
-> [LATER] bucket are now subsumed by the platform plan (see `docs/VISION.md §6`, `LATER_TRIAGE.md`).
+> The legacy NOW/NEXT product bucket (below) is all ✅ DONE; remaining optional polish and the
+> [LATER] bucket are subsumed by the platform plan (see `docs/VISION.md §6`, `LATER_TRIAGE.md`).
 
 **Optional polish (no decision needed — entry points):**
 - ~~**Bundle a font for share cards**~~ — ✅ DONE (`3f8155b`). `public/fonts/{DejaVuSans,
