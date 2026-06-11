@@ -46,6 +46,12 @@ export type Settings = {
   // NOTE: integration "connected" state (S3) is NOT stored here — it's derived at
   // runtime from token/secret presence by integrationStatus() in src/oauth.ts, so
   // it can never drift from reality or be spoofed by editing settings.json.
+  // Non-secret summarizer config. The Gemini key stays in secrets.json.
+  summarizer?: {
+    provider?: "auto" | "gemini" | "local" | "template";
+    baseUrl?: string;
+    model?: string;
+  };
 };
 
 /** Only chars that appear in colors and gradient functions. No ;{}<>\"' etc. */
