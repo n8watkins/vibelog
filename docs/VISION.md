@@ -299,6 +299,9 @@ just sets a base URL + model. Config: a `summarizer` block (`provider: gemini|lo
 `baseUrl`, `model`) in `settings.json`; extend `Summary["source"]` to `"local"`; keep `sanitizeLabel`
 + the template fallback wrapping. A 3B model (`llama3.2:3b`, `qwen2.5:3b`) is plenty for one-line
 labels, making the privacy story airtight (even the label never leaves the box). **No new deps.**
+**Onboarding default:** Gemini (BYO free-tier key) is the zero-friction on-ramp; nudge users toward
+the **local LLM** as the privacy upgrade once they're comfortable; the template fallback is always
+there with no key at all.
 
 ### 6.9 Sequencing (platform build order)
 

@@ -157,9 +157,22 @@ domain + SSL) covers a personal VibeLog. Only respect the **1k KV writes/day** l
 publishes to ~every 2 min / on-change). The sole real cost is the **domain renewal** (~$10–15/yr),
 not a Cloudflare charge. (`PLATFORM_PLAN.md §5`)
 
+**Q: Do we make a separate Worker per person? What drives cost at scale?**
+No — **one Worker** (deployed once) serves everyone; it reads the hostname/`/u/<handle>` per request
+and fetches that user's snapshot from storage keyed per user (`snapshot:<handle>`). Cost is **operation
+count, not bandwidth (free on Cloudflare) or storage (pennies)**, ranked: (1) **writes/publishes** —
+the ~10×-pricier KV op and the #1 controllable driver; tame it with write-on-change + throttle +
+publish-faster-only-while-live; (2) **page-view requests** — big number but cheap and **edge-cacheable**
+(snapshots change only on publish); (3) **custom hostnames** — only paying users, self-funding; (4)
+storage — pennies. Realistic ~30k users ≈ $100–150/mo, dominated by writes. (`PLATFORM_PLAN.md §5`)
+
 **Q: Cost guardrails as we grow?**
-Keep the snapshot small; **never proxy video through our servers** (Twitch/YouTube embeds load direct
-= $0). Those two keep cost flat as users scale.
+Keep the snapshot small; **publisher writes on-change + throttled**; **edge-cache reads**; **never
+proxy video through our servers** (Twitch/YouTube embeds load direct = $0). Those keep cost flat at scale.
+
+**Q: LLM onboarding default?**
+Gemini (BYO free-tier key) = zero-friction on-ramp; nudge users to a **local LLM** as the privacy
+upgrade once comfortable; template fallback always available with no key. (`VISION.md §6.8`)
 
 ---
 

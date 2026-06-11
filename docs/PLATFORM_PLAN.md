@@ -166,8 +166,33 @@ every ~2 min, or only when the snapshot actually changed) to stay under 1k KV wr
 only real cost is the **domain renewal** (~$10–15/yr for `natebuilds.dev`) — not a Cloudflare charge.
 So: **$0/mo hosting for yourself.**
 
+**Infra shape — ONE Worker, not one-per-user.** A single Worker (your code, deployed once) serves
+*everyone*; per request it reads the hostname / `/u/<handle>`, fetches *that* user's snapshot from
+storage, and renders. Storage is **keyed per user** (`snapshot:<handle>` in KV). One Worker, N keys —
+the standard multi-tenant serverless pattern. (Per-user Workers would be a deployment/limits nightmare.)
+
+**What actually drives cost at scale** (ranked) — it's **operation count, not bandwidth or storage**:
+1. **Writes (publishes) — the #1 controllable driver.** KV writes (~$5/M) cost ~10× reads. Worst case
+   (30k users publishing every 2 min all day) ≈ 100M writes/mo ≈ ~$540/mo; with **write-on-change +
+   throttle + publish-faster-only-while-live**, writes track *active streaming hours* ≈ ~16M/mo ≈ ~$80/mo.
+2. **Worker requests (page views) — big number, cheap + cacheable.** Snapshots change only on publish,
+   so **edge-cache the rendered page** (short TTL); most views never bill a KV read. ~$5–10/mo realistic.
+3. **Custom hostnames** (Cloudflare for SaaS, ~$0.10/hostname/mo) — only *paying* users get these, each
+   paying $6–8, so it's self-funding (revenue scales faster than this cost).
+4. **Storage** — pennies. **Egress/bandwidth — $0 on Cloudflare** (the cost that kills others is free).
+
+→ Realistic all-in for 30k users ≈ **$100–150/mo, dominated by write volume**. The publisher's
+throttle/diff logic is therefore an *engineering feature*, not an afterthought — it's what keeps both
+the free tier and the business margins safe.
+
+**Reads vs writes (the "is it the rights?" answer):** reads (visitors loading pages) are cheap and
+cache-crushable; **writes (publishes) are the ~10×-pricier op and the real scaler** — control publish
+frequency and you control the bill.
+
 **Cost guardrails (keep it flat as you grow):**
 - Keep the snapshot small (numeric stats + a few profile fields + theme + ~1yr calendar).
+- **Publisher writes on change + throttled** (and faster only while live) — the single biggest lever.
+- **Edge-cache reads** (snapshot changes only on publish, so pages cache hard).
 - **Never proxy video through your servers** — embedded Twitch/YouTube players load *directly from
   Twitch/YouTube*, costing you $0. Piping media through your infra is the one thing that breaks the math.
 
