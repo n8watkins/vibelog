@@ -1,5 +1,10 @@
 # VibeLog PRD
 
+> **⚠️ HISTORICAL — superseded.** This PRD's Supabase/Next.js multi-user SaaS framing is
+> NOT the current direction; VibeLog is local-first. The canonical roadmap is
+> [`docs/VISION.md`](./docs/VISION.md) (it wins any conflict); the old hosted-accounts idea
+> survives only as the [LATER] **X4** item there. Kept for historical context.
+
 > This is the full product vision. The **V0 cut actually being built first** lives
 > in [`V0_SPEC.md`](./V0_SPEC.md). Treat the phases here as the long-term roadmap;
 > V0 deliberately ships only the local agent + overlay and adds the rest live.

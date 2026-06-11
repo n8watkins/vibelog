@@ -1,5 +1,9 @@
 # VibeLog — V0 Spec (Overlay-First)
 
+> **⚠️ HISTORICAL — frozen V0 scope.** Superseded by [`docs/VISION.md`](./docs/VISION.md)
+> (canonical roadmap; it wins any conflict). Kept for context on the original overlay-first
+> cut. For current architecture start at [`docs/HANDOFF.md`](./docs/HANDOFF.md).
+
 > The full PRD describes the eventual product. **This is the V0 cut: the smallest
 > thing that puts a live coding HUD on stream this week.** Everything in the PRD
 > that isn't here is deliberately deferred. Build the loop, stream it, grow it live.

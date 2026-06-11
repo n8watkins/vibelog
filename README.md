@@ -1,10 +1,14 @@
-# VibeLog (V0)
+# VibeLog
 
 Live coding telemetry + an OBS overlay for vibe-coding streams. One local Node
-process tracks your git activity and Claude token spend and serves a live HUD that
-OBS reads as a Browser Source. **100% local, no accounts, $0.** See
-[`V0_SPEC.md`](./V0_SPEC.md) for scope and [`PRD.md`](./PRD.md)… (the full product
-vision) once added.
+process tracks your git activity, Claude token spend, stream time and channel
+growth, and serves a live HUD (OBS Browser Source), a private dashboard, a public
+**/live** page, and shareable **/share** cards. **Local-first, no accounts, $0.**
+
+Roadmap & direction live in [`docs/VISION.md`](./docs/VISION.md) (canonical) and
+[`docs/HANDOFF.md`](./docs/HANDOFF.md) (architecture cold-start). The root
+`V0_SPEC.md`, `PRD.md`, and `NEXT_STEPS.md` are **historical** — superseded by
+`docs/VISION.md`.
 
 ## Quick start
 
@@ -16,6 +20,9 @@ pnpm vibe init --project "VibeLog"
 
 # Start a session + the overlay agent (runs in the foreground — leave it up)
 pnpm vibe start --cwd /path/to/the/repo/youre/streaming --title "Building the live tracker"
+
+# …or just preview everything with seeded fake data (no git/session needed):
+pnpm vibe demo
 ```
 
 Then in **OBS** add a **Browser Source** pointing at:
@@ -116,7 +123,12 @@ session is running. Prompt text is redacted before it can reach the overlay.
 - **Claude tokens for this session**, polled every 30s via `npx ccusage --json`
   (today's total minus the total captured at `vibe start`).
 - **Milestones** you mark: features, bugs, etc. → the build log.
-- **Now Building**: whatever you type via `vibe building`. No AI, no Gemini.
+- **Now Building**: whatever you type via `vibe building`, or — when Claude Code hooks
+  are wired — your prompt, turned into a short feature label by the summarizer
+  (Gemini Flash-Lite via `src/summarize.ts`, with a pure-local template fallback when
+  no key is set). The raw prompt is never persisted; only the redacted label is.
+- **Stream time** from the OBS WebSocket, and **Twitch/YouTube** live status +
+  follower/sub counts (channel-growth deltas over time) when configured.
 
 ## Tokens by project
 
@@ -146,10 +158,19 @@ private in `~/.vibelog/events.jsonl`.
 The agent binds `0.0.0.0` (so Windows OBS can reach a WSL session), and `vibe
 share` tunnels the whole port — so it **gates by origin**. Direct/localhost
 requests get everything; remote or tunneled requests (detected via cloudflared's
-forwarding headers) get read-only public routes only (`/`, `/overlay`, `/live`,
-`/state.json`). The write endpoints (`mark`/`building`/`end`/hooks) and the
-private `/dashboard` return `403` for them — a viewer can't end your session,
-inject overlay text, or read your dashboard.
+forwarding headers, `isRemote()` in `src/agent.ts`) get the read-only public
+routes only (`/`, `/overlay`, `/live`, `/landing`, `/share`, `/share/card.png`,
+`/state.json`, `/api/theme.json`, `/api/presets.json`, `/api/profile.json`,
+`/shots/*.png`). The write endpoints (`mark`/`building`/`end`/settings/OAuth/hooks)
+and the private `/dashboard` return `403` for them — a viewer can't end your
+session, inject overlay text, change your theme, or read your dashboard.
+
+**Credentials** (Gemini key, OBS password, Twitch/YouTube/Discord/GitHub app
+creds, OAuth tokens) live only in `~/.vibelog/` (chmod 600) — VibeLog reads **no
+environment variables**. Copy [`secrets.example.json`](./secrets.example.json) to
+`~/.vibelog/secrets.json` and fill in only what you use; with none set, VibeLog
+runs in zero-config local mode. Keys never reach `LiveState`/the overlay; see
+[`CLAUDE.md`](./CLAUDE.md) and [`docs/INFRA_PLAN.md`](./docs/INFRA_PLAN.md) §1/§4.
 
 ```bash
 pnpm test        # redactor tests
@@ -161,7 +182,10 @@ pnpm typecheck
 The agent serves a polished, shareable public page at **`/live`** — a richer,
 full-screen view of the same state (great to link in your bio or pin in chat).
 It shows an "Offline — back soon" state when no session is running, so the URL is
-safe to share permanently.
+safe to share permanently. There's also a **`/share`** page with proper OG/Twitter
+meta and a server-rendered card image (`/share/card.png?kind=stats|join`) so links
+unfurl nicely, plus a marketing **`/landing`** page. To track Twitch follower
+counts, authorize once with `pnpm vibe twitch login`.
 
 To expose it to viewers over the internet, run a free Cloudflare Tunnel:
 
@@ -176,20 +200,39 @@ pnpm vibe share            # wraps `cloudflared tunnel --url http://localhost:45
 
 ```
 hooks/
-  claude-hook.mjs  dumb Claude Code hook → forwards to the agent (no deps)
+  claude-hook.mjs    dumb Claude Code hook → forwards to the agent (no deps)
 src/
-  cli.ts            vibe CLI (commander)
-  claude-projects.ts tokens-by-project from local transcripts (+ tests)
-  agent.ts      HTTP server + state + git/ccusage pollers  (+ agent.test.ts: origin gate)
-  git.ts        git metrics
-  ccusage.ts    Claude token totals (best-effort)
-  redact.ts     secret scrubber  (+ redact.test.ts)
-  report.ts     `vibe report` daily + weekly recaps from events  (+ report.test.ts)
-  chart.ts      `vibe chart` heatmap + Vibe Score from events  (+ chart.test.ts)
-  state.ts      LiveState contract
-  store.ts      ~/.vibelog persistence
+  cli.ts             vibe CLI (commander): start/demo/building/mark/report/chart/
+                       tokens/share/twitch login/hooks/status/end
+  agent.ts           HTTP server + in-memory LiveState + pollers + all routes
+                       (+ isRemote/originOf origin gate)  (+ agent.test.ts)
+  config.ts          paths + defaults (ports, ~/.vibelog file locations)
+  secrets.ts         ~/.vibelog/secrets.json reader (chmod 600, never logged)
+  store.ts           ~/.vibelog persistence (session/state/events/settings/config)
+  state.ts           LiveState contract (the public-safe overlay schema)
+  redact.ts          secret scrubber for overlay-bound text  (+ redact.test.ts)
+  git.ts             git metrics (lines/files/commits/branch)
+  ccusage.ts         Claude token + cost totals via ccusage  (+ ccusage.test.ts)
+  claude-projects.ts tokens-by-project from local transcripts  (+ test)
+  projects.ts        per-project activity (transcripts × git)  (+ projects.test.ts)
+  report.ts          `vibe report` daily/weekly recaps  (+ report.test.ts)
+  chart.ts           `vibe chart` heatmap + Vibe Score  (+ chart.test.ts)
+  summarize.ts       prompt → feature label (Gemini Flash-Lite + fallback)  (+ test)
+  obs.ts             OBS WebSocket bridge (live started/ended)
+  stream.ts          per-day stream minutes from events  (+ stream.test.ts)
+  social.ts          Twitch/YouTube live + follower/sub stats  (+ social.test.ts)
+  twitch-oauth.ts    `vibe twitch login` user OAuth + refresh  (+ test)
+  oauth.ts           generic integrations OAuth engine (S3)  (+ oauth.test.ts)
+  theme.ts           theme model + allowlist + presets + sanitizeProfile  (+ test)
+  share.ts           /share OG/Twitter card SVG → PNG (resvg)  (+ share.test.ts)
+  demodata.ts        seeded demo year for `vibe demo`
 public/
-  overlay.html   the OBS HUD (transparent, self-contained)
-  live.html      shareable public /live page (full-screen viewer view)
-  dashboard.html private /dashboard (today + week + heatmap, localhost only)
+  overlay.html       the OBS HUD (transparent, self-contained)
+  live.html          public /live page (full-screen viewer view)
+  share.html         /share page (OG/Twitter cards, copy-link)
+  landing.html       /landing marketing page
+  dashboard.html     private /dashboard (today + week + heatmap, localhost only)
+  shots/             product screenshots served to the landing/OG image
+docs/
+  HANDOFF.md  VISION.md  THEMING.md  INFRA_PLAN.md   (architecture + roadmap)
 ```

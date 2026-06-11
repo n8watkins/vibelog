@@ -1,5 +1,9 @@
 # VibeLog — status & next steps
 
+> **⚠️ HISTORICAL.** This outline describes an earlier multi-user framing and is no longer
+> the source of truth. For current status + roadmap see [`docs/VISION.md`](./docs/VISION.md)
+> (canonical) and [`docs/HANDOFF.md`](./docs/HANDOFF.md) §4–5. Kept for historical context.
+
 A running outline of what's built and what's planned. V0 is **overlay-first,
 100% local, $0** (see [`V0_SPEC.md`](./V0_SPEC.md); full vision in [`PRD.md`](./PRD.md)).
 
