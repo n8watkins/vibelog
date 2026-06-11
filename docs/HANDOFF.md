@@ -140,10 +140,12 @@ In rough priority, with entry points:
    stats|join`. Possible follow-ups (optional): bundle a font in the repo so cards render identically
    on a machine with no system fonts (today resvg uses `loadSystemFonts` + a `DejaVu Sans` default);
    add a "Share" entry point from `/live`/dashboard; a third card design ("here's my VibeLog").
-6. **Doc reconciliation [NOW]** — `README.md` is stale (says "no Gemini" but `src/summarize.ts` uses it;
-   file map omits ~9 modules). `V0_SPEC.md`/`PRD.md`/`NEXT_STEPS.md` describe older directions;
-   mark historical. Add an in-repo `CLAUDE.md` (streaming-safety block is in `INFRA_PLAN.md §4`)
-   and a keyless `.env.example`.
+6. **Doc reconciliation** — ✅ DONE (this session). `README.md` rewritten (Gemini line fixed; full
+   22-module file map; `demo`/`twitch login`/`/share`/`/landing` added; Safety route list +
+   secrets.json model). `V0_SPEC.md`/`PRD.md`/`NEXT_STEPS.md` got HISTORICAL banners → `docs/VISION.md`.
+   Added in-repo `CLAUDE.md` (streaming-safety + orientation) and a keyless **`secrets.example.json`**
+   — note: NOT `.env.example`, because VibeLog reads **no env vars** (all creds in `~/.vibelog/
+   secrets.json`), so an env template would be misleading. Commits `22898bc`, `b7dbfc2`.
 7. **LATER (needs design + a user decision first — ask before building):** Discord server
    create/manage + suggestion-box front-end, Twitter auto-post, embeddable widget, VibeLog MCP,
    hosted accounts / Google login. See `docs/VISION.md §3.4–3.5`.

@@ -146,17 +146,15 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 
 ## 4. Documentation health (from the docs audit)
 
-The docs need reconciliation; this file is step one. Outstanding:
+✅ **DONE — reconciled.** All audit items are resolved:
 
-- **README** — stale file map (missing `obs.ts`, `social.ts`, `secrets.ts`, `summarize.ts`,
-  `twitch-oauth.ts`, `stream.ts`, `projects.ts`, `config.ts`, `demodata.ts`) and a direct
-  contradiction: it says "no Gemini" while `src/summarize.ts` uses it. Fix the file map + the
-  tracking section, add `demo` / `twitch login` to the CLI list.
-- **V0_SPEC.md / PRD.md / NEXT_STEPS.md** — mark as historical; they describe frozen-V0,
-  Supabase-SaaS, and multi-user respectively, none of which is the current local-first direction.
-- **In-repo `CLAUDE.md`** — `docs/INFRA_PLAN.md §4` already contains a copy-pasteable
-  streaming-safety block; commit it as an actual `CLAUDE.md`.
-- **`.env.example`** — referenced by INFRA_PLAN but missing; add placeholders (no real keys).
+- **README** — file map rewritten to cover all 22 modules + current pages/docs; the "no Gemini"
+  contradiction fixed; `demo` / `twitch login` + the `/share` & `/landing` surfaces added; Safety
+  route list updated to the full `PUBLIC_GET_ROUTES` set; the secrets.json (no-env) model documented.
+- **V0_SPEC.md / PRD.md / NEXT_STEPS.md** — each now carries a HISTORICAL banner pointing here.
+- **In-repo `CLAUDE.md`** — committed (streaming-safety block from `INFRA_PLAN.md §4` + orientation).
+- **Keyless config example** — shipped as **`secrets.example.json`** (not `.env.example`): VibeLog
+  reads no env vars, so an env template would mislead; all creds live in `~/.vibelog/secrets.json`.
 
 ---
 
