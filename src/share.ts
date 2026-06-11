@@ -14,6 +14,8 @@
  * no url()) so a card can't be an exfil vector.
  */
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 import { DEFAULT_THEME, type ThemeVars } from "./theme.ts";
 
@@ -78,7 +80,10 @@ function ellipsize(s: string, n: number): string {
   return t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t;
 }
 
-const FONT = "Inter, 'Segoe UI', 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif";
+// We bundle DejaVu Sans (public/fonts) and load ONLY it (no system fonts) so a card
+// rasterises to an identical PNG on any machine. Keep it first in the stack; the
+// remaining families are inert fallbacks should the bundled file ever be missing.
+const FONT = "'DejaVu Sans', Inter, 'Segoe UI', 'Liberation Sans', Arial, sans-serif";
 
 /** Pull a theme var with a fallback to the default theme. */
 function v(theme: ThemeVars, key: keyof ThemeVars): string {
@@ -215,12 +220,20 @@ export function shareCardSvg(kind: ShareKind, d: ShareData): string {
   return kind === "join" ? joinCard(d) : statsCard(d);
 }
 
-/** Rasterise a card SVG to a PNG buffer (1200×630). Uses system fonts. */
+/** Absolute paths to the bundled DejaVu Sans faces (regular + bold). Resolved
+ *  relative to this module so it works whatever the process cwd is — same trick
+ *  as PUBLIC_DIR in src/agent.ts. Weights 600/700/800 in the SVG all snap to Bold. */
+const FONTS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public", "fonts");
+const FONT_FILES = ["DejaVuSans.ttf", "DejaVuSans-Bold.ttf"].map((f) => path.join(FONTS_DIR, f));
+
+/** Rasterise a card SVG to a PNG buffer (1200×630). Renders with ONLY the bundled
+ *  DejaVu Sans fonts (loadSystemFonts: false) so the output is deterministic across
+ *  machines regardless of what fonts are installed locally. */
 export function renderCardPng(svg: string): Buffer {
   const r = new Resvg(svg, {
     fitTo: { mode: "width", value: CARD_W },
     background: "rgba(0,0,0,0)",
-    font: { loadSystemFonts: true, defaultFontFamily: "DejaVu Sans" },
+    font: { loadSystemFonts: false, fontFiles: FONT_FILES, defaultFontFamily: "DejaVu Sans" },
   });
   return r.render().asPng();
 }
