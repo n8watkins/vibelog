@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "commander": "^12.1.0"
   },
   "devDependencies": {

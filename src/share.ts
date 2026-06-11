@@ -1,0 +1,226 @@
+/**
+ * Share cards (G1/G2). Server-rendered social images + the data that feeds them.
+ *
+ * A card is a themed 1200×630 SVG (the standard OG / Twitter `summary_large_image`
+ * size) rasterised to PNG with @resvg/resvg-js, so links unfurl on Twitter/Discord/
+ * Slack/iMessage (all of which reject SVG og:images). It is built from ONLY the
+ * already-public surface — the four sanitised profile fields + the public numeric
+ * LiveState stats + the resolved theme vars. No paths, prompts, tokens or secrets.
+ *
+ * Security: every dynamic string is XML-escaped before it enters the SVG (profile
+ * fields and `nowBuilding` are user-typed and may contain `<`, `&`, `"`); theme
+ * values are already allowlist-validated (see src/theme.ts) so they're safe as
+ * SVG attribute values. The SVG itself never embeds remote refs (no <image href>,
+ * no url()) so a card can't be an exfil vector.
+ */
+
+import { Resvg } from "@resvg/resvg-js";
+import { DEFAULT_THEME, type ThemeVars } from "./theme.ts";
+
+export type ShareKind = "stats" | "join";
+export const SHARE_KINDS: ShareKind[] = ["stats", "join"];
+export function isShareKind(s: string): s is ShareKind {
+  return (SHARE_KINDS as string[]).includes(s);
+}
+
+export type ShareData = {
+  displayName: string;
+  channelHeader?: string;
+  bio?: string;
+  twitter?: string;
+  live: boolean;
+  nowBuilding?: string;
+  /** Headline numbers for the "stats" card. */
+  stats: { features: number; commits: number; tokens: number; timeLive: string };
+  /** Resolved (allowlist-validated) theme vars to paint the card with. */
+  theme: ThemeVars;
+};
+
+const CARD_W = 1200;
+const CARD_H = 630;
+
+/** Compact human number: 1_300_000 → "1.3M", 134_000 → "134k", 12 → "12".
+ *  Drops the decimal once the scaled value reaches 3 digits so a card column
+ *  never has to fit more than ~4 glyphs ("133.8k" would overflow; "134k" fits). */
+export function fmtNum(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  const scale = (x: number, suffix: string) =>
+    (x >= 100 ? x.toFixed(0) : x.toFixed(1).replace(/\.0$/, "")) + suffix;
+  if (n >= 1e6) return scale(n / 1e6, "M");
+  if (n >= 1e3) return scale(n / 1e3, "k");
+  return String(Math.round(n));
+}
+
+/** Elapsed-since label for the "time live" stat: "47m", "4.2h", "—". */
+export function timeLiveLabel(startedAt: string | null | undefined, now = Date.now()): string {
+  if (!startedAt) return "—";
+  const t = Date.parse(startedAt);
+  if (Number.isNaN(t)) return "—";
+  const mins = Math.max(0, Math.floor((now - t) / 60000));
+  if (mins < 60) return mins + "m";
+  return (mins / 60).toFixed(1).replace(/\.0$/, "") + "h";
+}
+
+/** XML/SVG-escape a text value. Drops the few chars that could break out of a
+ *  text node or an attribute. Pure; total. */
+export function xmlEscape(s: string): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+/** Truncate to n chars with an ellipsis (counted before escaping). */
+function ellipsize(s: string, n: number): string {
+  const t = s.trim();
+  return t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t;
+}
+
+const FONT = "Inter, 'Segoe UI', 'DejaVu Sans', 'Liberation Sans', Arial, sans-serif";
+
+/** Pull a theme var with a fallback to the default theme. */
+function v(theme: ThemeVars, key: keyof ThemeVars): string {
+  return theme[key] ?? DEFAULT_THEME.vars[key] ?? "#ffffff";
+}
+
+/** Shared frame: background, aurora blobs, glass panel, brand + footer. The
+ *  caller supplies the inner content already positioned inside the panel. */
+function frame(d: ShareData, inner: string): string {
+  const bg = v(d.theme, "--bg");
+  const accent = v(d.theme, "--accent");
+  const accent2 = v(d.theme, "--accent2");
+  const pink = v(d.theme, "--pink");
+  const text = v(d.theme, "--text");
+  const muted = v(d.theme, "--muted");
+  const aurora1 = v(d.theme, "--aurora1");
+  const aurora2 = v(d.theme, "--aurora2");
+  const name = xmlEscape(ellipsize(d.displayName || "VibeLog", 34));
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}" font-family="${FONT}">
+  <defs>
+    <radialGradient id="a1" cx="78%" cy="8%" r="62%">
+      <stop offset="0%" stop-color="${aurora1}" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="${aurora1}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="a2" cx="14%" cy="104%" r="60%">
+      <stop offset="0%" stop-color="${aurora2}" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="${aurora2}" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="${accent}"/>
+      <stop offset="50%" stop-color="${pink}"/>
+      <stop offset="100%" stop-color="${accent2}"/>
+    </linearGradient>
+    <linearGradient id="brandg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="${accent}"/>
+      <stop offset="100%" stop-color="${accent2}"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="42%" stop-color="${pink}"/>
+      <stop offset="78%" stop-color="${accent}"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+  <rect width="${CARD_W}" height="${CARD_H}" fill="${bg}"/>
+  <rect width="${CARD_W}" height="${CARD_H}" fill="url(#a1)"/>
+  <rect width="${CARD_W}" height="${CARD_H}" fill="url(#a2)"/>
+  <rect x="36" y="36" width="${CARD_W - 72}" height="${CARD_H - 72}" rx="28" fill="#000000" fill-opacity="0.28" stroke="url(#ring)" stroke-width="2"/>
+  <!-- brand -->
+  <g transform="translate(78 86)">
+    <rect width="40" height="40" rx="12" fill="url(#brandg)"/>
+    <text x="58" y="29" font-size="30" font-weight="800" fill="${text}" letter-spacing="-0.5">${name}</text>
+  </g>
+  ${inner}
+  <text x="78" y="${CARD_H - 64}" font-size="22" fill="${muted}" font-weight="600">powered by <tspan fill="${accent}" font-weight="800">VibeLog</tspan></text>
+</svg>`;
+}
+
+/** A coloured "LIVE"/"ONLINE" status pill, top-right. */
+function statusPill(d: ShareData): string {
+  const live = d.live;
+  const col = live ? "#ff4d5e" : v(d.theme, "--muted");
+  const label = live ? "LIVE" : "ONLINE";
+  const w = live ? 132 : 168;
+  const x = CARD_W - 78 - w;
+  return `<g transform="translate(${x} 70)">
+    <rect width="${w}" height="46" rx="23" fill="${col}" fill-opacity="0.14" stroke="${col}" stroke-opacity="0.5"/>
+    <circle cx="28" cy="23" r="7" fill="${col}"/>
+    <text x="48" y="31" font-size="20" font-weight="800" letter-spacing="2" fill="${col}">${label}</text>
+  </g>`;
+}
+
+/** One big stat: value over a label. `x` is the column's left edge. */
+function stat(d: ShareData, x: number, value: string, label: string, color: string): string {
+  return `<g transform="translate(${x} 0)">
+    <text x="0" y="372" font-size="76" font-weight="800" fill="${color}" letter-spacing="-1">${xmlEscape(value)}</text>
+    <text x="2" y="416" font-size="24" font-weight="700" letter-spacing="2" fill="${v(d.theme, "--muted")}">${xmlEscape(label.toUpperCase())}</text>
+  </g>`;
+}
+
+/** "Today's stats" card — features / time-live / tokens / commits + now-building. */
+function statsCard(d: ShareData): string {
+  const accent = v(d.theme, "--accent");
+  const accent2 = v(d.theme, "--accent2");
+  const pink = v(d.theme, "--pink");
+  const text = v(d.theme, "--text");
+  const header = xmlEscape(ellipsize(d.channelHeader || d.bio || "Live coding, streamed.", 64));
+
+  const cols = [
+    { v: fmtNum(d.stats.features), l: "features", c: text },
+    { v: d.stats.timeLive, l: "time live", c: accent2 },
+    { v: fmtNum(d.stats.tokens), l: "tokens", c: pink },
+    { v: fmtNum(d.stats.commits), l: "commits", c: accent },
+  ];
+  const colW = 262;
+  const startX = 78;
+  const statsSvg = cols.map((c, i) => stat(d, startX + i * colW, c.v, c.l, c.c)).join("\n");
+
+  const building = d.nowBuilding
+    ? `<g transform="translate(78 ${CARD_H - 132})">
+        <rect x="0" y="-30" width="14" height="14" rx="3" fill="${pink}"/>
+        <text x="30" y="-18" font-size="26" font-weight="600" fill="${text}">${xmlEscape(ellipsize("Building: " + d.nowBuilding, 56))}</text>
+      </g>`
+    : "";
+
+  const inner = `
+  ${statusPill(d)}
+  <text x="78" y="210" font-size="30" font-weight="600" fill="${v(d.theme, "--muted")}">${header}</text>
+  ${statsSvg}
+  ${building}`;
+  return frame(d, inner);
+}
+
+/** "Join VibeLog" invite card — big gradient headline + tagline. */
+function joinCard(d: ShareData): string {
+  const text = v(d.theme, "--text");
+  const muted = v(d.theme, "--muted");
+  const who = d.displayName && d.displayName !== "VibeLog"
+    ? `${ellipsize(d.displayName, 28)} streams their builds with VibeLog.`
+    : "Stream your public development to the world.";
+
+  const inner = `
+  ${statusPill(d)}
+  <text x="78" y="270" font-size="92" font-weight="800" fill="url(#flow)" letter-spacing="-3">Stream what</text>
+  <text x="78" y="368" font-size="92" font-weight="800" fill="url(#flow)" letter-spacing="-3">you build.</text>
+  <text x="78" y="446" font-size="30" font-weight="600" fill="${muted}">${xmlEscape(ellipsize(who, 66))}</text>
+  <text x="78" y="492" font-size="26" font-weight="700" fill="${text}">A live overlay, dashboard &amp; public page — local-first. Join VibeLog.</text>`;
+  return frame(d, inner);
+}
+
+/** Build the themed SVG string for a card kind. Pure. */
+export function shareCardSvg(kind: ShareKind, d: ShareData): string {
+  return kind === "join" ? joinCard(d) : statsCard(d);
+}
+
+/** Rasterise a card SVG to a PNG buffer (1200×630). Uses system fonts. */
+export function renderCardPng(svg: string): Buffer {
+  const r = new Resvg(svg, {
+    fitTo: { mode: "width", value: CARD_W },
+    background: "rgba(0,0,0,0)",
+    font: { loadSystemFonts: true, defaultFontFamily: "DejaVu Sans" },
+  });
+  return r.render().asPng();
+}

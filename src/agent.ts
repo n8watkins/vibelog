@@ -16,6 +16,7 @@ import {
 } from "./state.ts";
 import { appendEvent, readConfig, readSession, readSettings, writeSession, writeSettings, writeState, type Session } from "./store.ts";
 import { PRESETS, resolveTheme, sanitizeProfile, validateVars, type Settings } from "./theme.ts";
+import { isShareKind, renderCardPng, shareCardSvg, timeLiveLabel, type ShareData } from "./share.ts";
 import { beginAuth, completeAuth, disconnect, integrationStatus, isProvider } from "./oauth.ts";
 import { demoDashboard, demoToday, demoWeek, demoSocialGrowth } from "./demodata.ts";
 import { getProjectActivity, type ProjectActivity } from "./projects.ts";
@@ -33,6 +34,7 @@ const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..",
 const OVERLAY_FILE = path.join(PUBLIC_DIR, "overlay.html");
 const LIVE_FILE = path.join(PUBLIC_DIR, "live.html");
 const LANDING_FILE = path.join(PUBLIC_DIR, "landing.html");
+const SHARE_FILE = path.join(PUBLIC_DIR, "share.html");
 const DASHBOARD_FILE = path.join(PUBLIC_DIR, "dashboard.html");
 const SHOTS_DIR = path.join(PUBLIC_DIR, "shots");
 // Allowlisted product screenshots used by the landing page (and the OG image).
@@ -47,6 +49,12 @@ const SHOT_FILES = new Set(["overlay.png", "live.png", "dashboard.png"]);
  */
 const PUBLIC_GET_ROUTES = new Set([
   "/", "/overlay", "/live", "/landing", "/state.json",
+  // The shareable public page (G1) + its server-rendered OG/Twitter card image
+  // (G2). Both must be reachable by remote viewers and unfurl bots. The page is
+  // read-only HTML and the card is a PNG rendered from already-public data only
+  // (the four profile fields + numeric LiveState stats + theme vars) — see
+  // src/share.ts. The "?kind=" query is matched on pathname, so it's covered.
+  "/share", "/share/card.png",
   // Static product screenshots shown on the landing page + used as the OG image,
   // so they must be fetchable by remote/unfurl bots. Read-only PNGs only.
   "/shots/overlay.png", "/shots/live.png", "/shots/dashboard.png",
@@ -85,6 +93,40 @@ export function isRemote(req: {
   const loopback =
     addr === "" || addr === "127.0.0.1" || addr === "::1" || addr === "::ffff:127.0.0.1";
   return !loopback;
+}
+
+/**
+ * The public origin to use when building absolute URLs (og:image must be
+ * absolute for unfurl bots). Behind `vibe share`'s Cloudflare Tunnel the real
+ * public host/proto arrive as forwarding headers; locally we fall back to the
+ * Host header. Only host-shaped values are trusted (no path/scheme injection).
+ */
+export function originOf(
+  req: { headers: IncomingMessage["headers"] },
+  fallbackPort: number,
+): string {
+  const h = req.headers;
+  const fwdHost = h["x-forwarded-host"];
+  const host =
+    (Array.isArray(fwdHost) ? fwdHost[0] : fwdHost) ||
+    (typeof h.host === "string" ? h.host : "") ||
+    `localhost:${fallbackPort}`;
+  const fwdProto = h["x-forwarded-proto"];
+  const proto = (Array.isArray(fwdProto) ? fwdProto[0] : fwdProto)?.split(",")[0]?.trim() ||
+    (h["cf-ray"] ? "https" : "http");
+  // Guard: a Host header can only be host[:port] — reject anything with a slash
+  // or whitespace so it can never smuggle a scheme/path into our absolute URLs.
+  const safeHost = /^[a-z0-9.:\-]+$/i.test(host) ? host : `localhost:${fallbackPort}`;
+  return `${proto === "https" ? "https" : "http"}://${safeHost}`;
+}
+
+/** HTML-attribute/text escape for values injected into the share page meta. */
+function htmlEscape(s: string): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 /**
@@ -209,6 +251,35 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
       // transcripts/git unavailable — keep last good (or empty) activity
     }
     return projCache.data;
+  }
+
+  // ---- share cards (G1/G2) -------------------------------------------------
+
+  /**
+   * Assemble the data a share card / page renders from. Pulls ONLY already-public
+   * surface: the sanitised profile fields, the public numeric LiveState stats,
+   * and the resolved (allowlist-validated) theme vars for the live page. No
+   * paths, prompts, tokens or secrets ever reach here.
+   */
+  async function buildShareData(): Promise<ShareData> {
+    const settings = await readSettings();
+    const profile = sanitizeProfile(settings?.profile);
+    const s = state.stats;
+    return {
+      displayName: profile.displayName || "VibeLog",
+      channelHeader: profile.channelHeader,
+      bio: profile.bio,
+      twitter: profile.twitter,
+      live: state.streaming && state.isLive,
+      nowBuilding: state.isLive ? state.nowBuilding?.title : undefined,
+      stats: {
+        features: s.features,
+        commits: s.commits,
+        tokens: s.claudeTokens,
+        timeLive: state.isLive ? timeLiveLabel(state.startedAt) : "—",
+      },
+      theme: resolveTheme(settings, "live"),
+    };
   }
 
   // ---- mutations -----------------------------------------------------------
@@ -367,6 +438,42 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         const buf = await readFile(path.join(SHOTS_DIR, name));
         res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=3600" });
         res.end(buf);
+        return;
+      }
+
+      // Shareable public page (G1). Themed like /live, with server-rendered OG /
+      // Twitter meta so links unfurl. Display name + description come from the
+      // public profile; the og:image is an absolute URL to the card PNG below.
+      if (req.method === "GET" && route === "/share") {
+        const html = await readFile(SHARE_FILE, "utf8");
+        const sd = await buildShareData();
+        const origin = originOf(req, port);
+        const title = `${sd.displayName} · VibeLog`;
+        const desc =
+          sd.bio || sd.channelHeader || "Live coding, streamed. Watch what I'm building in real time.";
+        const filled = html
+          .replaceAll("{{ORIGIN}}", htmlEscape(origin))
+          .replaceAll("{{OG_TITLE}}", htmlEscape(title))
+          .replaceAll("{{OG_DESC}}", htmlEscape(desc))
+          .replaceAll("{{DISPLAY_NAME}}", htmlEscape(sd.displayName));
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+        res.end(filled);
+        return;
+      }
+
+      // Server-rendered share card image (G2) — the OG/Twitter image. `?kind=`
+      // picks "stats" (today's numbers) or "join" (invite). PNG, rendered from
+      // public data only (see buildShareData + src/share.ts).
+      if (req.method === "GET" && route === "/share/card.png") {
+        const kindParam = url.searchParams.get("kind") ?? "stats";
+        const kind = isShareKind(kindParam) ? kindParam : "stats";
+        const png = renderCardPng(shareCardSvg(kind, await buildShareData()));
+        res.writeHead(200, {
+          "content-type": "image/png",
+          // Short cache: unfurl bots fetch once, but stats change through a session.
+          "cache-control": "public, max-age=300",
+        });
+        res.end(png);
         return;
       }
 

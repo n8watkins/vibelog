@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{OG_TITLE}}</title>
+    <meta name="description" content="{{OG_DESC}}" />
+
+    <!-- Open Graph / Twitter — server-templated absolute URLs so links unfurl.
+         The image is a live, server-rendered PNG card (see /share/card.png). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VibeLog" />
+    <meta property="og:title" content="{{OG_TITLE}}" />
+    <meta property="og:description" content="{{OG_DESC}}" />
+    <meta property="og:url" content="{{ORIGIN}}/share" />
+    <meta property="og:image" content="{{ORIGIN}}/share/card.png?kind=stats" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{OG_TITLE}}" />
+    <meta name="twitter:description" content="{{OG_DESC}}" />
+    <meta name="twitter:image" content="{{ORIGIN}}/share/card.png?kind=stats" />
+
+    <style>
+      :root {
+        --text: #f3f0ff; --muted: #a99fce;
+        --accent: #a06bff; --accent2: #22d3a6; --pink: #ff5cf0; --live: #ff4d5e;
+        --bg: #07060e; --g1: var(--accent); --g2: var(--pink); --g3: var(--accent2);
+        --aurora1: #3a1d7a; --aurora2: #0f3a44;
+        --glass: linear-gradient(165deg, rgba(38, 22, 72, 0.55), rgba(14, 11, 28, 0.62));
+        --border: rgba(167, 134, 255, 0.30); --glow: 0 0 22px rgba(160, 107, 255, 0.22);
+        --radius: 18px;
+        --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        font-family: var(--font); color: var(--text); background: var(--bg, #07060e);
+        min-height: 100vh; overflow-x: hidden; display: flex; flex-direction: column;
+      }
+      @property --vlangle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+      @keyframes vlspin { to { --vlangle: 360deg; } }
+      body::before, body::after {
+        content: ""; position: fixed; z-index: -1; border-radius: 50%;
+        filter: blur(100px); opacity: 0.55; pointer-events: none;
+      }
+      body::before { width: 65vw; height: 65vw; top: -25vw; right: -12vw;
+        background: radial-gradient(circle, var(--aurora1), transparent 65%); animation: drift1 28s ease-in-out infinite alternate; }
+      body::after { width: 60vw; height: 60vw; bottom: -28vw; left: -14vw;
+        background: radial-gradient(circle, var(--aurora2), transparent 65%); animation: drift2 34s ease-in-out infinite alternate; }
+      @keyframes drift1 { from { transform: translate(0,0) scale(1); } to { transform: translate(-9vw,11vh) scale(1.18); } }
+      @keyframes drift2 { from { transform: translate(0,0) scale(1); } to { transform: translate(11vw,-9vh) scale(1.12); } }
+      @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+      @media (prefers-reduced-motion: reduce) {
+        body::before, body::after, .dot { animation: none !important; }
+      }
+
+      .stage { width: min(880px, 92vw); margin: 0 auto; flex: 1; padding: 40px 0 48px; display: flex; flex-direction: column; gap: 26px; }
+
+      .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+      .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; font-size: 19px; letter-spacing: -0.01em; }
+      .brand .spark { width: 24px; height: 24px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 0 18px rgba(124,92,255,0.55); }
+      .pill { display: inline-flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 15px; border-radius: 999px; background: rgba(255,77,94,0.14); color: var(--live); border: 1px solid rgba(255,77,94,0.35); box-shadow: 0 0 18px rgba(255,77,94,0.25); }
+      .pill.off { background: rgba(255,255,255,0.05); color: var(--muted); border-color: var(--border); box-shadow: none; }
+      .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; animation: pulse 1.4s infinite; }
+      .pill.off .dot { animation: none; box-shadow: none; }
+
+      .head { display: flex; flex-direction: column; gap: 10px; }
+      .eyebrow { font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; color: var(--pink); text-shadow: 0 0 14px rgba(255,92,240,0.45); }
+      h1 { margin: 0; font-size: clamp(30px, 5vw, 52px); font-weight: 850; letter-spacing: -0.025em; line-height: 1.05;
+        background: linear-gradient(100deg, #fff 0%, var(--pink) 32%, var(--accent) 60%, #fff 85%); background-size: 250% 100%;
+        -webkit-background-clip: text; background-clip: text; color: transparent; animation: textflow 9s linear infinite; }
+      @keyframes textflow { to { background-position: 250% 0; } }
+      .head .desc { color: var(--muted); font-size: 16px; max-width: 60ch; }
+
+      /* travelling-ring glass */
+      .glass { position: relative; background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius);
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        box-shadow: var(--glow), 0 12px 36px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.05); overflow: hidden; }
+      .glass::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); padding: 1.5px;
+        background: conic-gradient(from calc(var(--vlangle) + var(--vlstart, 0deg)), transparent 30%, var(--g1) 50%, var(--g2) 64%, var(--g3) 76%, transparent 92%);
+        filter: hue-rotate(var(--vlhue, 0deg)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+        animation: vlspin var(--vldur, 28s) linear infinite; animation-delay: var(--vldelay, 0s); }
+      .glass:nth-of-type(2n)::after { --vlstart: 140deg; --vlhue: 40deg; --vldur: 33s; --vldelay: -12s; animation-direction: reverse; }
+
+      .card-wrap { padding: 16px; }
+      .card-img { display: block; width: 100%; height: auto; border-radius: 12px; aspect-ratio: 1200 / 630; background: rgba(0,0,0,0.25); }
+
+      .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+      .seg { display: inline-flex; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 999px; padding: 4px; gap: 4px; }
+      .seg button { appearance: none; border: 0; background: transparent; color: var(--muted); font: 600 13px var(--font); padding: 8px 16px; border-radius: 999px; cursor: pointer; transition: all 0.25s; }
+      .seg button.on { background: linear-gradient(90deg, var(--accent), var(--pink)); color: #fff; box-shadow: 0 0 14px rgba(160,107,255,0.45); }
+      .spacer { flex: 1; }
+      .btn { appearance: none; cursor: pointer; font: 700 13px var(--font); padding: 10px 18px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--text); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.25s; }
+      .btn:hover { border-color: var(--accent); box-shadow: var(--glow); }
+      .btn.primary { background: linear-gradient(90deg, var(--accent), var(--pink)); border-color: transparent; color: #fff; }
+      .btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+      .linkrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+      .linkrow input { flex: 1; min-width: 220px; font: 13px var(--mono); color: var(--text); background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; }
+
+      .foot { text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0; }
+      .foot a { color: var(--accent); text-decoration: none; }
+      .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none;
+        background: rgba(20,16,40,0.95); border: 1px solid var(--accent); color: var(--text); padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; box-shadow: var(--glow); transition: all 0.3s; }
+      .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+  </head>
+  <body>
+    <main class="stage">
+      <div class="top">
+        <div class="brand"><span class="spark"></span> <span id="brandName">{{DISPLAY_NAME}}</span></div>
+        <span class="pill off" id="livePill"><span class="dot"></span> <span id="pillText">Offline</span></span>
+      </div>
+
+      <div class="head">
+        <div class="eyebrow">Share your VibeLog</div>
+        <h1>{{DISPLAY_NAME}}</h1>
+        <div class="desc">{{OG_DESC}}</div>
+      </div>
+
+      <div class="controls">
+        <div class="seg" id="seg">
+          <button data-kind="stats" class="on">Today's stats</button>
+          <button data-kind="join">Join VibeLog</button>
+        </div>
+        <div class="spacer"></div>
+        <a class="btn" id="open-img" href="/share/card.png?kind=stats" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+          Open image
+        </a>
+      </div>
+
+      <div class="glass card-wrap">
+        <img class="card-img" id="card" src="/share/card.png?kind=stats" alt="VibeLog share card" />
+      </div>
+
+      <div class="glass card-wrap">
+        <div class="linkrow">
+          <input id="shareUrl" readonly value="" />
+          <button class="btn primary" id="copy">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy link
+          </button>
+          <a class="btn" id="tweet" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24"><path d="M4 4l11.5 16H20L8.5 4z"/><path d="M4 20 10 13M14 11 20 4"/></svg>
+            Post on X
+          </a>
+          <a class="btn" id="toLive" href="/live" target="_blank" rel="noopener">Open /live →</a>
+        </div>
+      </div>
+
+      <div class="foot">made with <a href="/landing">VibeLog</a> · stream your public development</div>
+    </main>
+
+    <div class="toast" id="toast">Link copied</div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      async function applyTheme() {
+        try {
+          const { vars } = await (await fetch("/api/theme.json?page=live", { cache: "no-store" })).json();
+          const s = document.documentElement.style;
+          for (const k in vars) s.setProperty(k, vars[k]);
+        } catch {}
+      }
+      applyTheme();
+
+      const origin = location.origin;
+      let kind = "stats";
+      const shareLink = origin + "/share";
+      $("shareUrl").value = shareLink;
+      $("tweet").href = "https://x.com/intent/tweet?text=" +
+        encodeURIComponent("Watch what I'm building, live →") + "&url=" + encodeURIComponent(shareLink);
+
+      // Card preview: cache-bust so the image refreshes as stats change.
+      function refreshCard() {
+        $("card").src = "/share/card.png?kind=" + kind + "&t=" + Date.now();
+        $("open-img").href = "/share/card.png?kind=" + kind;
+      }
+      $("seg").addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-kind]");
+        if (!b) return;
+        kind = b.dataset.kind;
+        for (const el of $("seg").children) el.classList.toggle("on", el === b);
+        refreshCard();
+      });
+
+      $("copy").addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(shareLink); }
+        catch { $("shareUrl").select(); document.execCommand("copy"); }
+        const t = $("toast"); t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 1600);
+      });
+
+      // Live pill + display name + periodic card refresh from /state.json.
+      async function tick() {
+        try {
+          const d = await (await fetch("/state.json", { cache: "no-store" })).json();
+          const live = d.streaming && d.isLive;
+          $("pillText").textContent = live ? "Live" : d.isLive ? "Online" : "Offline";
+          $("livePill").classList.toggle("off", !live);
+        } catch {}
+      }
+      tick();
+      setInterval(tick, 5000);
+      // Refresh the visible card every 60s so an open tab tracks the session.
+      setInterval(refreshCard, 60000);
+    </script>
+  </body>
+</html>
