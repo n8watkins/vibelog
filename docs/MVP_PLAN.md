@@ -10,7 +10,7 @@
 ## 1. Definition of done
 
 **"Nathan's VibeLog, live on a public URL, 24/7, for $0."** A visitor loads the URL (free
-`*.workers.dev` first, `vibelog.natebuilds.dev` later) and sees Nathan's `/live` page — current stats,
+`*.workers.dev` first, `vibelog.n8builds.dev` later) and sees Nathan's `/live` page — current stats,
 calendar, profile, theme — **even when his laptop is off**, served from the last published snapshot.
 Single-tenant. No accounts, billing, multi-tenancy, or embed (those are Phase 2+).
 
@@ -71,8 +71,8 @@ LOCAL agent (existing)                         CLOUD (new, thin)              VI
   already the public surface — no secrets). CORS: GET open, POST token-only.
 
 ### Component ④ — Custom domain (last-mile, optional for "done")
-- Works on `*.workers.dev` with $0 and no domain. When `natebuilds.dev` is on Cloudflare, add the
-  Worker custom domain `vibelog.natebuilds.dev` (one CNAME / dashboard route) → auto-SSL. No code change.
+- Works on `*.workers.dev` with $0 and no domain. When `n8builds.dev` is on Cloudflare, add the
+  Worker custom domain `vibelog.n8builds.dev` (one CNAME / dashboard route) → auto-SSL. No code change.
 
 ## 3. Build / PR order
 
@@ -102,7 +102,7 @@ LOCAL agent (existing)                         CLOUD (new, thin)              VI
 2. **Storage = Cloudflare KV**, single key for MVP. ✅ recommend
 3. **Cadence (MVP, hardcoded):** ~300 s live / ~900 s idle, write-on-change. ✅ recommend
 4. **Subdomain label** (last step only): `vibelog.` / `live.` / `building.`? — Nathan's call.
-5. **Do you already own `natebuilds.dev`?** (Only affects when ④ can happen; nothing before it.)
+5. **Do you already own `n8builds.dev`?** (Only affects when ④ can happen; nothing before it.)
 
 ## 7. Explicitly NOT in V1 MVP (Phase 2+)
 

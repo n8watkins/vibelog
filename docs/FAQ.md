@@ -56,25 +56,25 @@ stream link) and **offline** (degrades to the public dashboard — calendar, sta
 
 **Q: How do people put VibeLog on their own site? (three options)**
 1. **Embed widget** — paste a `<script>`/`<iframe>` *inside an existing page* of your site, so
-   `natebuilds.dev` shows the stats inline. Zero DNS. Easiest; probably what Nathan wants personally.
-2. **Custom subdomain** — `vibelog.natebuilds.dev` via a CNAME → our servers + auto-SSL. The
+   `n8builds.dev` shows the stats inline. Zero DNS. Easiest; probably what Nathan wants personally.
+2. **Custom subdomain** — `vibelog.n8builds.dev` via a CNAME → our servers + auto-SSL. The
    native-feeling, paid option. The user picks the label (`vibelog.`/`live.`/`building.`).
 3. **Static export** (optional future) — agent emits a self-contained snapshot you commit into your
    own site build. Fully yours, but not auto-live. (`VISION.md §6.4`)
 
 **Q: What's the difference between a subdomain and a URL path, and why does the MVP use a subdomain?**
 A URL has three parts after `https://`: the **hostname** (everything before the first `/`) and the
-**path** (everything from that `/` onward). In `vibelog.natebuilds.dev/live`, `vibelog.` is the
-subdomain, `natebuilds.dev` is the domain, and `/live` is the path.
+**path** (everything from that `/` onward). In `vibelog.n8builds.dev/live`, `vibelog.` is the
+subdomain, `n8builds.dev` is the domain, and `/live` is the path.
 
 - **Subdomain** = a prefix on the hostname itself. DNS routes *hostnames*, so a subdomain can point at a
   completely different server — *a separate storefront with its own address.*
 - **Path** = what comes after the domain. DNS never sees paths, only hostnames, so `/vibelog` is always
   served by whatever already handles the bare domain — *a department inside the same store.*
 
-The MVP uses **`vibelog.natebuilds.dev`** (subdomain) for two concrete reasons:
+The MVP uses **`vibelog.n8builds.dev`** (subdomain) for two concrete reasons:
 1. **Cloudflare Worker routing attaches to a hostname.** A subdomain gets a single route + auto-SSL
-   pointing straight at the Worker. A path (`natebuilds.dev/vibelog`) instead requires the main site to
+   pointing straight at the Worker. A path (`n8builds.dev/vibelog`) instead requires the main site to
    reverse-proxy `/vibelog/*` to the Worker — more moving parts, and usually not under our control.
 2. **`public/live.html` fetches absolute paths** (`/state.json`, `/api/profile.json`,
    `/api/theme.json`). On a subdomain those paths sit at the root and work unchanged. Under a path they
@@ -83,13 +83,13 @@ The MVP uses **`vibelog.natebuilds.dev`** (subdomain) for two concrete reasons:
 
 (Decided 2026-06-11; see `HANDOFF.md §5` and `SNAPSHOT_CONTRACT.md`.)
 
-**Q: A path like `natebuilds.dev/vibelog` — can we do that with DNS?**
+**Q: A path like `n8builds.dev/vibelog` — can we do that with DNS?**
 No — DNS works at the host level, not the path level; you can't CNAME a path. `/vibelog` is either an
 **embed** (a page on their site containing the widget) or a **reverse proxy** on their side.
 
-**Q: If *we* host it, how can it live on *their* domain (`vibelog.natebuilds.dev`)?**
+**Q: If *we* host it, how can it live on *their* domain (`vibelog.n8builds.dev`)?**
 Because **owning a domain ≠ hosting the content.** DNS is just a signpost. The user, who owns
-`natebuilds.dev`, adds a **CNAME** that forwards one subdomain to our servers — like call-forwarding:
+`n8builds.dev`, adds a **CNAME** that forwards one subdomain to our servers — like call-forwarding:
 people dial *their* number, *our* service answers, the number stays theirs. We hold the content; the
 address stays theirs.
 
@@ -100,7 +100,7 @@ for a redirect here.
 
 **Q: Who owns the DNS — VibeLog or the user? Depends which option:**
 - `<handle>.vibelog.app` (free vendor subdomain) → **VibeLog** owns that DNS; zero setup for the user.
-- `vibelog.natebuilds.dev` (paid custom domain) → **the user** owns the DNS and points one subdomain
+- `vibelog.n8builds.dev` (paid custom domain) → **the user** owns the DNS and points one subdomain
   at us via CNAME.
 - Widget inside their page → the user's site serves the page; we just serve the widget data.
 
@@ -211,12 +211,12 @@ directly bounds the #1 cost driver (writes). (`VISION.md §6.6`, `PLATFORM_PLAN.
 
 ## E. Glossary (the web/DNS/hosting basics)
 
-- **Domain** — the address you rent (`natebuilds.dev`).
+- **Domain** — the address you rent (`n8builds.dev`).
 - **Registrar** — where you buy/manage the domain (Namecheap, Cloudflare, GoDaddy).
 - **DNS** — the phonebook translating a name → a server address.
 - **A record** — points a name at an IP. **CNAME** — points a name at *another name* (the "forward my
   subdomain to someone else's server" trick).
-- **Subdomain** — the prefix (`vibelog.` in `vibelog.natebuilds.dev`); free, make as many as you like.
+- **Subdomain** — the prefix (`vibelog.` in `vibelog.n8builds.dev`); free, make as many as you like.
 - **Hosting / server / "edge"** — the computer holding/serving the content. Separate from owning the name.
 - **SSL/TLS** — the encryption behind `https://` + the 🔒. **Certificate** — the file proving a server
   may serve a hostname. **ACME / Let's Encrypt** — the free automated system that issues certs.

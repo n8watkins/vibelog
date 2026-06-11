@@ -109,7 +109,7 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 - **G3 [LATER] — Auto-post to Twitter/X.** Connect Twitter and optionally auto-post a daily-stats
   card. Needs Twitter API access + posting cadence/consent design.
 - **G4 [LATER] — Embeddable widget.** Let people inject their dashboard (or a compact stat strip)
-  as a widget on another site (`<iframe>`/`<script>` on `natebuilds.dev/vibelog`). The free,
+  as a widget on another site (`<iframe>`/`<script>` on `n8builds.dev/vibelog`). The free,
   badge-carrying viral surface — see **§6.4**. Needs the hosted snapshot service (§6.2) underneath.
 
 ### 3.4 Discord
@@ -205,7 +205,7 @@ local process becomes a **publisher**.
 ```
 LOCAL (your machine, default: nothing leaves)        HOSTED (the deployable piece)      YOUR SITE
 ┌───────────────────────────┐   publish              ┌──────────────────────┐  embed   ┌───────────┐
-│ agent (`vibe start`):      │ ──sanitized snapshot──▶│ stores snapshots     │◀─iframe──│ natebuilds│
+│ agent (`vibe start`):      │ ──sanitized snapshot──▶│ stores snapshots     │◀─iframe──│ n8builds│
 │  git/ccusage/OBS/OAuth     │   (buildShareData      │ serves /u/<handle>   │  /CNAME  │  .dev/    │
 │  → summarize → redact+cap  │    surface only)       │ + embed.js + API     │          │  vibelog  │
 │  → LiveState → overlay     │                        └──────────────────────┘          └───────────┘
@@ -239,9 +239,9 @@ is the snapshot — same UI, different data source + audience.
 VibeLog ships as something you bolt onto **your own** site, not a destination:
 
 1. **Embed widget** (easy, zero-DNS) — an `<iframe>`/`<script>` on any page of your site, so
-   `natebuilds.dev/vibelog` is just a page of *your* site containing it. Works on any host. Carries
+   `n8builds.dev/vibelog` is just a page of *your* site containing it. Works on any host. Carries
    a small "⚡ powered by VibeLog" badge on the free tier (this is the viral loop). (= **G4**.)
-2. **Custom subdomain** (native-feeling) — CNAME `vibelog.natebuilds.dev` → the hosted app, auto-SSL.
+2. **Custom subdomain** (native-feeling) — CNAME `vibelog.n8builds.dev` → the hosted app, auto-SSL.
    The Notion/Substack "bring your own domain" model. Paid (see §6.6).
 
 ### 6.5 Two auths, never confused
@@ -261,7 +261,7 @@ fills the funnel. Charge for the hard-to-run parts — hosting, convenience, and
 | Free + open source (local agent) | Paid (hosted cloud) |
 |---|---|
 | Collects your stats | Hosted 24/7 — profile up when your laptop's off |
-| Drives your OBS overlay | **Custom domain** (`vibelog.natebuilds.dev`) + SSL |
+| Drives your OBS overlay | **Custom domain** (`vibelog.n8builds.dev`) + SSL |
 | Local LLM / template / BYO-key | Remove "powered by" branding |
 | Publishes a snapshot *if you opt in* | Unlimited history + profile analytics |
 | **Slow publish cadence** (~5–10 min, only while live, on-change) | **Fast cadence** (~30–60 s, near-real-time) |

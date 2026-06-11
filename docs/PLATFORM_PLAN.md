@@ -39,7 +39,7 @@ LOCAL agent (vibe start)                    CLOUD (thin)                  VISITO
 6. **It publishes** *(NEW — Track A1)*: token-authed `POST` of that snapshot to your cloud endpoint,
    throttled (~every 2 min / on change). Outbound only — adds no inbound local route.
 7. **The cloud stores it** *(NEW)*: a Cloudflare Worker writes the snapshot to KV.
-8. **A visitor loads `vibelog.natebuilds.dev`** *(NEW)*: the Worker reads the snapshot from KV and
+8. **A visitor loads `vibelog.n8builds.dev`** *(NEW)*: the Worker reads the snapshot from KV and
    renders the public page (reusing `public/live.html` + the `/state.json` shape), 24/7, even with
    your laptop off. Live Twitch/YouTube embeds load *directly from those platforms* (cost you $0).
 9. **The visitor sees your stats** — no login, on your domain, with the 🔒 (auto-SSL).
@@ -54,7 +54,7 @@ later makes steps 7–8 multi-tenant (keyed by `@handle`) and adds accounts/bill
 | | **Track A — "VibeLog for me"** | **Track B — "VibeLog the product"** |
 |---|---|---|
 | Tenants | 1 (you) | many |
-| Goal | `vibelog.natebuilds.dev` is up 24/7 | anyone signs up + gets their own |
+| Goal | `vibelog.n8builds.dev` is up 24/7 | anyone signs up + gets their own |
 | Auth | one publish token | login + `@handle` + per-user tokens |
 | Buildable | **now** (small, self-contained) | [LATER] — the platform |
 
@@ -68,7 +68,7 @@ something real for you *and* de-risks the whole product. Then B is mostly "make 
 Two ways, pick by how much you care about "up when my laptop's off":
 
 ### A0 — zero code, NOT 24/7 (what exists today)
-Run `vibe share` (the Cloudflare tunnel) and point `vibelog.natebuilds.dev` at the tunnel hostname.
+Run `vibe share` (the Cloudflare tunnel) and point `vibelog.n8builds.dev` at the tunnel hostname.
 Works right now, no new code — **but the page is down whenever your machine is off or not running.**
 Fine for "show it live during a stream," not for an always-on portfolio piece.
 
@@ -83,7 +83,7 @@ Fine for "show it live during a stream," not for an always-on portfolio piece.
    - `POST /publish` — token-authed → store the snapshot (one key, since it's just you).
    - `GET /` (and `/live`, `/state.json`) — render the public page from the stored snapshot,
      reusing the existing `public/live.html` + the `/state.json` contract. No accounts, no DB.
-3. **Domain + SSL.** Add a CNAME `vibelog.natebuilds.dev → <the service>`; SSL auto-provisions
+3. **Domain + SSL.** Add a CNAME `vibelog.n8builds.dev → <the service>`; SSL auto-provisions
    (Cloudflare/Vercel). Done — your VibeLog is live on your brand, 24/7.
 
 **"Super access"** here is just the publish token: only your agent can overwrite your stats. Viewing
@@ -163,7 +163,7 @@ outright — Workers **100k requests/day**, Workers KV **100k reads/day + 1k wri
 **free** custom domain on a Worker, and **free** Universal SSL. A personal page is nowhere near those
 limits. Two things to respect: **(1)** the publisher must **throttle writes** (publish at most ~once
 every ~2 min, or only when the snapshot actually changed) to stay under 1k KV writes/day; **(2)** the
-only real cost is the **domain renewal** (~$10–15/yr for `natebuilds.dev`) — not a Cloudflare charge.
+only real cost is the **domain renewal** (~$10–15/yr for `n8builds.dev`) — not a Cloudflare charge.
 So: **$0/mo hosting for yourself.**
 
 **Infra shape — ONE Worker, not one-per-user.** A single Worker (your code, deployed once) serves
@@ -200,10 +200,10 @@ frequency and you control the bill.
 
 ## 6. What I need from you
 
-**To do Track A now (your VibeLog, 24/7, on `vibelog.natebuilds.dev`):**
+**To do Track A now (your VibeLog, 24/7, on `vibelog.n8builds.dev`):**
 1. **Go-ahead** on A1 (the always-on build) vs. A0 (zero-code tunnel, not 24/7).
 2. **A Cloudflare account** (free) — recommended host (zero egress + does custom-domain SSL for you).
-3. **DNS access for `natebuilds.dev`** at your registrar — to add the one CNAME (you do this; I can
+3. **DNS access for `n8builds.dev`** at your registrar — to add the one CNAME (you do this; I can
    give you the exact record).
 4. Decide the subdomain label (`vibelog.` / `live.` / `building.` — your call, `VISION.md §6.4`).
 5. *(optional)* If you want the AI summary in the cloud snapshot too, decide local-LLM vs Gemini
@@ -222,7 +222,7 @@ plan when we reach it. Priority order is fixed: **ship the V1 MVP for Nathan fir
 ### 7.1 V1 MVP (the clear, shippable target)
 
 > **V1 MVP = "Nathan's VibeLog, live on his own domain, 24/7, for $0."** = Track A1 + the local-LLM
-> option. A visitor hits `vibelog.natebuilds.dev` and sees Nathan's stats even when his laptop is off.
+> option. A visitor hits `vibelog.n8builds.dev` and sees Nathan's stats even when his laptop is off.
 > That's the whole MVP — no accounts, no billing, no multi-tenancy, no embed.
 >
 > **The detailed, build-ready spec for this is `docs/MVP_PLAN.md`** (components, PR order, tests,
@@ -234,7 +234,7 @@ plan when we reach it. Priority order is fixed: **ship the V1 MVP for Nathan fir
 2. **Publisher** — build the `buildShareData` snapshot, write-on-change + throttle, token-authed POST.
 3. **Thin Cloudflare Worker + KV** — `POST /publish` (token), `GET /` renders from the stored snapshot
    (reuse `public/live.html` + the `/state.json` shape). Single key — it's just Nathan.
-4. **Wire `vibelog.natebuilds.dev`** — CNAME + auto-SSL.
+4. **Wire `vibelog.n8builds.dev`** — CNAME + auto-SSL.
 Done = MVP live, $0/mo.
 
 ### 7.2 Phases (each plans-in-detail when reached)
@@ -268,10 +268,10 @@ Done = MVP live, $0/mo.
 
 **No domain is required to build/test.** Every Worker gets a free `*.workers.dev` URL — the whole MVP
 can run 24/7 there at $0, no purchase. A custom domain is only the **last-mile cosmetic step** (swap
-`*.workers.dev` → `vibelog.natebuilds.dev` via one CNAME). So:
+`*.workers.dev` → `vibelog.n8builds.dev` via one CNAME). So:
 
 1. A **free Cloudflare account** (only hard requirement — needed to deploy the Worker).
-2. *(last step only)* **`natebuilds.dev` on Cloudflare** to put it on Nathan's brand. Until then,
+2. *(last step only)* **`n8builds.dev` on Cloudflare** to put it on Nathan's brand. Until then,
    `workers.dev` works fine.
 3. Confirm the **local-LLM flexibility** approach (§7.3.1) — or let me proceed with the recommendation.
 

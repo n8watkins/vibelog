@@ -149,7 +149,7 @@ download it, set it up in minutes, and stream their public development. See `doc
 > `fc55dcb` worker round-trip tests · `7cf194a` this handoff. (PR1/PR2/PR3 each have a subagent commit +
 > an orchestrator `--no-ff` merge commit.)
 >
-> **Subdomain DECIDED: `vibelog.natebuilds.dev`** (subdomain, not a `/vibelog` path — a path would
+> **Subdomain DECIDED: `vibelog.n8builds.dev`** (subdomain, not a `/vibelog` path — a path would
 > break the contract's absolute `/state.json` etc. fetches and force a client rewrite).
 >
 > **➡️ REMAINING — the deploy runbook (do when Nathan is ready; he said "not yet"):**
@@ -162,8 +162,8 @@ download it, set it up in minutes, and stream their public development. See `doc
 > 6. Put that URL + the same token into `~/.vibelog/secrets.json` `publish:{url,token}` (see
 >    `secrets.example.json`), restart `vibe start` → snapshots publish; load the workers.dev URL,
 >    stop the agent, reload → page still serves the last snapshot (proves the 24/7 claim, MVP_PLAN §4).
-> 7. **PR4 (custom domain)** — only when Nathan owns `natebuilds.dev` (he does NOT yet) and it's on
->    Cloudflare: add the Worker custom domain `vibelog.natebuilds.dev` (one route, auto-SSL). No code.
+> 7. **PR4 (custom domain)** — only when Nathan owns `n8builds.dev` (he does NOT yet) and it's on
+>    Cloudflare: add the Worker custom domain `vibelog.n8builds.dev` (one route, auto-SSL). No code.
 >    **Do NOT buy `vibelog.app`** (Phase 2+).
 >
 > Verification status: unit + handler round-trip tests prove publish→store→serve locally; a true
