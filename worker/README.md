@@ -33,12 +33,19 @@ The same applies to the embed widget (G4): `worker/public/embed.html` and
 `/embed` and `/embed.js` (the `/embed.js` loader derives its origin at runtime,
 so the same file works on `*.workers.dev` and the custom domain).
 
-When `public/live.html` (or `public/embed.{html,js}`) is updated, re-copy:
+`/` is the **marketing front door** — the Worker rewrites it to `landing.html` (a copy
+of `public/landing.html`), with the landing page's screenshots served from
+`worker/public/shots/*.png`. `/live` is the public profile, `/embed` the G4 widget.
+
+When `public/{live,landing,embed}.html`, `public/embed.js`, or `public/shots/*.png`
+are updated, re-copy:
 
 ```bash
-cp public/live.html  worker/public/live.html
-cp public/embed.html worker/public/embed.html
-cp public/embed.js   worker/public/embed.js
+cp public/live.html    worker/public/live.html
+cp public/landing.html worker/public/landing.html
+cp public/embed.html   worker/public/embed.html
+cp public/embed.js     worker/public/embed.js
+cp public/shots/*.png  worker/public/shots/
 ```
 
 Then re-deploy (`wrangler deploy` from the `worker/` directory).

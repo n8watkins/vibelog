@@ -12,8 +12,8 @@
  *   GET  /state.json           — snapshot.state verbatim
  *   GET  /api/profile.json     — { profile: snapshot.profile }
  *   GET  /api/theme.json       — { vars: snapshot.theme } (ignores ?page=)
- *   GET  /                     — live.html (served via static assets binding)
- *   GET  /live                 — live.html (served via static assets binding)
+ *   GET  /                     — landing.html (marketing front door, via assets binding)
+ *   GET  /live                 — live.html (the public profile, via static assets binding)
  *   GET  /embed                — embed.html (the G4 widget, via assets binding)
  *   GET  /embed.js             — loader script (auto-served from worker/public/)
  *
@@ -79,6 +79,7 @@ export type RouteKind =
   | "state"
   | "profile"
   | "theme"
+  | "landing"
   | "page"
   | "embed"
   | "not_found";
@@ -96,7 +97,11 @@ export function routeKind(method: string, pathname: string): RouteKind {
   if (m === "GET" && p === "/state.json") return "state";
   if (m === "GET" && p === "/api/profile.json") return "profile";
   if (m === "GET" && p === "/api/theme.json") return "theme";
-  if (m === "GET" && (p === "/" || p === "/live")) return "page";
+  // "/" is the marketing front door (landing.html); "/live" is the public
+  // profile (live.html). Keeping them distinct lets a stranger who lands on the
+  // root learn what VibeLog is + grab it from GitHub, while shared links go to /live.
+  if (m === "GET" && p === "/") return "landing";
+  if (m === "GET" && p === "/live") return "page";
   // The G4 embed widget. /embed.js is a real file served directly by the
   // static-assets binding; only the extensionless /embed page needs a rewrite.
   if (m === "GET" && p === "/embed") return "embed";
@@ -325,13 +330,17 @@ export default {
           return snap ? extractTheme(snap) : EMPTY_THEME;
         });
 
+      case "landing":
       case "page":
       case "embed": {
-        // Serve a static HTML page from the assets binding. "/" and "/live" map
-        // to live.html; "/embed" maps to embed.html (the G4 widget). The extra
-        // hop (vs. letting assets auto-serve) lets us rewrite the extensionless
-        // route and stamp a consistent Cache-Control.
-        const file = kind === "embed" ? "/embed.html" : "/live.html";
+        // Serve a static HTML page from the assets binding. "/" maps to
+        // landing.html (the marketing front door); "/live" to live.html (the
+        // public profile); "/embed" to embed.html (the G4 widget). The extra hop
+        // (vs. letting assets auto-serve) lets us rewrite the extensionless route
+        // and stamp a consistent Cache-Control. /shots/*.png referenced by the
+        // landing page are auto-served by the assets binding (real file paths).
+        const file =
+          kind === "landing" ? "/landing.html" : kind === "embed" ? "/embed.html" : "/live.html";
         const assetUrl = new URL(request.url);
         assetUrl.pathname = file;
         const assetReq = new Request(assetUrl.toString(), request);

@@ -23,6 +23,11 @@ compatibility_date = "2024-09-23"
 [assets]
 directory = "./public"
 binding   = "ASSETS"
+# Serve files at their exact path — no .html→extensionless 307 redirects. The
+# Worker explicitly rewrites "/" → /landing.html, "/live" → /live.html, etc., so
+# we want ASSETS to return those files directly (200), not redirect them.
+html_handling      = "none"
+not_found_handling = "none"
 
 # ---------------------------------------------------------------------------
 # KV namespace — the snapshot store

@@ -117,13 +117,18 @@ describe("worker round-trip: publish then serve", () => {
     assert.deepEqual(await theme.json(), { vars: {} });
   });
 
-  it("serves live.html on / and /live via the assets binding", async () => {
+  it("serves landing.html on / and live.html on /live via the assets binding", async () => {
     const env = makeEnv(makeKV());
-    for (const p of ["/", "/live"]) {
+    // The ASSETS stub echoes the rewritten pathname, proving the route→file map.
+    const cases: Array<[string, RegExp]> = [
+      ["/", /landing\.html/],
+      ["/live", /live\.html/],
+    ];
+    for (const [p, want] of cases) {
       const res = await worker.fetch(new Request("https://w.example" + p), env);
       assert.equal(res.status, 200);
       const body = await res.text();
-      assert.match(body, /live\.html/);
+      assert.match(body, want);
       assert.equal(res.headers.get("cache-control"), "public, max-age=30");
     }
   });

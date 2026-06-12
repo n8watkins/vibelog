@@ -89,11 +89,11 @@ describe("routeKind", () => {
     assert.equal(routeKind("GET", "/api/theme.json"), "theme");
   });
 
-  it("maps GET / to page", () => {
-    assert.equal(routeKind("GET", "/"), "page");
+  it("maps GET / to landing (marketing front door)", () => {
+    assert.equal(routeKind("GET", "/"), "landing");
   });
 
-  it("maps GET /live to page", () => {
+  it("maps GET /live to page (the public profile)", () => {
     assert.equal(routeKind("GET", "/live"), "page");
   });
 
