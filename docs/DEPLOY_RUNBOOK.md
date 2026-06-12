@@ -1,4 +1,15 @@
-# VibeLog — Deploy Runbook (pre-flighted 2026-06-12)
+# VibeLog — Deploy Runbook
+
+> **✅ DEPLOYED & VERIFIED 2026-06-12.** The Worker is **live**:
+> **`https://vibelog-live.nathancwatkins23.workers.dev`** (account `nathancwatkins23`).
+> Steps 1–5 are DONE: login · KV namespaces (prod `ce9484…`, preview `181065…`, wired into
+> `wrangler.toml`) · `wrangler deploy` (also bumped wrangler → v4) · `PUBLISH_TOKEN` set on
+> the Worker **and** in `~/.vibelog/secrets.json` `publish:{url,token}` (token never printed).
+> **End-to-end proven:** agent published its real snapshot to KV; with the agent **stopped**
+> the Worker still serves `/live`, `/embed`, `/embed.js`, `/state.json` (and the shutdown
+> final-publish flipped `isLive→false`); `POST /publish` returns **403** on a bad token.
+> **Only Step 6 (custom domain `vibelog.n8builds.dev`) remains** — needs the zone on Cloudflare.
+> The original pre-flight steps below are kept as the reference procedure / for a re-deploy.
 
 The code is complete and committed through G4 (embed widget). This is the exact,
 paste-ready sequence to take `vibelog-live` from "never deployed" to "live 24/7 on
