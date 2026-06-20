@@ -166,10 +166,14 @@ test("shouldPublish skips throttle when lastAt is null (first publish after hash
 // Transport — stub globalThis.fetch to verify behaviour
 // ---------------------------------------------------------------------------
 
-// Store original fetch so we can restore it
+// Store original fetch so we can restore it. Install a harmless default stub
+// for the whole file so NO test — and no fire-and-forget POST that outlives its
+// test — can ever reach the real network (the URL is "http://test.invalid/…").
+// Each transport test below still overrides this with its own stub.
 let originalFetch: typeof globalThis.fetch;
 before(() => {
   originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(null, { status: 204 });
 });
 after(() => {
   globalThis.fetch = originalFetch;
