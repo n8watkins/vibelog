@@ -419,12 +419,15 @@
           enqueueToast("🚀", delta === 1 ? "Commit pushed" : delta + " commits pushed", nc + " today");
         }
 
-        // a build-log milestone added (feed grew). buildLog is newest-first.
-        const pLog = Array.isArray(p.buildLog) ? p.buildLog.length : 0;
-        const nLog = Array.isArray(n.buildLog) ? n.buildLog.length : 0;
-        if (nLog > pLog && Array.isArray(n.buildLog) && n.buildLog[0]) {
-          const top = n.buildLog[0];
-          const text = (typeof top === "string" ? top : top.text) ?? "";
+        // a build-log milestone added. buildLog is newest-first and capped at
+        // BUILD_LOG_MAX, so detect a NEW top entry by identity, not length
+        // growth — length stops growing once the cap is hit on a long stream.
+        const topKey = (e) =>
+          e ? (typeof e === "string" ? "|" + e : (e.ts ?? "") + "|" + (e.text ?? "")) : "";
+        const nTop = Array.isArray(n.buildLog) ? n.buildLog[0] : null;
+        const pTop = Array.isArray(p.buildLog) ? p.buildLog[0] : null;
+        if (nTop && topKey(nTop) !== topKey(pTop)) {
+          const text = (typeof nTop === "string" ? nTop : nTop.text) ?? "";
           if (text) enqueueToast("✨", text, "milestone");   // text is already redacted + capped upstream
         }
 
