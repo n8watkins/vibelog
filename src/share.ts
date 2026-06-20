@@ -304,8 +304,11 @@ function recapCard(d: ShareData): string {
     { v: fmtNum(fixes), l: "fixes", c: accent },
   ];
   const colW = 248;
+  // Strip sits above the frame's "powered by VibeLog" footer (y = CARD_H - 64).
+  // Number baseline at CARD_H - 140, label 32px below it (≈ CARD_H - 108) — both
+  // clear of the footer so they never overlap it.
   const strip = cols
-    .map((c, i) => `<g transform="translate(${startX + i * colW} ${CARD_H - 96})">
+    .map((c, i) => `<g transform="translate(${startX + i * colW} ${CARD_H - 140})">
       <text x="0" y="0" font-size="52" font-weight="800" fill="${c.c}" letter-spacing="-0.5">${xmlEscape(c.v)}</text>
       <text x="2" y="32" font-size="20" font-weight="700" letter-spacing="1.5" fill="${muted}">${xmlEscape(c.l.toUpperCase())}</text>
     </g>`)
