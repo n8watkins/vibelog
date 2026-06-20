@@ -249,6 +249,21 @@
       .intg-sub { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .intg-pill { font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
       .intg-pill.on { color: #04130f; background: var(--accent2); border-color: transparent; }
+
+      /* embed widget snippet */
+      .embed-sub { color: var(--muted); font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
+      .embed-box { display: flex; align-items: stretch; gap: 10px; }
+      .embed-code {
+        flex: 1; width: 100%; box-sizing: border-box; resize: none;
+        font: 12.5px/1.55 var(--mono); color: #c9aaff;
+        background: rgba(160, 107, 255, 0.06); border: 1px solid var(--border);
+        border-radius: 10px; padding: 11px 13px; white-space: pre; overflow-x: auto;
+      }
+      .embed-code:focus { outline: none; border-color: var(--accent); }
+      .embed-copy { flex: 0 0 auto; align-self: flex-start; min-width: 70px; }
+      .embed-copy.ok { color: #04130f; background: var(--accent2); border-color: transparent; }
+      .embed-note { color: var(--muted); font-size: 11.5px; margin-top: 11px; line-height: 1.5; }
+      .embed-note code { font-family: var(--mono); font-size: 11px; color: var(--accent2); }
     </style>
   </head>
   <body>
@@ -328,6 +343,16 @@
           <h3><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/></svg>Channel</h3>
           <div id="social"></div>
         </div>
+      </div>
+
+      <div class="panel">
+        <h3><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>Embed widget</h3>
+        <div class="embed-sub">Drop this one line on your site to show a live build card. The loader resolves its own origin, so the snippet works as-is.</div>
+        <div class="embed-box">
+          <textarea id="embedSnippet" class="embed-code" readonly rows="3" spellcheck="false" aria-label="Embed snippet"></textarea>
+          <button class="btn sm embed-copy" id="copyEmbed" type="button">Copy</button>
+        </div>
+        <div class="embed-note">Sizes are tweakable via <code>data-width</code> / <code>data-height</code>, or set <code>data-target="#sel"</code> to mount into a specific element.</div>
       </div>
     </div>
 
@@ -985,6 +1010,31 @@
       document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("settingsModal").classList.contains("open")) closeSettings(); });
 
       if (location.hash === "#settings") openSettings();
+
+      // ── embed snippet ─────────────────────────────────────────────────────
+      // Paste-ready loader for the user's own site. Built from THIS page's
+      // origin at runtime so it points at wherever the dashboard is served from
+      // (localhost while developing, the public host once shared). The snippet
+      // matches what /embed.js expects: a <script> tag with optional data-* attrs.
+      (function setupEmbed() {
+        const snippet =
+          `<script src="${location.origin}/embed.js" async\n` +
+          `        data-vibelog data-width="380" data-height="250"></scr` + `ipt>`;
+        $("embedSnippet").value = snippet;
+        const btn = $("copyEmbed");
+        btn.onclick = async () => {
+          const ta = $("embedSnippet");
+          try {
+            await navigator.clipboard.writeText(ta.value);
+          } catch {
+            // clipboard API unavailable (non-secure context) — fall back to select+copy
+            ta.focus(); ta.select();
+            try { document.execCommand("copy"); } catch {}
+          }
+          btn.textContent = "Copied"; btn.classList.add("ok");
+          setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("ok"); }, 1400);
+        };
+      })();
 
       tick();
       setInterval(tick, 4000);
