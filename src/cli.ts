@@ -334,6 +334,14 @@ program
   });
 
 program
+  .command("mcp")
+  .description("Run the read-only VibeLog MCP server (stdio) for Claude Desktop")
+  .action(async () => {
+    const { runServer } = await import("./mcp.ts");
+    await runServer();
+  });
+
+program
   .command("status")
   .description("Show the current live state")
   .action(async () => {
