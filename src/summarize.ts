@@ -1,5 +1,6 @@
 import { readSecrets } from "./secrets.ts";
 import { readSettings } from "./store.ts";
+import { isLoopbackUrl } from "./theme.ts";
 
 /**
  * Turn a raw coding prompt into a short "Now Building" feature label for the
@@ -185,9 +186,11 @@ export async function summarize(prompt: string): Promise<Summary> {
   if (provider === "local") {
     // Use explicit config if provided, else auto-detect localhost
     let info: LocalLLMInfo | null = null;
-    if (summarizerCfg?.baseUrl && summarizerCfg?.model) {
-      info = { baseUrl: summarizerCfg.baseUrl, model: summarizerCfg.model };
-    } else if (summarizerCfg?.baseUrl) {
+    // Re-validate the configured baseUrl at USE-TIME, not just on write: a
+    // hand-edited settings.json must not be able to point the summarizer at a
+    // remote host and exfiltrate the (pre-redaction) prompt. Loopback only;
+    // anything else falls back to a localhost auto-probe.
+    if (summarizerCfg?.baseUrl && isLoopbackUrl(summarizerCfg.baseUrl)) {
       info = { baseUrl: summarizerCfg.baseUrl, model: summarizerCfg.model ?? "local-model" };
     } else {
       info = await detectLocalLLM();

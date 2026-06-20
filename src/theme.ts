@@ -122,7 +122,7 @@ const SUMMARIZER_PROVIDERS = ["auto", "gemini", "local", "template"] as const;
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 
 /** True only for an http/https URL whose host is loopback. */
-function isLoopbackUrl(raw: string): boolean {
+export function isLoopbackUrl(raw: string): boolean {
   let u: URL;
   try {
     u = new URL(raw);

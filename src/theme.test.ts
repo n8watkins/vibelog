@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateVars, resolveTheme, sanitizeProfile, sanitizeSummarizer, DEFAULT_THEME, PRESETS, THEME_VAR_KEYS, type Settings } from "./theme.ts";
+import { validateVars, resolveTheme, sanitizeProfile, sanitizeSummarizer, isLoopbackUrl, DEFAULT_THEME, PRESETS, THEME_VAR_KEYS, type Settings } from "./theme.ts";
 
 test("validateVars keeps allowlisted color/gradient values", () => {
   const out = validateVars({
@@ -155,4 +155,15 @@ test("sanitizeSummarizer tolerates non-objects and strips empty fields", () => {
   assert.deepEqual(sanitizeSummarizer(null), {});
   assert.deepEqual(sanitizeSummarizer("nope"), {});
   assert.deepEqual(sanitizeSummarizer({ model: "   ", baseUrl: "" }), {});
+});
+
+// isLoopbackUrl is the use-time guard summarize.ts re-applies before POSTing a
+// prompt to a configured local LLM — keep its contract locked down.
+test("isLoopbackUrl accepts only loopback http(s) hosts", () => {
+  for (const ok of ["http://127.0.0.1:1234", "http://localhost:11434/v1", "https://localhost", "http://[::1]:1234"]) {
+    assert.equal(isLoopbackUrl(ok), true, ok);
+  }
+  for (const bad of ["http://evil.com", "http://10.0.0.5:1234", "https://api.openai.com", "http://localhost.evil.com", "file:///etc/passwd", "not-a-url", ""]) {
+    assert.equal(isLoopbackUrl(bad), false, bad);
+  }
 });
