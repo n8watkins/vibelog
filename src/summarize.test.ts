@@ -1,6 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { templateSummary, sanitizeLabel, callOpenAICompatible, resetLocalLLMCache } from "./summarize.ts";
+import {
+  templateSummary,
+  sanitizeLabel,
+  callOpenAICompatible,
+  resetLocalLLMCache,
+  sanitizeRecap,
+  templateRecap,
+  RECAP_SYSTEM_INSTRUCTION,
+} from "./summarize.ts";
 
 test("templateSummary strips polite filler and title-cases", () => {
   assert.equal(templateSummary("can you add discord oauth to the login page"), "Add discord oauth to the login page");
@@ -24,6 +32,46 @@ test("templateSummary caps length and word count, never empty", () => {
 test("sanitizeLabel strips quotes and trailing punctuation", () => {
   assert.equal(sanitizeLabel('"Adding Discord OAuth."'), "Adding Discord OAuth");
   assert.equal(sanitizeLabel("wiring   the\tstats card  "), "Wiring the stats card");
+});
+
+// --- Recap (AI day/session narrative) ---
+
+test("sanitizeRecap unwraps quotes, strips markdown, collapses whitespace", () => {
+  assert.equal(
+    sanitizeRecap('  "Shipped the **auth** layer today."  '),
+    "Shipped the auth layer today.",
+  );
+  assert.equal(sanitizeRecap("Wired   the\tstats\ncard"), "Wired the stats card");
+});
+
+test("sanitizeRecap drops code fences a model adds and caps length", () => {
+  const out = sanitizeRecap("Built the thing ```const x = 1``` and more");
+  assert.ok(!out.includes("const x"));
+  assert.ok(sanitizeRecap("x".repeat(400)).length <= 280);
+});
+
+test("templateRecap is informative offline and never empty", () => {
+  const report = [
+    "📊 Vibe report — 2026-06-20",
+    "",
+    "  ⏱  2h 10m active  ·  1 session",
+    "  ✨ 2 features  ·  🐛 1 fix  ·  💬 12 prompts  ·  🔧 40 tool calls",
+  ].join("\n");
+  const out = templateRecap(report);
+  assert.ok(out.length > 0);
+  assert.ok(out.includes("feature")); // pulled the headline counts line
+  assert.ok(out.length <= 280);
+});
+
+test("templateRecap falls back gracefully with no counts line", () => {
+  const out = templateRecap("📊 Vibe report — 2026-06-20\n\n  No activity logged today.");
+  assert.ok(out.length > 0);
+  assert.ok(!out.includes("undefined"));
+});
+
+test("RECAP_SYSTEM_INSTRUCTION forbids secrets and file paths", () => {
+  assert.match(RECAP_SYSTEM_INSTRUCTION, /no secrets/i);
+  assert.match(RECAP_SYSTEM_INSTRUCTION, /no file paths/i);
 });
 
 // --- New tests for provider abstraction ---
