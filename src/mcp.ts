@@ -128,14 +128,15 @@ async function agentPort(): Promise<number> {
   return session?.port ?? DEFAULT_PORT;
 }
 
-/** GET the current shared theme from the running agent (localhost only). */
-async function getCurrentShared(port: number): Promise<ThemeVars> {
+/** GET the current theme (shared vars + sync flag) from the running agent. */
+async function getCurrentTheme(port: number): Promise<{ shared: ThemeVars; sync: boolean }> {
   const res = await fetch(`http://127.0.0.1:${port}/api/settings.json`, {
     signal: AbortSignal.timeout(2500),
   });
   if (!res.ok) throw new Error(`agent returned HTTP ${res.status}`);
-  const data = (await res.json()) as { theme?: { shared?: ThemeVars } };
-  return data?.theme?.shared ?? {};
+  const data = (await res.json()) as { theme?: { shared?: ThemeVars; sync?: boolean } };
+  // sync defaults to true (the shared theme drives every page) — see resolveTheme.
+  return { shared: data?.theme?.shared ?? {}, sync: data?.theme?.sync !== false };
 }
 
 /** POST a settings patch to the running agent (localhost only). */
@@ -225,14 +226,22 @@ export function createServer(): Server {
 
       try {
         const port = await agentPort();
-        // Only need the current theme when merging vars without a preset base.
-        const currentShared = preset ? {} : await getCurrentShared(port);
-        const patch = buildThemePatch({ preset, vars }, PRESETS, currentShared);
+        // Always fetch the current theme: we need `shared` for the vars-merge
+        // path, and `sync` to warn if the pages won't actually pick this up.
+        const { shared, sync } = await getCurrentTheme(port);
+        const patch = buildThemePatch({ preset, vars }, PRESETS, preset ? {} : shared);
         const result = await postSettings(port, { theme: patch });
         const applied = result?.theme?.shared ?? patch.shared;
+        // set_theme only writes the SHARED theme. When per-page sync is off,
+        // resolveTheme serves each page's perPage theme instead, so the overlay
+        // won't visibly change — say so rather than reporting a silent no-op.
+        const syncNote = sync
+          ? ""
+          : "\n\nNote: per-page theming is ON, so the overlay/live/dashboard keep their own themes and won't show this shared change. Turn on \"sync all pages\" in the dashboard Settings to use it.";
         return text(
           `Theme applied${preset ? ` (preset: ${preset})` : ""}. Active shared vars:\n` +
-            JSON.stringify(applied, null, 2),
+            JSON.stringify(applied, null, 2) +
+            syncNote,
         );
       } catch (err) {
         return text(
