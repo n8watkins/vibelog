@@ -281,6 +281,25 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     const settings = await readSettings();
     const profile = sanitizeProfile(settings?.profile);
     const s = state.stats;
+
+    // Weekly rollup for the "recap" card — PUBLIC-NUMERIC only. We pass per-day
+    // vibe SCORES (never the underlying titles/paths) plus the streak and the
+    // shipped/fixed counts. Built from the same local event log as `vibe week`.
+    let recap: ShareData["recap"];
+    try {
+      const events = await readEvents();
+      const range = summarizeRange(events, 7);
+      const week = summarizeWeek(events, localDateString());
+      recap = {
+        days: range.map((r) => ({ date: r.date, score: r.score })),
+        streak: currentStreak(summarizeRange(events, 371)),
+        features: week.features.length,
+        fixes: week.bugs.length,
+      };
+    } catch {
+      // event log unreadable — omit the recap (the card degrades to empty bars)
+    }
+
     return {
       displayName: profile.displayName || "VibeLog",
       channelHeader: profile.channelHeader,
@@ -294,6 +313,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         tokens: s.claudeTokens,
         timeLive: state.isLive ? timeLiveLabel(state.startedAt) : "—",
       },
+      recap,
       theme: resolveTheme(settings, "live"),
     };
   }

@@ -40,6 +40,7 @@ test("isShareKind only accepts the known kinds", () => {
   assert.ok(isShareKind("stats"));
   assert.ok(isShareKind("join"));
   assert.ok(isShareKind("profile"));
+  assert.ok(isShareKind("recap"));
   assert.ok(!isShareKind("evil"));
   assert.ok(!isShareKind(""));
 });
@@ -52,17 +53,60 @@ const data = (over: Partial<ShareData> = {}): ShareData => ({
   live: true,
   nowBuilding: "the share card",
   stats: { features: 4, commits: 5, tokens: 133_850, timeLive: "47m" },
+  recap: {
+    days: [
+      { date: "2026-06-14", score: 12 },
+      { date: "2026-06-15", score: 0 },
+      { date: "2026-06-16", score: 40 },
+      { date: "2026-06-17", score: 22 },
+      { date: "2026-06-18", score: 8 },
+      { date: "2026-06-19", score: 31 },
+      { date: "2026-06-20", score: 17 },
+    ],
+    streak: 3,
+    features: 9,
+    fixes: 4,
+  },
   theme: {},
   ...over,
 });
 
 test("shareCardSvg renders a 1200×630 SVG for every kind", () => {
-  for (const kind of ["stats", "join", "profile"] as const) {
+  for (const kind of ["stats", "join", "profile", "recap"] as const) {
     const svg = shareCardSvg(kind, data());
     assert.ok(svg.startsWith("<svg"), "is an svg");
     assert.match(svg, /width="1200"/);
     assert.match(svg, /height="630"/);
   }
+});
+
+test("shareCardSvg dispatches 'recap' to the recap card (bars + week heading)", () => {
+  const svg = shareCardSvg("recap", data());
+  assert.match(svg, /This week/, "recap card has the week heading");
+  // 7 day bars → 7 weekday labels painted as <rect> + <text> pairs.
+  assert.equal((svg.match(/<rect /g) || []).length >= 7, true, "paints at least 7 bars");
+  // the streak / features / fixes strip labels (uppercased)
+  assert.match(svg, /STREAK/);
+  assert.match(svg, /FEATURES/);
+  assert.match(svg, /FIXES/);
+  // streak value rendered as e.g. "3d", counts compacted via fmtNum
+  assert.ok(svg.includes(">3d<"), "streak value present");
+  assert.ok(svg.includes(">9<"), "features count present");
+});
+
+test("recap card escapes a hostile channelHeader — no raw injection survives", () => {
+  const svg = shareCardSvg("recap", data({
+    channelHeader: '<script>alert(1)</script> & "q"',
+  }));
+  assert.ok(!svg.includes("<script>"), "raw <script> must never appear");
+  assert.ok(svg.includes("&lt;script&gt;"), "header is escaped");
+  assert.ok(svg.includes("&amp;") && svg.includes("&quot;"), "header entities escaped");
+});
+
+test("recap card tolerates a missing recap field (empty bars, zeroed strip)", () => {
+  const svg = shareCardSvg("recap", data({ recap: undefined }));
+  assert.ok(svg.startsWith("<svg"), "still a valid svg");
+  assert.ok(svg.includes(">0d<"), "streak falls back to 0");
 });
 
 test("shareCardSvg escapes user-typed text — no raw injection survives", () => {

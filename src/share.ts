@@ -19,8 +19,8 @@ import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 import { DEFAULT_THEME, type ThemeVars } from "./theme.ts";
 
-export type ShareKind = "stats" | "join" | "profile";
-export const SHARE_KINDS: ShareKind[] = ["stats", "join", "profile"];
+export type ShareKind = "stats" | "join" | "profile" | "recap";
+export const SHARE_KINDS: ShareKind[] = ["stats", "join", "profile", "recap"];
 export function isShareKind(s: string): s is ShareKind {
   return (SHARE_KINDS as string[]).includes(s);
 }
@@ -34,6 +34,10 @@ export type ShareData = {
   nowBuilding?: string;
   /** Headline numbers for the "stats" card. */
   stats: { features: number; commits: number; tokens: number; timeLive: string };
+  /** Optional weekly rollup for the "recap" card — PUBLIC-NUMERIC only: per-day
+   *  vibe scores (no titles/paths), the current streak, and shipped/fixed counts.
+   *  `days` is oldest→newest; `date` is an ISO yyyy-mm-dd (used only for weekday). */
+  recap?: { days: { date: string; score: number }[]; streak: number; features: number; fixes: number };
   /** Resolved (allowlist-validated) theme vars to paint the card with. */
   theme: ThemeVars;
 };
@@ -254,10 +258,73 @@ function profileCard(d: ShareData): string {
   return frame(d, inner);
 }
 
+const RECAP_DOW = ["S", "M", "T", "W", "T", "F", "S"];
+
+/** "This week" recap card — the last 7 days as small bars (heights scaled to the
+ *  busiest day), the current streak, and shipped/fixed counts. Mirrors the
+ *  `vibe week` rollup but with PUBLIC-NUMERIC data only (per-day vibe scores, no
+ *  titles). Same neon frame as statsCard/profileCard. */
+function recapCard(d: ShareData): string {
+  const accent = v(d.theme, "--accent");
+  const accent2 = v(d.theme, "--accent2");
+  const pink = v(d.theme, "--pink");
+  const text = v(d.theme, "--text");
+  const muted = v(d.theme, "--muted");
+  const days = (d.recap?.days ?? []).slice(-7);
+  const streak = Math.max(0, Math.floor(d.recap?.streak ?? 0));
+  const features = Math.max(0, Math.floor(d.recap?.features ?? 0));
+  const fixes = Math.max(0, Math.floor(d.recap?.fixes ?? 0));
+  const header = xmlEscape(ellipsize(d.channelHeader || d.bio || "My week in public.", 64));
+
+  // 7 bars across the panel; heights scale to the busiest day in the window.
+  const max = Math.max(1, ...days.map((x) => (Number.isFinite(x.score) ? x.score : 0)));
+  const barW = 96;
+  const gap = 28;
+  const startX = 78;
+  const baseY = 392; // bar baseline
+  const maxH = 150;
+  const bars = days
+    .map((x, i) => {
+      const score = Math.max(0, Number.isFinite(x.score) ? x.score : 0);
+      const h = score > 0 ? Math.max(8, Math.round((score / max) * maxH)) : 4;
+      const x0 = startX + i * (barW + gap);
+      const dow = RECAP_DOW[new Date((x.date || "") + "T00:00:00").getDay()] ?? "·";
+      const fill = score > 0 ? "url(#brandg)" : v(d.theme, "--muted");
+      const op = score > 0 ? "1" : "0.3";
+      return `<g transform="translate(${x0} 0)">
+      <rect x="0" y="${baseY - h}" width="${barW}" height="${h}" rx="8" fill="${fill}" fill-opacity="${op}"/>
+      <text x="${barW / 2}" y="${baseY + 34}" font-size="24" font-weight="700" text-anchor="middle" fill="${muted}">${xmlEscape(dow)}</text>
+    </g>`;
+    })
+    .join("\n");
+
+  const cols = [
+    { v: streak + "d", l: "streak", c: pink },
+    { v: fmtNum(features), l: "features", c: accent2 },
+    { v: fmtNum(fixes), l: "fixes", c: accent },
+  ];
+  const colW = 248;
+  const strip = cols
+    .map((c, i) => `<g transform="translate(${startX + i * colW} ${CARD_H - 96})">
+      <text x="0" y="0" font-size="52" font-weight="800" fill="${c.c}" letter-spacing="-0.5">${xmlEscape(c.v)}</text>
+      <text x="2" y="32" font-size="20" font-weight="700" letter-spacing="1.5" fill="${muted}">${xmlEscape(c.l.toUpperCase())}</text>
+    </g>`)
+    .join("\n");
+
+  const inner = `
+  ${statusPill(d)}
+  <text x="78" y="184" font-size="34" font-weight="800" fill="${text}" letter-spacing="-0.5">This week</text>
+  <text x="78" y="224" font-size="26" font-weight="600" fill="${muted}">${header}</text>
+  ${bars}
+  ${strip}`;
+  return frame(d, inner);
+}
+
 /** Build the themed SVG string for a card kind. Pure. */
 export function shareCardSvg(kind: ShareKind, d: ShareData): string {
   if (kind === "join") return joinCard(d);
   if (kind === "profile") return profileCard(d);
+  if (kind === "recap") return recapCard(d);
   return statsCard(d);
 }
 
