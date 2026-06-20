@@ -20,7 +20,7 @@ import { isShareKind, renderCardPng, shareCardSvg, timeLiveLabel, type ShareData
 import { beginAuth, completeAuth, disconnect, integrationStatus, isProvider } from "./oauth.ts";
 import { demoDashboard, demoToday, demoWeek, demoSocialGrowth } from "./demodata.ts";
 import { getProjectActivity, type ProjectActivity } from "./projects.ts";
-import { summarize, detectLocalLLM } from "./summarize.ts";
+import { summarize, detectLocalLLM, resetLocalLLMCache } from "./summarize.ts";
 import { connectOBS, type OBSHandle } from "./obs.ts";
 import { streamMinutesByDay } from "./stream.ts";
 import { readSecrets } from "./secrets.ts";
@@ -583,6 +583,11 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
       // PUBLIC_GET_ROUTES, so the isRemote gate above 403s any tunneled/LAN
       // caller. Only probes loopback ports; returns non-secret { baseUrl, model }.
       if (req.method === "GET" && route === "/api/summarizer/detect.json") {
+        // Explicit user action (the Detect button) — always re-probe both ports.
+        // detectLocalLLM memoizes process-wide (incl. a cached null from an
+        // earlier auto-summary), so without a reset Detect can't see a model
+        // started after the agent booted.
+        resetLocalLLMCache();
         sendJson(res, 200, { detected: await detectLocalLLM() });
         return;
       }

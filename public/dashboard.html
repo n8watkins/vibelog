@@ -816,6 +816,8 @@
         $("sm-provider").value = s.provider || "auto";
         $("sm-baseurl").value = s.baseUrl || "";
         $("sm-model").value = s.model || "";
+        // Reset any transient Detect status back to the neutral note on (re)open.
+        $("sm-note").innerHTML = "The Gemini API key lives in <code>~/.vibelog/secrets.json</code>, never here.";
       }
       function readSummarizer() {
         return {
@@ -832,7 +834,10 @@
           if (r.detected) {
             $("sm-baseurl").value = r.detected.baseUrl || "";
             $("sm-model").value = r.detected.model || "";
-            if ($("sm-provider").value === "auto") $("sm-provider").value = "local";
+            // They clicked Detect — switch to Local LLM so Save actually uses it
+            // (gemini/template ignore baseUrl/model, so leaving it would silently
+            // save-but-never-use the detected model).
+            $("sm-provider").value = "local";
             $("sm-note").textContent = "Found a local model — Save to use it.";
           } else {
             $("sm-note").textContent = "No local model found on :11434 or :1234.";
