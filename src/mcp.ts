@@ -16,6 +16,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { readFile } from "node:fs/promises";
 import { DEFAULT_PORT, STATE_FILE } from "./config.ts";
+import { readSession } from "./store.ts";
 import type { LiveState } from "./state.ts";
 
 export type LoadStateOptions = {
@@ -97,7 +98,10 @@ export function createServer(): McpServer {
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async () => {
-      const result = await loadState();
+      // Honor `vibe start --port <n>` — the active port lives in the session
+      // file; loadState falls back to DEFAULT_PORT (then disk) if it's absent.
+      const session = await readSession().catch(() => null);
+      const result = await loadState({ port: session?.port });
       if (!result.ok) {
         return { content: [{ type: "text", text: result.message }] };
       }
