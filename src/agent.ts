@@ -15,12 +15,12 @@ import {
   type LiveState,
 } from "./state.ts";
 import { appendEvent, readConfig, readSession, readSettings, writeSession, writeSettings, writeState, type Session } from "./store.ts";
-import { PRESETS, resolveTheme, sanitizeProfile, validateVars, type Settings } from "./theme.ts";
+import { PRESETS, resolveTheme, sanitizeProfile, sanitizeSummarizer, validateVars, type Settings } from "./theme.ts";
 import { isShareKind, renderCardPng, shareCardSvg, timeLiveLabel, type ShareData } from "./share.ts";
 import { beginAuth, completeAuth, disconnect, integrationStatus, isProvider } from "./oauth.ts";
 import { demoDashboard, demoToday, demoWeek, demoSocialGrowth } from "./demodata.ts";
 import { getProjectActivity, type ProjectActivity } from "./projects.ts";
-import { summarize } from "./summarize.ts";
+import { summarize, detectLocalLLM } from "./summarize.ts";
 import { connectOBS, type OBSHandle } from "./obs.ts";
 import { streamMinutesByDay } from "./stream.ts";
 import { readSecrets } from "./secrets.ts";
@@ -569,8 +569,21 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         sendJson(res, 200, {
           theme,
           profile: sanitizeProfile(s?.profile),
+          // Non-secret summarizer config (provider / local baseUrl / model). The
+          // Gemini API key is NOT here — it lives in secrets.json and is never
+          // exposed over any route.
+          summarizer: sanitizeSummarizer(s?.summarizer),
           integrations: await integrationStatus(),
         });
+        return;
+      }
+
+      // Auto-detect a localhost OpenAI-compatible model (Ollama :11434 /
+      // LM Studio :1234) for the Summarizer settings UI. LOCALHOST ONLY — not in
+      // PUBLIC_GET_ROUTES, so the isRemote gate above 403s any tunneled/LAN
+      // caller. Only probes loopback ports; returns non-secret { baseUrl, model }.
+      if (req.method === "GET" && route === "/api/summarizer/detect.json") {
+        sendJson(res, 200, { detected: await detectLocalLLM() });
         return;
       }
 
@@ -693,9 +706,17 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         if (body.profile && typeof body.profile === "object") {
           profile = sanitizeProfile({ ...current.profile, ...(body.profile as object) });
         }
-        const next: Settings = { ...current, version: 1, theme, profile };
+        // Summarizer patch (provider / local baseUrl / model). Non-secret and
+        // merged over the existing config; baseUrl is loopback-only after
+        // sanitising, so a write can't point the agent at a remote URL. The
+        // Gemini key is never accepted here — it lives in secrets.json.
+        let summarizer = current.summarizer;
+        if (body.summarizer && typeof body.summarizer === "object") {
+          summarizer = sanitizeSummarizer({ ...current.summarizer, ...(body.summarizer as object) });
+        }
+        const next: Settings = { ...current, version: 1, theme, profile, summarizer };
         await writeSettings(next);
-        return sendJson(res, 200, { ok: true, theme: next.theme, profile: next.profile ?? {} });
+        return sendJson(res, 200, { ok: true, theme: next.theme, profile: next.profile ?? {}, summarizer: next.summarizer ?? {} });
       }
 
       // ── Integrations OAuth (S3) — all localhost-only ──────────────────────

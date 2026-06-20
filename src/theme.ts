@@ -108,6 +108,57 @@ export function sanitizeProfile(input: unknown): Profile {
   return out;
 }
 
+/**
+ * Non-secret summarizer config (provider / local baseUrl / model). The Gemini
+ * API key never lives here — it stays in secrets.json. This round-trips through
+ * the localhost-only settings routes (never PUBLIC_GET_ROUTES), but we still
+ * sanitise hard so a hand-edited settings.json or a stray POST can't point the
+ * agent at an arbitrary remote URL: baseUrl is LOOPBACK-ONLY (127.0.0.1 /
+ * localhost / ::1), keeping the tool local-first. Pure; never throws; tolerates
+ * non-objects (returns {}). Unknown/invalid fields are stripped, not defaulted.
+ */
+export type Summarizer = NonNullable<Settings["summarizer"]>;
+const SUMMARIZER_PROVIDERS = ["auto", "gemini", "local", "template"] as const;
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+
+/** True only for an http/https URL whose host is loopback. */
+function isLoopbackUrl(raw: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+  // hostname strips any [..] brackets/port; check both forms for IPv6.
+  return LOOPBACK_HOSTS.has(u.hostname) || LOOPBACK_HOSTS.has(u.host.replace(/:\d+$/, ""));
+}
+
+export function sanitizeSummarizer(raw: unknown): Summarizer {
+  const out: Summarizer = {};
+  if (!raw || typeof raw !== "object") return out;
+  const obj = raw as Record<string, unknown>;
+
+  const provider = obj.provider;
+  if (typeof provider === "string" && (SUMMARIZER_PROVIDERS as readonly string[]).includes(provider)) {
+    out.provider = provider as Summarizer["provider"];
+  }
+
+  const baseUrl = obj.baseUrl;
+  if (typeof baseUrl === "string") {
+    const s = baseUrl.trim();
+    if (s && s.length <= 200 && isLoopbackUrl(s)) out.baseUrl = s;
+  }
+
+  const model = obj.model;
+  if (typeof model === "string") {
+    const s = model.trim().slice(0, 100);
+    if (s) out.model = s;
+  }
+
+  return out;
+}
+
 const rgba = (hex: string, a: number): string => {
   const h = hex.replace("#", "");
   const r = parseInt(h.slice(0, 2), 16);

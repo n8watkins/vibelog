@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateVars, resolveTheme, sanitizeProfile, DEFAULT_THEME, PRESETS, THEME_VAR_KEYS, type Settings } from "./theme.ts";
+import { validateVars, resolveTheme, sanitizeProfile, sanitizeSummarizer, DEFAULT_THEME, PRESETS, THEME_VAR_KEYS, type Settings } from "./theme.ts";
 
 test("validateVars keeps allowlisted color/gradient values", () => {
   const out = validateVars({
@@ -108,4 +108,51 @@ test("sanitizeProfile collapses whitespace runs and tolerates non-objects", () =
   assert.deepEqual(sanitizeProfile(null), {});
   assert.deepEqual(sanitizeProfile("nope"), {});
   assert.equal(sanitizeProfile({ bio: "a   b" }).bio, "a b");
+});
+
+test("sanitizeSummarizer keeps an allowed provider and a loopback baseUrl + model", () => {
+  const out = sanitizeSummarizer({ provider: "local", baseUrl: "http://127.0.0.1:1234", model: "  llama3  " });
+  assert.equal(out.provider, "local");
+  assert.equal(out.baseUrl, "http://127.0.0.1:1234");
+  assert.equal(out.model, "llama3", "model is trimmed");
+});
+
+test("sanitizeSummarizer accepts every allowed provider literal", () => {
+  for (const p of ["auto", "gemini", "local", "template"] as const) {
+    assert.equal(sanitizeSummarizer({ provider: p }).provider, p);
+  }
+});
+
+test("sanitizeSummarizer drops an unknown provider", () => {
+  assert.equal("provider" in sanitizeSummarizer({ provider: "openai" }), false);
+  assert.equal("provider" in sanitizeSummarizer({ provider: 42 } as Record<string, unknown>), false);
+});
+
+test("sanitizeSummarizer accepts localhost / ::1 baseUrls", () => {
+  assert.equal(sanitizeSummarizer({ baseUrl: "http://localhost:11434" }).baseUrl, "http://localhost:11434");
+  assert.equal(sanitizeSummarizer({ baseUrl: "http://[::1]:1234" }).baseUrl, "http://[::1]:1234");
+});
+
+test("sanitizeSummarizer REJECTS a non-loopback / remote baseUrl", () => {
+  assert.equal("baseUrl" in sanitizeSummarizer({ baseUrl: "http://evil.com" }), false);
+  assert.equal("baseUrl" in sanitizeSummarizer({ baseUrl: "http://10.0.0.5:1234" }), false);
+  assert.equal("baseUrl" in sanitizeSummarizer({ baseUrl: "https://api.openai.com/v1" }), false);
+  // a deceptive host that merely contains "localhost" must still be rejected
+  assert.equal("baseUrl" in sanitizeSummarizer({ baseUrl: "http://localhost.evil.com" }), false);
+  // non-http(s) schemes are rejected too
+  assert.equal("baseUrl" in sanitizeSummarizer({ baseUrl: "file:///etc/passwd" }), false);
+  assert.equal("baseUrl" in sanitizeSummarizer({ baseUrl: "not a url" }), false);
+});
+
+test("sanitizeSummarizer caps model length and bounds baseUrl length", () => {
+  const out = sanitizeSummarizer({ model: "x".repeat(500) });
+  assert.equal(out.model!.length, 100, "model is capped at 100");
+  const longUrl = "http://127.0.0.1:1234/" + "a".repeat(300);
+  assert.equal("baseUrl" in sanitizeSummarizer({ baseUrl: longUrl }), false, "over-long baseUrl is dropped");
+});
+
+test("sanitizeSummarizer tolerates non-objects and strips empty fields", () => {
+  assert.deepEqual(sanitizeSummarizer(null), {});
+  assert.deepEqual(sanitizeSummarizer("nope"), {});
+  assert.deepEqual(sanitizeSummarizer({ model: "   ", baseUrl: "" }), {});
 });
