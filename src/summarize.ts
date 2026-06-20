@@ -311,8 +311,9 @@ export function sanitizeRecap(raw: string): string {
  */
 export function templateRecap(reportText: string): string {
   const lines = reportText.split("\n").map((l) => l.trim()).filter(Boolean);
-  // The headline counts line is the one carrying the feature/fix tally.
-  const counts = lines.find((l) => l.includes("feature") && l.includes("·")) ?? "";
+  // The headline counts line carries the ✨ feature/fix tally — anchor on the
+  // ✨ marker so a Notes entry that merely contains "feature" can't match.
+  const counts = lines.find((l) => l.includes("✨") && l.includes("feature")) ?? "";
   const tail = counts ? ` ${counts.replace(/\s+/g, " ")}.` : "";
   return `Shipped some focused work today.${tail}`.slice(0, 280);
 }
