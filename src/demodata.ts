@@ -231,10 +231,23 @@ export function demoWeek(end = new Date()) {
 }
 
 /** Fake but plausible channel growth for the demo dashboard's social panel. */
-export function demoSocialGrowth(): Record<string, { followers: number; views?: number; deltaWeek: number; deltaMonth: number; series: { date: string; followers: number }[] }> {
+export function demoSocialGrowth(end = new Date()): Record<string, { followers: number; views?: number; deltaWeek: number; deltaMonth: number; series: { date: string; followers: number }[] }> {
+  // A gently rising 30-day series so the dashboard sparkline has something to
+  // draw in demo mode (real mode fills this from social_snapshot events).
+  const series = (final: number, climb: number): { date: string; followers: number }[] => {
+    const out: { date: string; followers: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const dt = new Date(end);
+      dt.setDate(dt.getDate() - i);
+      const date = dt.toISOString().slice(0, 10);
+      const wobble = Math.round(Math.sin(i * 1.3) * (climb * 0.15));
+      out.push({ date, followers: final - Math.round((climb / 29) * i) + wobble });
+    }
+    return out;
+  };
   return {
-    twitch: { followers: 1240, deltaWeek: 38, deltaMonth: 162, series: [] },
-    youtube: { followers: 3210, views: 142_000, deltaWeek: 21, deltaMonth: 240, series: [] },
+    twitch: { followers: 1240, deltaWeek: 38, deltaMonth: 162, series: series(1240, 162) },
+    youtube: { followers: 3210, views: 142_000, deltaWeek: 21, deltaMonth: 240, series: series(3210, 240) },
   };
 }
 

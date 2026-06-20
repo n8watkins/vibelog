@@ -5,7 +5,7 @@ import path from "node:path";
 import { getBranch, getStats } from "./git.ts";
 import { getClaudeUsageToday, dailyUsageMap, sessionTokenDelta, localDateString } from "./ccusage.ts";
 import { readEvents, summarizeDay, summarizeWeek } from "./report.ts";
-import { summarizeRange, currentStreak } from "./chart.ts";
+import { summarizeRange, currentStreak, records } from "./chart.ts";
 import { redact } from "./redact.ts";
 import {
   BUILD_LOG_MAX,
@@ -198,13 +198,42 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   /** Streak + today's vibe score from the event log (gamified overlay stats). */
   async function refreshHistory(): Promise<void> {
     try {
-      const range = summarizeRange(await readEvents(), 371);
-      state.stats.streak = currentStreak(range);
-      state.stats.vibeScore = range[range.length - 1]?.score ?? 0;
+      const events = await readEvents();
+      const range = summarizeRange(events, 371);
+      const todayScore = range[range.length - 1]?.score ?? 0;
+      const streak = currentStreak(range);
+      state.stats.streak = streak;
+      state.stats.vibeScore = todayScore;
+      state.record = deriveRecord(events, todayScore, streak);
       render();
     } catch {
       // event log unreadable — keep last good values
     }
+  }
+
+  /**
+   * Compare today against the all-time bests and, if today set a record, return
+   * a SHORT, fixed/derived label (never raw user text) for the overlay badge +
+   * a milestone toast. The bests are computed from ALL days, so we only flag a
+   * record when today's number is at least the best — and require it to be a
+   * meaningful (>0) run, so a quiet day never falsely celebrates.
+   */
+  function deriveRecord(
+    events: Awaited<ReturnType<typeof readEvents>>,
+    todayScore: number,
+    streak: number,
+  ): LiveState["record"] {
+    const r = records(events);
+    // Best single-day score: today ties/owns the all-time peak (records() spans
+    // all days incl. today, so a new best makes bestDayScore === todayScore).
+    if (todayScore > 0 && todayScore >= r.bestDayScore) {
+      return { kind: "best-day", label: "NEW PERSONAL BEST — best day yet" };
+    }
+    // Longest streak: today's active run ties/owns the all-time longest.
+    if (streak > 1 && streak >= r.longestStreak) {
+      return { kind: "best-streak", label: "NEW PERSONAL BEST — longest streak" };
+    }
+    return null;
   }
 
   async function pollTokens(): Promise<void> {
@@ -226,9 +255,25 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   // Live status + audience counts (Twitch/YouTube). Snapshots followers once per
   // day to the event log so the dashboard can chart channel growth over time.
   let lastSnapDay = "";
+  // Per-live-session peak (high-water mark) of concurrent viewers, by platform.
+  // fetchSocial only returns the instantaneous count each poll, so we keep the
+  // running max here and reset it on the live_ended transition (see onLive).
+  let peakViewers: Record<string, number> = {};
   async function pollSocial(): Promise<void> {
     const social = await fetchSocial();
     if (!social) return; // no channels configured
+    // Carry forward the per-session viewer high-water mark. Both values are
+    // already public numbers, so peakViewers is safe on the overlay/snapshot.
+    for (const platform of ["twitch", "youtube"] as const) {
+      const ch = social[platform];
+      if (!ch) continue;
+      const cur = ch.viewers ?? 0;
+      const peak = Math.max(peakViewers[platform] ?? 0, cur);
+      if (peak > 0) {
+        peakViewers[platform] = peak;
+        ch.peakViewers = peak;
+      }
+    }
     state.social = social;
     render();
     const day = localDateString();
@@ -865,6 +910,9 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         if (active === live) return;
         live = active;
         state.streaming = active;
+        // A fresh live session starts/ends here — reset the per-session viewer
+        // high-water mark so peakViewers tracks THIS stream, not the last one.
+        peakViewers = {};
         void appendEvent({ type: active ? "live_started" : "live_ended" });
         render();
       },
@@ -999,10 +1047,11 @@ function runDemoLoop(
   state.stats.streak = 6;
   state.streaming = true;
   state.social = {
-    twitch: { live: true, followers: 1240, viewers: 87, url: "https://twitch.tv/yourchannel" },
+    twitch: { live: true, followers: 1240, viewers: 87, peakViewers: 134, url: "https://twitch.tv/yourchannel" },
     youtube: { live: false, followers: 3210, views: 142_000, url: "https://youtube.com/@yourchannel" },
     updatedAt: new Date().toISOString(),
   };
+  state.record = { kind: "best-day", label: "NEW PERSONAL BEST — best day yet" };
   session.features = 1;
   session.bugs = 0;
   session.subAgents = 1;

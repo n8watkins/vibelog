@@ -41,6 +41,34 @@ export function summarizeRange(events: VibeEvent[], days: number, end = new Date
   return out;
 }
 
+/**
+ * All-time bests from the event log, PURE. Computed over a wide window of days
+ * (default ~371, matching the heatmap range) so the agent can tell whether
+ * "today" beats any prior day. Every value is a plain number — no titles, paths
+ * or any user text leak out, so the caller can derive a public-safe badge from
+ * these. Safe on empty input (all zeros, null `bestDay`).
+ */
+export type Records = {
+  /** Highest single-day vibe score ever seen, and the date it happened. */
+  bestDayScore: number;
+  bestDayDate: string | null;
+  /** Longest run of consecutive active days (vibe score > 0). */
+  longestStreak: number;
+};
+
+export function records(events: VibeEvent[], days = 371, end = new Date()): Records {
+  const stats = summarizeRange(events, days, end);
+  let bestDayScore = 0;
+  let bestDayDate: string | null = null;
+  for (const s of stats) {
+    if (s.score > bestDayScore) {
+      bestDayScore = s.score;
+      bestDayDate = s.date;
+    }
+  }
+  return { bestDayScore, bestDayDate, longestStreak: longestStreak(stats) };
+}
+
 /** Map a score to a 0–4 intensity level, relative to the range's busiest day. */
 function levelFor(score: number, max: number): number {
   if (score <= 0) return 0;

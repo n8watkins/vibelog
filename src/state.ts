@@ -60,6 +60,8 @@ export type SocialChannel = {
   followers?: number;
   views?: number;
   viewers?: number;
+  /** Highest concurrent viewer count seen this live session (high-water mark). */
+  peakViewers?: number;
   url?: string;
 };
 
@@ -84,6 +86,13 @@ export type LiveState = {
   stats: LiveStats;
   /** Live status + follower/sub counts (Twitch/YouTube), or null if unconfigured. */
   social: SocialState | null;
+  /**
+   * A derived "personal best" flag, set when today beats an all-time record
+   * (best single-day vibe score or longest shipping streak). PUBLIC-NUMERIC:
+   * both fields are SHORT, fixed/derived strings — never raw user text — so they
+   * are safe to paint onto the overlay/snapshot. Absent when no record is set.
+   */
+  record: { kind: string; label: string } | null;
   branch: string | null;
   startedAt: string | null;
   updatedAt: string;
@@ -120,6 +129,7 @@ export function emptyState(): LiveState {
     buildLog: [],
     stats: emptyStats(),
     social: null,
+    record: null,
     branch: null,
     startedAt: null,
     updatedAt: new Date().toISOString(),

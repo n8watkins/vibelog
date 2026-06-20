@@ -160,6 +160,24 @@
       .cam .tag.off { color: rgba(169, 159, 206, 0.6); }
       .cam .tag.off .rec { background: var(--muted); box-shadow: none; animation: none; }
 
+      /* personal-best badge — pinned to the camera frame so it reads as a
+         "now" celebration. Label is a short, server-derived string (never raw
+         user text); textContent only in JS. */
+      .pb {
+        position: absolute; left: 13px; bottom: 12px; z-index: 2;
+        display: none; align-items: center; gap: 7px;
+        max-width: calc(100% - 26px); padding: 6px 11px; border-radius: 999px;
+        background: linear-gradient(120deg, rgba(255, 92, 240, 0.22), rgba(160, 107, 255, 0.18));
+        border: 1px solid var(--pink); box-shadow: 0 0 16px rgba(255, 92, 240, 0.45);
+        font-family: var(--font); font-size: 11px; font-weight: 800;
+        letter-spacing: 0.04em; text-transform: uppercase; color: var(--text);
+        text-shadow: 0 0 10px rgba(255, 92, 240, 0.5);
+      }
+      .pb.show { display: inline-flex; }
+      .pb svg { width: 13px; height: 13px; flex: none; fill: currentColor; color: var(--pink); filter: drop-shadow(0 0 5px rgba(255, 92, 240, 0.7)); }
+      .pb .pbtxt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .socials .so .peak { color: var(--pink); font-weight: 700; }
+
       .timer { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: auto; }
 
       /* ---- milestone toasts ------------------------------------------------ */
@@ -205,7 +223,7 @@
   <body>
     <div id="toasts" aria-live="polite"></div>
     <div id="hud">
-      <div class="cam"><span class="tag" id="camtag"><span class="rec"></span> <span id="camtagtext">live</span></span><span class="ph"></span></div>
+      <div class="cam"><span class="tag" id="camtag"><span class="rec"></span> <span id="camtagtext">live</span></span><span class="ph"></span><span class="pb" id="pb"><svg viewBox="0 0 24 24"><path d="M5 4h14v2a4 4 0 0 1-3 3.9V12a4 4 0 0 1-3 3.9V18h3v2H8v-2h3v-2.1A4 4 0 0 1 8 12V9.9A4 4 0 0 1 5 6V4Z"/></svg><span class="pbtxt" id="pbtxt"></span></span></div>
 
       <div class="card projects">
         <div class="label"><svg class="hic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3 3 7.5 12 12l9-4.5L12 3Z"/><path d="M3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5"/></svg> Projects</div>
@@ -304,10 +322,24 @@
         camtag.classList.toggle("off", !d.streaming);
         $("camtagtext").textContent = d.streaming ? "live" : "off air";
 
-        // social strip — live dot + follower/sub counts
+        // personal-best badge — short server-derived label only (textContent,
+        // never innerHTML). Hidden unless the agent set d.record this session.
+        const pbEl = $("pb");
+        if (d.record && d.record.label) {
+          $("pbtxt").textContent = d.record.label;
+          pbEl.classList.add("show");
+        } else {
+          pbEl.classList.remove("show");
+        }
+
+        // social strip — live dot + follower/sub counts; show the per-session
+        // peak-viewer high-water mark on a live channel when it's above 0.
         const soc = d.social, socEl = $("socials");
-        const so = (cls, svg, ch) =>
-          ch ? `<span class="so ${cls}">${svg}${ch.live ? '<span class="ldot"></span>' : ""}<b>${fmt(ch.followers ?? 0)}</b></span>` : "";
+        const so = (cls, svg, ch) => {
+          if (!ch) return "";
+          const peak = ch.live && ch.peakViewers ? ` <span class="peak" title="peak viewers">▲${fmt(ch.peakViewers)}</span>` : "";
+          return `<span class="so ${cls}">${svg}${ch.live ? '<span class="ldot"></span>' : ""}<b>${fmt(ch.followers ?? 0)}</b>${peak}</span>`;
+        };
         if (soc && (soc.twitch || soc.youtube)) {
           socEl.innerHTML = so("tw", TW_SVG, soc.twitch) + so("yt", YT_SVG, soc.youtube);
           socEl.style.display = "flex";
@@ -434,6 +466,14 @@
         // streak increased
         const pStreak = ps.streak ?? 0, nStreak = ns.streak ?? 0;
         if (nStreak > pStreak) enqueueToast("🔥", nStreak + "-day streak", "on fire");
+
+        // a NEW personal best — fire when the record flag appears or its kind
+        // changes (so beating best-day then later best-streak both celebrate).
+        // The label is a short server-derived string, never raw user text.
+        const pRec = p.record, nRec = n.record;
+        if (nRec && nRec.label && (!pRec || pRec.kind !== nRec.kind)) {
+          enqueueToast("🏆", nRec.label, "personal best");
+        }
 
         // big token threshold crossed (every 100k tokens)
         const STEP = 100000;

@@ -112,6 +112,11 @@
       .chan .figs b { color: var(--text); font-size: 14px; }
       .chan .up { color: var(--add); } .chan .empty { color: var(--muted); font-size: 13px; line-height: 1.5; }
       .chan .empty code { color: #c9aaff; font-family: var(--mono); font-size: 11px; }
+      /* follower-growth sparkline — a tiny inline polyline of the daily series */
+      .chan .spark { width: 100%; height: 30px; margin-top: 8px; overflow: visible; display: block; }
+      .chan .spark polyline { fill: none; stroke: var(--accent2); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px rgba(34, 211, 166, 0.5)); }
+      .chan .spark .fillarea { fill: rgba(34, 211, 166, 0.10); stroke: none; }
+      .chan .spark .dot { fill: var(--accent2); filter: drop-shadow(0 0 4px rgba(34, 211, 166, 0.7)); }
 
       .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 18px; }
       @media (max-width: 620px) { .stats { grid-template-columns: repeat(2, 1fr); } }
@@ -585,6 +590,33 @@
       const NMS = { twitch: "Twitch", youtube: "YouTube" };
       const compact = (n) => n >= 1e6 ? (n/1e6).toFixed(1)+"M" : n >= 1e4 ? (n/1e3).toFixed(0)+"k" : n.toLocaleString();
 
+      // Follower-growth sparkline: an inline SVG polyline of a {date,followers}[]
+      // series. Numbers only (no labels/text), so it's safe + tiny. Needs >=2
+      // points to draw a line; returns "" otherwise so the panel stays clean.
+      function sparkline(series) {
+        if (!Array.isArray(series) || series.length < 2) return "";
+        const W = 200, H = 30, P = 2; // viewBox units; CSS scales width to 100%
+        const ys = series.map((s) => s.followers);
+        const lo = Math.min(...ys), hi = Math.max(...ys);
+        const span = hi - lo || 1;
+        const n = series.length;
+        const pts = series.map((s, i) => {
+          const x = n === 1 ? W / 2 : P + (i / (n - 1)) * (W - 2 * P);
+          const y = H - P - ((s.followers - lo) / span) * (H - 2 * P);
+          return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+        });
+        const line = pts.map((p) => p.join(",")).join(" ");
+        const area = `${P},${H} ${line} ${W - P},${H}`;
+        const last = pts[pts.length - 1];
+        return (
+          `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">` +
+          `<polyline class="fillarea" points="${area}"/>` +
+          `<polyline points="${line}"/>` +
+          `<circle class="dot" cx="${last[0]}" cy="${last[1]}" r="2.2"/>` +
+          `</svg>`
+        );
+      }
+
       // Channel panel: live status + follower/sub counts + weekly growth.
       function renderSocial(social, growth) {
         const el = $("social");
@@ -600,14 +632,16 @@
           const foll = ch.followers ?? g.followers;
           const delta = g.deltaWeek || 0;
           const label = p === "youtube" ? "subs" : "followers";
+          const peak = ch.live && ch.peakViewers != null ? ` · peak ${compact(ch.peakViewers)}` : "";
           const row = document.createElement("div"); row.className = "c";
           row.innerHTML =
             `<span class="badge ${p === "twitch" ? "tw" : "yt"}">${SOCIAL_SVG[p]}</span>` +
             `<div class="meta">` +
-              `<div class="nm">${NMS[p]} ${ch.live ? `<span class="livetag">LIVE${ch.viewers != null ? " · " + compact(ch.viewers) : ""}</span>` : '<span class="off">offline</span>'}</div>` +
+              `<div class="nm">${NMS[p]} ${ch.live ? `<span class="livetag">LIVE${ch.viewers != null ? " · " + compact(ch.viewers) + peak : ""}</span>` : '<span class="off">offline</span>'}</div>` +
               `<div class="figs">${foll != null ? `<b>${compact(foll)}</b> ${label}` : "—"}` +
                 `${delta ? ` <span class="up">+${compact(delta)}/wk</span>` : ""}` +
                 `${ch.views != null ? ` · ${compact(ch.views)} views` : ""}</div>` +
+              sparkline(g.series) +
             `</div>`;
           wrap.append(row);
         }
