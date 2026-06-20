@@ -12,6 +12,7 @@ import { getTokensByProject, labelProjects } from "./claude-projects.ts";
 import { localDateString } from "./ccusage.ts";
 import { formatReport, formatWeekly, readEvents, summarizeDay, summarizeWeek } from "./report.ts";
 import { formatChart, summarizeRange } from "./chart.ts";
+import { recapSummary } from "./summarize.ts";
 import { readConfig, readSession, readState, writeConfig, writeSession, appendEvent } from "./store.ts";
 import { runAgent } from "./agent.ts";
 import { loginCommand as twitchLogin } from "./twitch-oauth.ts";
@@ -291,7 +292,8 @@ twitch
 program
   .command("report [day]")
   .description("Recap from your local log (day: today|yesterday|week|YYYY-MM-DD)")
-  .action(async (day?: string) => {
+  .option("--ai", "add a 1-2 sentence AI narrative recap (local LLM → Gemini → template)")
+  .action(async (day: string | undefined, opts: { ai?: boolean }) => {
     if (day === "week") {
       console.log("\n" + formatWeekly(summarizeWeek(await readEvents(), localDateString())) + "\n");
       return;
@@ -320,7 +322,16 @@ program
     const stats = sameDay ? state.stats : null;
     const project = sameDay ? (state.project?.name ?? session?.project?.name ?? null) : null;
 
-    console.log("\n" + formatReport(summary, stats, project) + "\n");
+    const reportText = formatReport(summary, stats, project);
+    console.log("\n" + reportText + "\n");
+
+    if (opts.ai) {
+      // Narrative goes to the TERMINAL only and is built from day STATS, not raw
+      // prompts. Uses the same provider chain as the overlay summarizer; the
+      // local path is loopback-only and only err.message is ever logged.
+      const recap = await recapSummary(reportText);
+      console.log(`✨ Recap: ${recap.text}\n`);
+    }
   });
 
 program

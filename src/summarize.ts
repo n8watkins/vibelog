@@ -28,6 +28,11 @@ const SYSTEM_INSTRUCTION =
   "paths, no secrets. Example input: 'can you add discord oauth to the login " +
   "page' -> 'Adding Discord OAuth to login'.";
 
+export const RECAP_SYSTEM_INSTRUCTION =
+  "Summarize this developer's day into 1-2 upbeat present/past-tense sentences " +
+  "for a devlog. No secrets, no file paths, no code. Reply with ONLY the recap " +
+  "sentences — no preamble, no markdown, no bullet points.";
+
 /** Strip a model reply down to a clean label: no quotes, no trailing punctuation, capped. */
 export function sanitizeLabel(raw: string): string {
   let s = raw.replace(/[`"']/g, "").replace(/\s+/g, " ").trim();
@@ -58,7 +63,13 @@ export function templateSummary(prompt: string): string {
   return label || "Vibe coding";
 }
 
-async function callGemini(prompt: string, key: string, model: string): Promise<string> {
+async function callGemini(
+  prompt: string,
+  key: string,
+  model: string,
+  system: string = SYSTEM_INSTRUCTION,
+  maxOutputTokens = 32,
+): Promise<string> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
@@ -68,9 +79,9 @@ async function callGemini(prompt: string, key: string, model: string): Promise<s
         method: "POST",
         headers: { "content-type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+          systemInstruction: { parts: [{ text: system }] },
           contents: [{ parts: [{ text: prompt.slice(0, 4000) }] }],
-          generationConfig: { maxOutputTokens: 32, temperature: 0.4 },
+          generationConfig: { maxOutputTokens, temperature: 0.4 },
         }),
         signal: ctrl.signal,
       },
@@ -94,6 +105,8 @@ export async function callOpenAICompatible(
   prompt: string,
   baseUrl: string,
   model: string,
+  system: string = SYSTEM_INSTRUCTION,
+  maxTokens = 32,
 ): Promise<string> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
@@ -104,10 +117,10 @@ export async function callOpenAICompatible(
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: SYSTEM_INSTRUCTION },
+          { role: "system", content: system },
           { role: "user", content: prompt.slice(0, 4000) },
         ],
-        max_tokens: 32,
+        max_tokens: maxTokens,
         temperature: 0.4,
       }),
       signal: ctrl.signal,
@@ -170,9 +183,27 @@ export async function detectLocalLLM(): Promise<LocalLLMInfo | null> {
 
 export type Summary = { text: string; source: "gemini" | "local" | "template" };
 
-/** Best-effort feature label for a prompt. Never throws. */
-export async function summarize(prompt: string): Promise<Summary> {
-  const fallback = templateSummary(prompt);
+/**
+ * Options for runProvider(): the system instruction sent to the model, the
+ * deterministic local fallback text, how to clean a raw model reply, and the
+ * model's max-output-token budget (labels are tiny; recaps need more room).
+ */
+type ProviderOpts = {
+  system: string;
+  fallback: string;
+  postprocess: (raw: string) => string;
+  maxTokens: number;
+};
+
+/**
+ * Shared provider chain used by both summarize() (feature labels) and
+ * recapSummary() (day narratives). Picks local (loopback-only) → gemini →
+ * template exactly as the summarizer always has, honouring the
+ * settings.json `summarizer.provider` override. Never throws; logs only
+ * err.message (never the prompt, key, headers, or model reply).
+ */
+async function runProvider(userText: string, opts: ProviderOpts): Promise<Summary> {
+  const { system, fallback, postprocess, maxTokens } = opts;
 
   // Read non-secret config from settings.json
   const settings = await readSettings();
@@ -197,7 +228,9 @@ export async function summarize(prompt: string): Promise<Summary> {
     }
     if (info) {
       try {
-        const out = sanitizeLabel(await callOpenAICompatible(prompt, info.baseUrl, info.model));
+        const out = postprocess(
+          await callOpenAICompatible(userText, info.baseUrl, info.model, system, maxTokens),
+        );
         return out ? { text: out, source: "local" } : { text: fallback, source: "template" };
       } catch (err) {
         console.error("[vibelog] summarizer fell back to template:", (err as Error).message);
@@ -211,8 +244,8 @@ export async function summarize(prompt: string): Promise<Summary> {
     const { geminiApiKey, geminiModel } = await readSecrets();
     if (!geminiApiKey) return { text: fallback, source: "template" };
     try {
-      const out = sanitizeLabel(
-        await callGemini(prompt, geminiApiKey, geminiModel || DEFAULT_GEMINI_MODEL),
+      const out = postprocess(
+        await callGemini(userText, geminiApiKey, geminiModel || DEFAULT_GEMINI_MODEL, system, maxTokens),
       );
       return out ? { text: out, source: "gemini" } : { text: fallback, source: "template" };
     } catch (err) {
@@ -225,8 +258,8 @@ export async function summarize(prompt: string): Promise<Summary> {
   const localInfo = await detectLocalLLM();
   if (localInfo) {
     try {
-      const out = sanitizeLabel(
-        await callOpenAICompatible(prompt, localInfo.baseUrl, localInfo.model),
+      const out = postprocess(
+        await callOpenAICompatible(userText, localInfo.baseUrl, localInfo.model, system, maxTokens),
       );
       return out ? { text: out, source: "local" } : { text: fallback, source: "template" };
     } catch (err) {
@@ -238,8 +271,8 @@ export async function summarize(prompt: string): Promise<Summary> {
   const { geminiApiKey, geminiModel } = await readSecrets();
   if (geminiApiKey) {
     try {
-      const out = sanitizeLabel(
-        await callGemini(prompt, geminiApiKey, geminiModel || DEFAULT_GEMINI_MODEL),
+      const out = postprocess(
+        await callGemini(userText, geminiApiKey, geminiModel || DEFAULT_GEMINI_MODEL, system, maxTokens),
       );
       return out ? { text: out, source: "gemini" } : { text: fallback, source: "template" };
     } catch (err) {
@@ -248,4 +281,53 @@ export async function summarize(prompt: string): Promise<Summary> {
   }
 
   return { text: fallback, source: "template" };
+}
+
+/** Best-effort feature label for a prompt. Never throws. */
+export async function summarize(prompt: string): Promise<Summary> {
+  return runProvider(prompt, {
+    system: SYSTEM_INSTRUCTION,
+    fallback: templateSummary(prompt),
+    postprocess: sanitizeLabel,
+    maxTokens: 32,
+  });
+}
+
+/** Cap a recap reply: strip wrapping quotes/markdown, collapse whitespace, 2-line cap. */
+export function sanitizeRecap(raw: string): string {
+  let s = raw
+    .replace(/```[\s\S]*?```/g, " ") // drop any code fences a model adds
+    .replace(/[`*_#>]/g, "") // strip markdown emphasis/heading markers
+    .replace(/\s+/g, " ")
+    .trim();
+  s = s.replace(/^["']+|["']+$/g, "").trim(); // unwrap surrounding quotes
+  return s.slice(0, 280);
+}
+
+/**
+ * Deterministic, network-free recap fallback derived from the day's report
+ * text. Pulls the headline counts line (e.g. "✨ 2 features · 🐛 1 fix …") so
+ * the recap is still informative offline. Pure & unit-testable.
+ */
+export function templateRecap(reportText: string): string {
+  const lines = reportText.split("\n").map((l) => l.trim()).filter(Boolean);
+  // The headline counts line is the one carrying the feature/fix tally.
+  const counts = lines.find((l) => l.includes("feature") && l.includes("·")) ?? "";
+  const tail = counts ? ` ${counts.replace(/\s+/g, " ")}.` : "";
+  return `Shipped some focused work today.${tail}`.slice(0, 280);
+}
+
+/**
+ * Turn a day's report text into a 1-2 sentence devlog narrative using the same
+ * provider chain as summarize() (local loopback → gemini → template). Recap
+ * output goes to the TERMINAL only and summarizes day STATS, never raw prompts.
+ * Never throws.
+ */
+export async function recapSummary(reportText: string): Promise<Summary> {
+  return runProvider(reportText, {
+    system: RECAP_SYSTEM_INSTRUCTION,
+    fallback: templateRecap(reportText),
+    postprocess: sanitizeRecap,
+    maxTokens: 120,
+  });
 }
