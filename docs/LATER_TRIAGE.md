@@ -86,8 +86,9 @@ loosen the global `isRemote()` gate or add a write path. No new tokens, no new p
 layout variants and lean on a stable URL.
 
 **Verdict.** **MAYBE / CONDITIONAL.** Genuinely cheap and on-ethos, but its value is gated on a
-persistent public URL. Condition = X1 ships (or the user pins a tunnel hostname). Until then most of
-its value is already captured by `/share` + the OG card.
+persistent public URL. Condition (a persistent public URL) is now MET — the Worker is live at
+https://vibelog-live.nathancwatkins23.workers.dev — so G4 is unblocked on that axis (or the user
+pins a tunnel hostname). Until built, most of its value is already captured by `/share` + the OG card.
 
 ---
 
@@ -220,7 +221,13 @@ is what's protecting them).
 
 **Effort.** **S** for the documented-tunnel guide; **M+** if it implies building a hosted node.
 
-**Verdict.** **DO-SOON (the doc), conditional on the rest.** The persistent-tunnel guide is the
+**Update: X1 is DONE — the hosted single-tenant Worker is live (2026-06-12) at
+https://vibelog-live.nathancwatkins23.workers.dev; see `docs/DEPLOY_RUNBOOK.md`.** The deploy went the
+hosted-Worker route (Cloudflare Worker + KV serving the public snapshot), not just the documented
+tunnel — so the "real hosting" interpretation actually shipped, single-tenant. The only remaining
+step is the cosmetic custom domain (`vibelog.n8builds.dev`), which is unblocked and codeless.
+
+**Verdict (original).** **DO-SOON (the doc), conditional on the rest.** The persistent-tunnel guide is the
 single cheapest, most on-ethos, fully-unblocked item in the bucket and it unlocks G4. Write that;
 defer the "real hosting" interpretation to the X4 decision.
 
@@ -303,9 +310,11 @@ reintroduce. No further action — not re-litigated here.
 
 ## Prioritized ranking (best → worst)
 
-1. **X1 deploy guide — DO-SOON.** Cheapest, fully unblocked, purely on-ethos (the "optionally
-   deployed" pillar), doc-only in its MVP, and it unlocks G4. The §3.5/§5 discrepancy resolves in
-   its favor: the *guide* is [NEXT].
+1. **X1 deploy — DONE.** Shipped the hosted-Worker route, not just the documented tunnel: a
+   single-tenant Cloudflare Worker + KV serving the public snapshot is live (2026-06-12) at
+   https://vibelog-live.nathancwatkins23.workers.dev, with a runbook at `docs/DEPLOY_RUNBOOK.md`. This
+   unblocks G4's persistent-embed story. (Originally ranked #1 as the cheapest, fully-unblocked,
+   on-ethos doc-only item; it has now shipped beyond the doc-only MVP.)
 2. **X3 VibeLog MCP — DO-SOON / strong MAYBE.** Its stated prereq (settings API) already shipped;
    local-to-local, zero new public surface, and the most "this user will actually use it" item.
 3. **D2 Discord notifications — MAYBE/CONDITIONAL.** Outbound-only via a user webhook; no bot, no new

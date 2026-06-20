@@ -1,16 +1,17 @@
 # VibeLog — V1 MVP Build Plan (Phase 1, executable)
 
-`docs/MVP_PLAN.md` — status: **PR1–PR3 BUILT + merged to master (deploy on hold)** · created 2026-06-11
+`docs/MVP_PLAN.md` — status: **PR1–PR4-pending — MVP DEPLOYED & LIVE 2026-06-12** (PR1-PR3 merged + pushed; only the optional custom domain remains) · created 2026-06-11
 · See `docs/HANDOFF.md §5` for the current build state + the deploy runbook.
 
 > The detailed, build-ready plan for the **V1 MVP**. Strategy/why lives in `VISION.md §6`; phasing +
 > economics in `PLATFORM_PLAN.md`. This is the executable spec a builder follows for Phase 1.
-> **No code written yet.** Decisions below use recommended defaults; Nathan can override the ones in §6.
+> **PR1-PR3 are built and the MVP is deployed live (2026-06-12).** Decisions below use recommended defaults; Nathan can override the ones in §6.
 
 ## 1. Definition of done
 
 **"Nathan's VibeLog, live on a public URL, 24/7, for $0."** A visitor loads the URL (free
-`*.workers.dev` first, `vibelog.n8builds.dev` later) and sees Nathan's `/live` page — current stats,
+`*.workers.dev` — now LIVE at vibelog-live.nathancwatkins23.workers.dev; `vibelog.n8builds.dev` later)
+and sees Nathan's `/live` page — current stats,
 calendar, profile, theme — **even when his laptop is off**, served from the last published snapshot.
 Single-tenant. No accounts, billing, multi-tenancy, or embed (those are Phase 2+).
 
@@ -98,11 +99,13 @@ LOCAL agent (existing)                         CLOUD (new, thin)              VI
 
 ## 6. Decisions to confirm (defaults chosen — override if you want)
 
+> Decisions 1-4 are now **confirmed and shipped** in PR1-PR3 (deployed live 2026-06-12).
+
 1. **Summarizer default = `"auto"`** (local-if-running → Gemini-if-key → template). Matches "be flexible." ✅ recommend
 2. **Storage = Cloudflare KV**, single key for MVP. ✅ recommend
 3. **Cadence (MVP, hardcoded):** ~300 s live / ~900 s idle, write-on-change. ✅ recommend
 4. **Subdomain label** (last step only): `vibelog.` / `live.` / `building.`? — Nathan's call.
-5. **Do you already own `n8builds.dev`?** (Only affects when ④ can happen; nothing before it.)
+5. ~~**Do you already own `n8builds.dev`?**~~ ✅ Yes — registered; the only gate left for ④ is adding the zone to Cloudflare.
 
 ## 7. Explicitly NOT in V1 MVP (Phase 2+)
 

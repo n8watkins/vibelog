@@ -1,5 +1,11 @@
 # VibeLog Worker — Deploy Guide
 
+> **DEPLOYED & VERIFIED 2026-06-12.** Live at https://vibelog-live.nathancwatkins23.workers.dev
+> (account `nathancwatkins23`). KV namespaces created and wired into `wrangler.toml`;
+> `PUBLISH_TOKEN` set as a Wrangler secret. Steps 1-5 are done — only the cosmetic
+> custom-domain step (`vibelog.n8builds.dev`) remains. The "First-time setup" steps below
+> are kept as the reference re-deploy procedure.
+
 This directory contains a Cloudflare Worker that stores the published snapshot
 in KV and serves the public `/live` page 24/7, independent of the local
 VibeLog agent.
@@ -13,8 +19,11 @@ Local agent (src/agent.ts)
                   { state, profile, theme }           ↓ stored in KV
 
 Browser / OBS
-  GET /             →  live.html (static assets)
+  GET /             →  landing.html (marketing front door, static assets)
   GET /live         →  live.html (static assets)
+  GET /embed        →  embed.html (G4 widget, static assets)
+  GET /embed.js     →  loader script
+  GET /shots/*.png  →  product screenshots (static assets)
   GET /state.json   →  { ...LiveState }   (KV snapshot.state)
   GET /api/profile.json  →  { profile }  (KV snapshot.profile)
   GET /api/theme.json    →  { vars }     (KV snapshot.theme)
@@ -101,8 +110,9 @@ wrangler secret put PUBLISH_TOKEN
 
 Enter the secret when prompted. This is the token the local agent will send
 as `Authorization: Bearer <token>` on `POST /publish`. Store the same value
-in `~/.vibelog/secrets.json` under a key your publish code reads (e.g.
-`workerPublishToken`).
+in `~/.vibelog/secrets.json` as `publish.token` (alongside `publish.url`, the
+full `POST /publish` endpoint) — this is already wired: the agent reads
+`secrets.publish` and POSTs to `secrets.publish.url` (see `src/agent.ts`).
 
 **Never commit the token or print it to the terminal.**
 
@@ -164,6 +174,10 @@ Or from inside `worker/` after `npm install`:
 ```bash
 npm test
 ```
+
+Note: `npm test` runs the full 38-test suite — the `test` script globs
+`src/*.test.ts`, covering both `worker.test.ts` (27 tests) and
+`roundtrip.test.ts` (11 tests).
 
 Tests cover:
 - `timingSafeEqualStr` — equal/not-equal/different-length/unicode

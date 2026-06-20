@@ -4,7 +4,10 @@
 
 > This is the *how* for the direction set in **`VISION.md §6`** (the *what/why*). It splits the work
 > into two tracks that share one architecture, and includes the hosting **unit economics**. For the
-> local-agent infra invariants this builds on, see **`INFRA_PLAN.md`**. **Nothing here is built yet.**
+> local-agent infra invariants this builds on, see **`INFRA_PLAN.md`**. **Track A1 / the V1 MVP is now
+> BUILT and LIVE** (publisher + Cloudflare Worker + KV, deployed & verified 2026-06-12 at
+> https://vibelog-live.nathancwatkins23.workers.dev). Only the custom-domain step (§7.4.2) remains.
+> Track B (the multi-tenant product) is still unbuilt.
 
 ---
 
@@ -44,7 +47,8 @@ LOCAL agent (vibe start)                    CLOUD (thin)                  VISITO
    your laptop off. Live Twitch/YouTube embeds load *directly from those platforms* (cost you $0).
 9. **The visitor sees your stats** — no login, on your domain, with the 🔒 (auto-SSL).
 
-Steps 1–5 exist today. Track A1 is **only** steps 6–8 (publisher + thin Worker + CNAME). Track B
+Steps 1–8 now exist and are LIVE on the Worker (https://vibelog-live.nathancwatkins23.workers.dev).
+The only outstanding piece is swapping the workers.dev URL for the custom domain (CNAME). Track B
 later makes steps 7–8 multi-tenant (keyed by `@handle`) and adds accounts/billing/embeds.
 
 ---
@@ -56,7 +60,7 @@ later makes steps 7–8 multi-tenant (keyed by `@handle`) and adds accounts/bill
 | Tenants | 1 (you) | many |
 | Goal | `vibelog.n8builds.dev` is up 24/7 | anyone signs up + gets their own |
 | Auth | one publish token | login + `@handle` + per-user tokens |
-| Buildable | **now** (small, self-contained) | [LATER] — the platform |
+| Buildable | **DONE — live on the Worker** (custom domain pending) | [LATER] — the platform |
 
 **Track A is Track B with one user and the multi-tenant parts stubbed out.** Build A first: it ships
 something real for you *and* de-risks the whole product. Then B is mostly "make A multi-tenant."
@@ -67,24 +71,28 @@ something real for you *and* de-risks the whole product. Then B is mostly "make 
 
 Two ways, pick by how much you care about "up when my laptop's off":
 
-### A0 — zero code, NOT 24/7 (what exists today)
-Run `vibe share` (the Cloudflare tunnel) and point `vibelog.n8builds.dev` at the tunnel hostname.
-Works right now, no new code — **but the page is down whenever your machine is off or not running.**
-Fine for "show it live during a stream," not for an always-on portfolio piece.
-
-### A1 — the real "always-on" version (small build)
-1. **Local: add a publisher to the agent.** A small module that builds the snapshot (reuse
+### A1 — the always-on version (BUILT — live on the Worker)
+1. **Local: add a publisher to the agent.** *(DONE)* A small module that builds the snapshot (reuse
    `buildShareData` in `src/share.ts`) and `POST`s it to a configured endpoint with a token, on
    state-change + a slow interval. Config lives in `~/.vibelog/secrets.json` as
    `publish: { url, token }` (the token is a secret → secrets.json, never logged, never in state).
    This route is **outbound only** — it adds no inbound route to the local agent, so `isRemote()`
    and `PUBLIC_GET_ROUTES` are untouched.
-2. **Cloud: a thin snapshot service.** Cloudflare Worker + KV (recommended) or a tiny VPS:
+2. **Cloud: a thin snapshot service.** *(DONE — deployed Cloudflare Worker + KV)*:
    - `POST /publish` — token-authed → store the snapshot (one key, since it's just you).
    - `GET /` (and `/live`, `/state.json`) — render the public page from the stored snapshot,
      reusing the existing `public/live.html` + the `/state.json` contract. No accounts, no DB.
 3. **Domain + SSL.** Add a CNAME `vibelog.n8builds.dev → <the service>`; SSL auto-provisions
    (Cloudflare/Vercel). Done — your VibeLog is live on your brand, 24/7.
+
+**Steps 1-2 are DONE and live on the Worker** (https://vibelog-live.nathancwatkins23.workers.dev);
+only step 3 (CNAME `vibelog.n8builds.dev` → the Worker) remains — unblocked now that `n8builds.dev`
+is registered.
+
+### A0 — zero code, NOT 24/7 (legacy fallback)
+Run `vibe share` (the Cloudflare tunnel) and point `vibelog.n8builds.dev` at the tunnel hostname.
+No new code — **but the page is down whenever your machine is off or not running.** Fine for "show
+it live during a stream," not for an always-on portfolio piece (A1 above is the shipped always-on path).
 
 **"Super access"** here is just the publish token: only your agent can overwrite your stats. Viewing
 is public and needs nothing. **Cost for just you: $0/mo** — see §5's "$0 single-user path."
@@ -200,13 +208,12 @@ frequency and you control the bill.
 
 ## 6. What I need from you
 
-**To do Track A now (your VibeLog, 24/7, on `vibelog.n8builds.dev`):**
-1. **Go-ahead** on A1 (the always-on build) vs. A0 (zero-code tunnel, not 24/7).
-2. **A Cloudflare account** (free) — recommended host (zero egress + does custom-domain SSL for you).
-3. **DNS access for `n8builds.dev`** at your registrar — to add the one CNAME (you do this; I can
-   give you the exact record).
-4. Decide the subdomain label (`vibelog.` / `live.` / `building.` — your call, `VISION.md §6.4`).
-5. *(optional)* If you want the AI summary in the cloud snapshot too, decide local-LLM vs Gemini
+**Track A is DONE/live** (go-ahead given; Cloudflare account `nathancwatkins23` exists; the Worker is
+deployed with KV and `PUBLISH_TOKEN` set). The only remaining ask is to bring the (already-registered)
+`n8builds.dev` zone onto Cloudflare and add the one CNAME for the custom domain:
+1. **Bring `n8builds.dev` onto Cloudflare** and add the one CNAME (I can give you the exact record).
+2. Decide the subdomain label (`vibelog.` / `live.` / `building.` — your call, `VISION.md §6.4`).
+3. *(optional)* If you want the AI summary in the cloud snapshot too, decide local-LLM vs Gemini
    (`VISION.md §6.8`) — orthogonal to hosting.
 
 **Later, for Track B (the product):** pick a login provider (Google/GitHub), set Pro pricing, a
@@ -228,19 +235,23 @@ plan when we reach it. Priority order is fixed: **ship the V1 MVP for Nathan fir
 > **The detailed, build-ready spec for this is `docs/MVP_PLAN.md`** (components, PR order, tests,
 > security checklist, decisions). The summary below is just the scope.
 
+**Status: SHIPPED on workers.dev (2026-06-12)** — items 2-3 (publisher + Worker + KV) are live at
+https://vibelog-live.nathancwatkins23.workers.dev; only item 4 (custom domain `vibelog.n8builds.dev`)
+remains.
+
 **V1 MVP scope (and nothing more):**
 1. **Local-LLM summarizer** — provider abstraction (Gemini | local OpenAI-compatible | template),
    with local-LLM flexibility (§7.3).
-2. **Publisher** — build the `buildShareData` snapshot, write-on-change + throttle, token-authed POST.
-3. **Thin Cloudflare Worker + KV** — `POST /publish` (token), `GET /` renders from the stored snapshot
-   (reuse `public/live.html` + the `/state.json` shape). Single key — it's just Nathan.
+2. **Publisher** *(DONE)* — build the `buildShareData` snapshot, write-on-change + throttle, token-authed POST.
+3. **Thin Cloudflare Worker + KV** *(DONE — live)* — `POST /publish` (token), `GET /` renders from the
+   stored snapshot (reuse `public/live.html` + the `/state.json` shape). Single key — it's just Nathan.
 4. **Wire `vibelog.n8builds.dev`** — CNAME + auto-SSL.
 Done = MVP live, $0/mo.
 
 ### 7.2 Phases (each plans-in-detail when reached)
 
 - **Phase 0 — decisions (no code).** Lock §7.3 open decisions so a fresh agent can execute.
-- **Phase 1 — V1 MVP (above).** Track A1 for Nathan. *← build this first.*
+- **Phase 1 — V1 MVP.** Track A1 for Nathan — **DONE / live on the Worker** (custom domain pending). *← next: Phase 2.*
 - **Phase 2 — product V1 (smallest multi-tenant slice).** One shared Worker keyed by `@handle`
   (`GET /u/<handle>`); owner auth (login → claim handle → issue publish token); free
   `<handle>.vibelog.app` subdomain. Now a *second* person can use it.
@@ -266,14 +277,13 @@ Done = MVP live, $0/mo.
 
 ### 7.4 What I need from Nathan to start Phase 1
 
-**No domain is required to build/test.** Every Worker gets a free `*.workers.dev` URL — the whole MVP
-can run 24/7 there at $0, no purchase. A custom domain is only the **last-mile cosmetic step** (swap
-`*.workers.dev` → `vibelog.n8builds.dev` via one CNAME). So:
+**Phase 1 is DONE** — the Worker is live at https://vibelog-live.nathancwatkins23.workers.dev (the
+free `*.workers.dev` URL runs 24/7 at $0). A custom domain is only the **last-mile cosmetic step**
+(swap `*.workers.dev` → `vibelog.n8builds.dev` via one CNAME). Remaining:
 
-1. A **free Cloudflare account** (only hard requirement — needed to deploy the Worker).
-2. *(last step only)* **`n8builds.dev` on Cloudflare** to put it on Nathan's brand. Until then,
-   `workers.dev` works fine.
-3. Confirm the **local-LLM flexibility** approach (§7.3.1) — or let me proceed with the recommendation.
+1. **Bring the (already-registered) `n8builds.dev` zone onto Cloudflare** to add the custom domain.
+   Until then, `workers.dev` works fine.
+2. Confirm the **local-LLM flexibility** approach (§7.3.1) — or let me proceed with the recommendation.
 
 Agent can't do: buy domains, create the Cloudflare account, or run interactive logins
 (`wrangler login`) — those are Nathan's (the agent provides exact commands). **Do NOT buy `vibelog.app`

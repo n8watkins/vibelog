@@ -124,9 +124,10 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 
 ### 3.5 Distribution & extensibility
 
-- **X1 [NEXT] — Deploy guide.** Step-by-step for standing up the hosted snapshot service (Vercel +
-  KV/blob) and pairing the local agent to it, while keeping the overlay local. Clarify what runs
-  where (local **publisher** agent vs. hosted read-only view). Now framed by the §6 platform model.
+- **X1 [DONE] — Deploy guide + live deploy.** The hosted snapshot service is live on a Cloudflare
+  Worker + KV (https://vibelog-live.nathancwatkins23.workers.dev); the local agent publishes to it.
+  See `docs/DEPLOY_RUNBOOK.md`. Clarifies what runs where (local **publisher** agent vs. hosted
+  read-only view). Only the custom-domain swap remains. Now framed by the §6 platform model.
 - **X2 [DONE] — Landing page.** Static marketing page at `GET /landing` (`public/landing.html`),
   reusing the shared neon palette/aurora/travelling-gradient rings. Sticky nav, hero with a mocked
   overlay, 12-card feature grid, three-step setup, the three surfaces, a privacy band, a theming
@@ -175,7 +176,9 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
    (`/share/card.png?kind=stats|join`); see §3.3.
 7. **[LATER] bucket** — Discord, auto-post, embed widget, MCP, hosted accounts — each needs its own
    design pass and an external decision before planning. The platform half (publisher → hosted
-   profile → embed → accounts → custom domains) is now sequenced in **§6.9**.
+   profile → embed → accounts → custom domains) is now sequenced in **§6.9**; its first step
+   (publisher → hosted single-tenant profile) is now DONE and live, with embed/accounts/
+   custom-domains remaining.
 
 ---
 
@@ -183,8 +186,11 @@ Legend: **[NOW]** buildable now, ready to plan/approve · **[NEXT]** needs desig
 
 > Captured from a product/architecture session. This is the **forward direction**; where it refines
 > the older "optionally deploy the whole app to Vercel" framing (§1 pillar 2, X1), **this wins.**
-> **Nothing here is built yet** — it's the target the [LATER] items (X1, X4, G4, G3) now serve, and
-> none of it should be built without an explicit go-ahead. The one near-term, safe piece is §6.8.
+> **The single-tenant publisher slice (Track A1 / the V1 MVP) is now built and LIVE** at
+> https://vibelog-live.nathancwatkins23.workers.dev (deployed & verified 2026-06-12); only the
+> cosmetic custom-domain step (vibelog.n8builds.dev) remains. **The multi-tenant product half
+> (Track B / accounts) is still unbuilt** and should not be built without explicit go-ahead.
+> The one other near-term, safe piece is §6.8.
 > The **implementation plan + hosting cost economics** live in **`docs/PLATFORM_PLAN.md`** (two
 > tracks: A = "VibeLog for me, 24/7 on a custom domain" now; B = the multi-tenant product).
 
@@ -310,8 +316,8 @@ OpenAI-compatible base URL + model. (Decision tracked in `PLATFORM_PLAN.md §7.3
 
 1. **Local LLM summarizer (§6.8)** — small, self-contained, strengthens the free-tier privacy pitch.
    *[ready to build on go-ahead]*
-2. **Snapshot publisher + minimal hosted profile** — agent pushes the snapshot; hosted app serves a
-   read-only `/u/<handle>`. The foundational platform step (the X1 deploy story).
+2. **Snapshot publisher + hosted profile** — DONE for single-tenant (live on the Worker). Remaining:
+   make it multi-tenant (`/u/<handle>`) under Track B.
 3. **Embed widget (G4)** on top of the hosted profile — the viral, free, badge-carrying surface.
 4. **Owner accounts (X4)** — `@handle` claiming + agent pairing (owner auth only).
 5. **Custom domains** — CNAME + auto-SSL; the hero paid upsell.

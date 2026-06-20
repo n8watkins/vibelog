@@ -4,15 +4,18 @@
 (canonical roadmap — see new **§6**, the local-tool→hosted-platform direction) and
 `docs/THEMING.md` (most recently shipped subsystem). For the platform **implementation plan +
 hosting cost economics**, read `docs/PLATFORM_PLAN.md` (two tracks: A = "VibeLog for me on a custom
-domain, 24/7" — buildable now; B = the multi-tenant product). If anything here disagrees with
+domain, 24/7" — BUILT & LIVE (workers.dev; custom domain is the last cosmetic step); B = the
+multi-tenant product). If anything here disagrees with
 `docs/VISION.md`, that file wins.
 
-> **Current state (2026-06-11):** `master @ 3a827aa`, **pushed to `origin/master`** (this session's
-> 20+ commits are live on GitHub). **100 src tests + 33 worker tests pass, typecheck clean.**
-> The whole local product is DONE, and this session **BUILT the V1 MVP code** (PR1–PR3, all merged to
-> master): the provider-flexible summarizer, the snapshot publisher, and the thin Cloudflare Worker+KV.
-> **The deploy is intentionally ON HOLD** (Nathan: "not yet") — no Cloudflare account/login yet, so
-> nothing is live. **The remaining work is the deploy runbook + PR4 custom domain — see §5.** Snapshot
+> **Current state (2026-06-20):** `master @ 475da63`, **pushed to `origin/master`**. **100 src tests
+> pass; 38 worker tests pass (27 in worker.test.ts + 11 in roundtrip.test.ts — the worker `test`
+> script globs both via `src/*.test.ts`), typecheck clean (root + worker).**
+> The whole local product is DONE, and this session **shipped the V1 MVP**: PR1–PR3 plus the live deploy
+> (the provider-flexible summarizer, the snapshot publisher, and the thin Cloudflare Worker+KV).
+> **The deploy is LIVE & VERIFIED (2026-06-12)** at https://vibelog-live.nathancwatkins23.workers.dev
+> (Cloudflare account nathancwatkins23, single-tenant). **The only remaining work is the optional custom
+> domain `vibelog.n8builds.dev` (PR4 / Step 6) — see §5.** Snapshot
 > interface is frozen in `docs/SNAPSHOT_CONTRACT.md`; build spec is `docs/MVP_PLAN.md`.
 
 ---
@@ -128,8 +131,8 @@ download it, set it up in minutes, and stream their public development. See `doc
 
 ## 5. What's NEXT
 
-> **✅ V1 MVP CODE BUILT (2026-06-11) — DEPLOY ON HOLD.** PR1–PR3 are written, reviewed, and merged
-> to `master` (not pushed). What exists now:
+> **✅ V1 MVP SHIPPED (deploy live & verified 2026-06-12).** PR1–PR3 are written, reviewed, merged
+> to `master`, and pushed to `origin/master`. What exists now:
 > - **PR1 — provider-flexible summarizer** (`src/summarize.ts`): `provider:"auto"` (local OpenAI-
 >   compatible → Gemini → template); `detectLocalLLM()` probes Ollama `:11434` / LM Studio `:1234`
 >   (localhost only); non-secret `summarizer:{provider,baseUrl,model}` in settings.json.
@@ -139,7 +142,9 @@ download it, set it up in minutes, and stream their public development. See `doc
 >   untouched. Disabled (no-op) unless `secrets.json.publish.{url,token}` are set.
 > - **PR3 — thin Worker+KV** (`worker/`, self-contained, no root deps): `POST /publish` (constant-time
 >   token compare, 256KB cap) → KV `snapshot:nate`; GETs serve the snapshot back so `public/live.html`
->   runs unchanged; `[assets]` serves `live.html`. **Deploy-ready, NOT deployed.** See `worker/README.md`.
+>   runs unchanged; `[assets]` serves `live.html`. **Deployed & live** at
+>   https://vibelog-live.nathancwatkins23.workers.dev (KV created + committed, PUBLISH_TOKEN set as a
+>   Wrangler secret). See `worker/README.md`.
 > - Snapshot interface frozen in `docs/SNAPSHOT_CONTRACT.md`. Security re-audit (§5 of MVP_PLAN) done:
 >   no new inbound route, token never logged, published JSON = the already-public surface only.
 >
@@ -152,22 +157,25 @@ download it, set it up in minutes, and stream their public development. See `doc
 > **Subdomain DECIDED: `vibelog.n8builds.dev`** (subdomain, not a `/vibelog` path — a path would
 > break the contract's absolute `/state.json` etc. fetches and force a client rewrite).
 >
-> **➡️ REMAINING — the deploy runbook (do when Nathan is ready; he said "not yet"):**
-> 1. Nathan: create a **free Cloudflare account**, then `wrangler login` (interactive — agent can't).
-> 2. `cd worker && npm install` (installs wrangler + `@cloudflare/workers-types`, isolated from root).
-> 3. `wrangler kv namespace create SNAPSHOTS` (+ `--preview`) → paste the returned `id`/`preview_id`
->    into `worker/wrangler.toml` (TODO markers are there).
-> 4. `wrangler secret put PUBLISH_TOKEN` (a strong random, e.g. `openssl rand -hex 32`).
-> 5. `wrangler deploy` → prints the free `*.workers.dev` URL.
-> 6. Put that URL + the same token into `~/.vibelog/secrets.json` `publish:{url,token}` (see
->    `secrets.example.json`), restart `vibe start` → snapshots publish; load the workers.dev URL,
->    stop the agent, reload → page still serves the last snapshot (proves the 24/7 claim, MVP_PLAN §4).
-> 7. **PR4 (custom domain)** — only when Nathan owns `n8builds.dev` (he does NOT yet) and it's on
->    Cloudflare: add the Worker custom domain `vibelog.n8builds.dev` (one route, auto-SSL). No code.
->    **Do NOT buy `vibelog.app`** (Phase 2+).
+> **✅ DEPLOY RUNBOOK DONE 2026-06-12 (steps 1–6 live):**
+> 1. ✅ **Free Cloudflare account** created (account nathancwatkins23), `wrangler login` done.
+> 2. ✅ `cd worker && npm install` (wrangler + `@cloudflare/workers-types`, isolated from root; wrangler bumped to v4).
+> 3. ✅ `wrangler kv namespace create SNAPSHOTS` (+ `--preview`) — ids created & committed in
+>    `worker/wrangler.toml` (prod `ce9484...`, preview `181065...`).
+> 4. ✅ `wrangler secret put PUBLISH_TOKEN` — set as a Wrangler secret on the Worker (also in
+>    `~/.vibelog/secrets.json`, never printed).
+> 5. ✅ `wrangler deploy` → **https://vibelog-live.nathancwatkins23.workers.dev** (landing page now
+>    fronts the Worker at `/`, commit 475da63).
+> 6. ✅ URL + token wired into `~/.vibelog/secrets.json` `publish:{url,token}`; the agent publishes to
+>    the live Worker; load the workers.dev URL, stop the agent, reload → page still serves the last
+>    snapshot (proves the 24/7 claim, MVP_PLAN §4).
+> 7. **➡️ REMAINING — PR4 (custom domain) — UNBLOCKED.** `n8builds.dev` IS registered (the old "does
+>    NOT own it" blocker is cleared); the zone just isn't on Cloudflare yet. Add the Worker custom
+>    domain `vibelog.n8builds.dev` (one route, auto-SSL). No code; last-mile cosmetic — the MVP is
+>    already live without it. **Do NOT buy `vibelog.app`** (Phase 2+).
 >
-> Verification status: unit + handler round-trip tests prove publish→store→serve locally; a true
-> end-to-end (live workers.dev) is pending the deploy above.
+> Verification status: unit + handler round-trip tests pass, and the live end-to-end was verified on
+> the workers.dev URL (2026-06-12).
 >
 > The legacy NOW/NEXT product bucket (below) is all ✅ DONE; remaining optional polish and the
 > [LATER] bucket are subsumed by the platform plan (see `docs/VISION.md §6`, `LATER_TRIAGE.md`).
@@ -233,7 +241,7 @@ MCP, X4 hosted accounts / Google login, Discord D1–D3, G3 Twitter auto-post, G
 
 - **Run demo:** `pnpm vibe demo` (serves seeded data on `:4545`). Real session: `vibe start`.
 - **Typecheck:** `pnpm exec tsc --noEmit`. **Tests:** `node --test --import tsx "src/*.test.ts"`
-  (currently 55 passing). Add tests for pure logic (see `src/theme.test.ts` as the pattern).
+  (currently 100 passing). Add tests for pure logic (see `src/theme.test.ts` as the pattern).
 - **Visual verify (this is a WSL box):** screenshot with Windows Chrome headless →
   `"/mnt/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu
   --virtual-time-budget=2500 --window-size=1320,900 --screenshot="C:\\Users\\natha\\Downloads\\x.png" URL`
