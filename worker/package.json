@@ -5,7 +5,7 @@
   "description": "VibeLog Cloudflare Worker — public snapshot host (PR3/Task C)",
   "type": "module",
   "scripts": {
-    "test": "node --test --import tsx src/worker.test.ts",
+    "test": "node --test --import tsx \"src/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev"
