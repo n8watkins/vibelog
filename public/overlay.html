@@ -161,9 +161,49 @@
       .cam .tag.off .rec { background: var(--muted); box-shadow: none; animation: none; }
 
       .timer { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: auto; }
+
+      /* ---- milestone toasts ------------------------------------------------ */
+      /* Transient celebration cards. Top-right so they never cover the camera or
+         the bottom HUD tiles. One toast shows at a time (queued in JS). */
+      #toasts {
+        position: fixed; top: 20px; right: 20px; z-index: 10;
+        display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+        pointer-events: none;
+      }
+      .toast {
+        display: flex; align-items: center; gap: 11px;
+        max-width: 340px; padding: 12px 16px;
+        background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius);
+        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        box-shadow: var(--glow), 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        color: var(--text); font-family: var(--font);
+        animation: toastin 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      }
+      .toast.out { animation: toastout 0.4s ease forwards; }
+      .toast .tic { font-size: 20px; line-height: 1; flex: 0 0 auto; filter: drop-shadow(0 0 8px rgba(160, 107, 255, 0.5)); }
+      .toast .tbody { display: flex; flex-direction: column; min-width: 0; }
+      .toast .ttitle {
+        font-size: 14px; font-weight: 700; letter-spacing: -0.01em;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        text-shadow: 0 0 14px rgba(160, 107, 255, 0.35);
+      }
+      .toast .tkind {
+        font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;
+        color: var(--accent2); text-shadow: 0 0 9px rgba(34, 211, 166, 0.5); margin-top: 2px;
+      }
+      @keyframes toastin { from { opacity: 0; transform: translateX(28px) scale(0.96); } to { opacity: 1; transform: none; } }
+      @keyframes toastout { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px) scale(0.96); } }
+
+      /* Stream-safe: kill all toast motion for viewers who ask for reduced motion. */
+      @media (prefers-reduced-motion: reduce) {
+        .toast { animation: toastfade 0.2s ease both; }
+        .toast.out { animation: toastfade 0.2s ease reverse forwards; }
+        @keyframes toastfade { from { opacity: 0; } to { opacity: 1; } }
+      }
     </style>
   </head>
   <body>
+    <div id="toasts" aria-live="polite"></div>
     <div id="hud">
       <div class="cam"><span class="tag" id="camtag"><span class="rec"></span> <span id="camtagtext">live</span></span><span class="ph"></span></div>
 
@@ -326,12 +366,92 @@
         $("s-tpm").textContent = mins ? fmt(Math.round((s.claudeTokens ?? 0) / mins)) : "0";
       }
 
+      // ---- milestone moment toasts ----------------------------------------
+      // Purely client-side: diff successive /state.json snapshots and celebrate
+      // milestones. No new server data, no new route. All copy is built from
+      // numbers/flags already present in the (redacted, capped) snapshot.
+      let prev = null;            // previous snapshot, for diffing
+      const toastQueue = [];      // pending toasts, shown one at a time
+      let toastShowing = false;   // is a toast currently on screen?
+
+      function enqueueToast(icon, title, kind) {
+        toastQueue.push({ icon, title, kind });
+        if (!toastShowing) showNextToast();
+      }
+      function showNextToast() {
+        const next = toastQueue.shift();
+        if (!next) { toastShowing = false; return; }
+        toastShowing = true;
+        const el = document.createElement("div");
+        el.className = "toast";
+        el.innerHTML = `<span class="tic"></span><span class="tbody"><span class="ttitle"></span><span class="tkind"></span></span>`;
+        // textContent only — never innerHTML user/snapshot strings (XSS-safe).
+        el.querySelector(".tic").textContent = next.icon;
+        el.querySelector(".ttitle").textContent = next.title;
+        el.querySelector(".tkind").textContent = next.kind;
+        $("toasts").appendChild(el);
+        // Auto-dismiss: hold ~3.6s, then play exit and remove the node (no leak).
+        setTimeout(() => {
+          el.classList.add("out");
+          const done = () => { el.remove(); showNextToast(); };
+          let finished = false;
+          const once = () => { if (finished) return; finished = true; done(); };
+          el.addEventListener("animationend", once, { once: true });
+          // Safety net in case animationend never fires (reduced-motion edge / OBS).
+          setTimeout(once, 600);
+        }, 3600);
+      }
+
+      // Build the milestone list from prev -> next. Only fires when prev exists,
+      // so a fresh page load never bursts a backlog of "milestones".
+      function diffMilestones(p, n) {
+        if (!p) return;                       // first-load guard
+        const ps = p.stats ?? {}, ns = n.stats ?? {};
+
+        // went live / went offline (isLive flipped)
+        if (!p.isLive && n.isLive) enqueueToast("🟢", "Stream is live", "live");
+        else if (p.isLive && !n.isLive) enqueueToast("⚫", "Stream ended", "offline");
+
+        // commits incremented
+        const pc = ps.commits ?? 0, nc = ns.commits ?? 0;
+        if (nc > pc) {
+          const delta = nc - pc;
+          enqueueToast("🚀", delta === 1 ? "Commit pushed" : delta + " commits pushed", nc + " today");
+        }
+
+        // a build-log milestone added (feed grew). buildLog is newest-first.
+        const pLog = Array.isArray(p.buildLog) ? p.buildLog.length : 0;
+        const nLog = Array.isArray(n.buildLog) ? n.buildLog.length : 0;
+        if (nLog > pLog && Array.isArray(n.buildLog) && n.buildLog[0]) {
+          const top = n.buildLog[0];
+          const text = (typeof top === "string" ? top : top.text) ?? "";
+          if (text) enqueueToast("✨", text, "milestone");   // text is already redacted + capped upstream
+        }
+
+        // streak increased
+        const pStreak = ps.streak ?? 0, nStreak = ns.streak ?? 0;
+        if (nStreak > pStreak) enqueueToast("🔥", nStreak + "-day streak", "on fire");
+
+        // big token threshold crossed (every 100k tokens)
+        const STEP = 100000;
+        const pTok = ps.claudeTokens ?? 0, nTok = ns.claudeTokens ?? 0;
+        if (nTok > pTok) {
+          const crossed = Math.floor(nTok / STEP) - Math.floor(pTok / STEP);
+          if (crossed > 0) {
+            const milestone = Math.floor(nTok / STEP) * STEP;
+            enqueueToast("⚡", fmt(milestone) + " tokens", "burned");
+          }
+        }
+      }
+
       async function tick() {
         try {
           const d = await (await fetch("/state.json", { cache: "no-store" })).json();
           state = d;
           const sig = JSON.stringify(d);
           if (sig !== last) { last = sig; paint(d); }
+          diffMilestones(prev, d);
+          prev = d;
         } catch { $("hud").classList.remove("live"); }
       }
       setInterval(tick, 1000);
