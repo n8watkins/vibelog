@@ -335,7 +335,7 @@ program
 
 program
   .command("mcp")
-  .description("Run the read-only VibeLog MCP server (stdio) for Claude Desktop")
+  .description("Run the VibeLog MCP server (stdio) for Claude Desktop — read state + apply themes")
   .action(async () => {
     const { runServer } = await import("./mcp.ts");
     await runServer();
