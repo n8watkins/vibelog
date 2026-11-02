@@ -119,7 +119,7 @@ Revisit if the waitlist shows many sign-ups who want a public page but will neit
 
 All prices are **planned** and may change before launch.
 
-- **Self-host: free**, the whole local product plus self-hosting the public page, forever, open source (license still undecided).
+- **Self-host: free**, the whole local product plus self-hosting the public page, forever, open source under the MIT license.
 - **Hosted by us: $6/month or $60/year (planned)**, with a 14-day free trial.
 - **Theme packs:** optional one-time purchases later, if the hosted plan alone does not carry the cost.
 - **Teams:** not priced; revisit only on real demand.
@@ -143,7 +143,7 @@ Why $6:
 | Public live page | Yes | Profile, not live | No | Leaderboard profiles | No |
 | Share cards | Yes, server-rendered | Charts | No | Some | Yes |
 | Runs fully local | Yes | No (hosted) | No (hosted) | Yes (CLI) | Yes |
-| Open source | Planned (license undecided) | Plugins only | No | Yes | Yes |
+| Open source | Yes (MIT) | Plugins only | No | Yes | Yes |
 | Price | Self-host free; hosted $6/mo planned | Free to $24/dev/mo | Free to $27/mo | Free | Free |
 
 ## Name check
@@ -181,5 +181,5 @@ Alternatives if the owner wants a clean, ownable name:
 
 ## Open questions
 
-- **License:** not decided (MIT and Apache-2.0 are the candidates).
-- **Making the repository public:** not decided.
+- **License:** decided 2026-11-01: MIT.
+- **Public repository:** decided 2026-11-01: public now, before M0 is finished.

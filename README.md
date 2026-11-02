@@ -249,3 +249,7 @@ public/
 docs/
   HANDOFF.md  VISION.md  THEMING.md  INFRA_PLAN.md   (architecture + roadmap)
 ```
+
+## License
+
+MIT, see [LICENSE](./LICENSE).

@@ -2,7 +2,7 @@
   "name": "vibelog-worker",
   "version": "0.0.1",
   "private": true,
-  "description": "VibeLog Cloudflare Worker — public snapshot host (PR3/Task C)",
+  "description": "VibeLog Cloudflare Worker - public snapshot host (PR3/Task C)",
   "type": "module",
   "scripts": {
     "test": "node --test --import tsx \"src/*.test.ts\"",
@@ -16,5 +16,6 @@
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "wrangler": "^4.156.1"
-  }
+  },
+  "license": "MIT"
 }

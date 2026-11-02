@@ -65,7 +65,7 @@ Effort is for one developer working with coding agents, in focused days.
 
 ### M0 - Open-source ready (first milestone, about 4-6 days)
 
-- Add a license (MIT or Apache-2.0, **owner decision still open**), `CONTRIBUTING.md`, `SECURITY.md`, code of conduct.
+- Add a license (MIT, done 2026-11-01), `CONTRIBUTING.md`, `SECURITY.md`, code of conduct.
 - CI on GitHub Actions: test, typecheck and audit for root and `worker/`.
 - Lint (ESLint flat config or Biome) and fix findings.
 - Make `worker/` a pnpm workspace package; generate `worker/public` pages from `public/` instead of copying.
@@ -156,7 +156,7 @@ Stop work on VibeLog entirely if, after M1, fewer than 3 external users keep it 
 | 2026-11-01 | Domain: the owner owns `vibelogs.dev`; `https://vibelogs.dev` is canonical. `vibelog.live` looked unregistered via RDAP (unconfirmed, not purchased). `vibelog.n8builds.dev` dropped. | Decided |
 | 2026-11-01 | Waitlist: every early-access CTA links to `https://n8builds.dev/upcoming?interest=vibelog#vibelog`. | Decided |
 | 2026-11-01 | Public dollar spend: decided 2026-11-01: hide dollar spend publicly by default; owner may change this back; flip `publicShowCost` to restore. | Decided, implemented |
-| - | License: MIT or Apache-2.0. | Open |
-| - | Make the repository public after M0. | Open |
+| 2026-11-01 | License: MIT (`LICENSE` at the repo root). | Decided, done |
+| 2026-11-01 | Make the repository public now, before M0 is finished. | Decided, done |
 | - | Keep the name VibeLog and publish as `vibelog-cli`. | Recommended, open |
 | - | Whether to buy `vibelog.live` as an extra domain. | Optional, open |
