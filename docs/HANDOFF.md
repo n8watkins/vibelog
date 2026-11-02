@@ -8,6 +8,14 @@ domain, 24/7" — BUILT & LIVE (workers.dev; custom domain is the last cosmetic 
 multi-tenant product). If anything here disagrees with
 `docs/VISION.md`, that file wins.
 
+> **Owner decisions 2026-11-01 (newer than everything below):** canonical URL is
+> `https://vibelogs.dev` (owned; the `vibelog.n8builds.dev` plan is dropped); self-host free first,
+> "hosted by us" as a planned paid plan; waitlist CTAs go to
+> `https://n8builds.dev/upcoming?interest=vibelog#vibelog`; dollar spend is hidden on public
+> surfaces by default (`publicShowCost` in settings.json, `vibe privacy cost show|hide`); `vibe demo`
+> no longer writes real state. License and going public are still open. See `docs/PRODUCT.md` and
+> `docs/DELIVERY_PLAN.md` section 6.
+>
 > **Current state (2026-06-20):** `master @ 475da63`, **pushed to `origin/master`**. **100 src tests
 > pass; 38 worker tests pass (27 in worker.test.ts + 11 in roundtrip.test.ts — the worker `test`
 > script globs both via `src/*.test.ts`), typecheck clean (root + worker).**

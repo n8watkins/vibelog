@@ -34,6 +34,7 @@ What is missing is not features but packaging: no license, no installable packag
 
 Note: `vibe demo` writes `~/.vibelog/state.json` on every render, so running the demo clobbers a real user's last state.
 The assessment ran it with a scratch `HOME`; a future fix should keep demo state in memory or in a temp dir.
+Update 2026-11-01: fixed; demo mode keeps its state in memory and an E2E test guards it.
 
 ## Screenshots (from the demo)
 
@@ -89,9 +90,9 @@ All three are committed in `fix(ui): ...`.
 | Claude-only token tracking | Excludes Codex, Gemini CLI, Cursor and Copilot users; ccusage itself now reads Codex logs, so the gap is narrow to close |
 | `npx --yes ccusage` at runtime | Network fetch plus an unpinned third-party package executed every 30 s poll cycle; `claude-projects.ts` already parses transcripts locally and could replace it |
 | Worker is single tenant | One `SNAPSHOT_KEY`, one `PUBLISH_TOKEN`; no handles, no accounts, no per-user isolation |
-| No custom domain on the Worker | Still `*.workers.dev`; `vibelog.n8builds.dev` was the planned last step |
+| No custom domain on the Worker | Still `*.workers.dev`; `vibelog.n8builds.dev` was the planned last step (update 2026-11-01: the target is now `vibelogs.dev`, which the owner owns) |
 | Hosted snapshot stale since 2026-06-12 | The public page shows June data; looks abandoned to a visitor |
-| Demo writes real state | `vibe demo` overwrites `~/.vibelog/state.json` |
+| Demo writes real state | `vibe demo` overwrites `~/.vibelog/state.json` (fixed 2026-11-01) |
 | Duplicated pages | `worker/public/*.html` are hand-copied from `public/` (runbook step); drift risk |
 | Two package managers | Root uses pnpm, `worker/` uses npm (`package-lock.json`) |
 | Kick and X not supported | Only Twitch and YouTube for social stats |

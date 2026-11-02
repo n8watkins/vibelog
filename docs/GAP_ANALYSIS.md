@@ -28,7 +28,7 @@ Legend: **Reuse** = works, ship as is; **Fix** = exists but broken or rough; **M
 | `/share` + PNG cards | Reuse | `public/share.html`, `src/share.ts` | None |
 | Embed widget | Reuse | `public/embed.js`, `public/embed.html` | None |
 | Terminal recaps | Reuse | `src/report.ts`, `src/chart.ts` | None |
-| Demo mode | Fix | `src/agent.ts` | Overwrites `~/.vibelog/state.json`; keep demo state in memory |
+| Demo mode | Reuse (fixed 2026-11-01) | `src/agent.ts` | Demo no longer writes `state.json`, `session.json` or `events.jsonl`; E2E test in `src/demo.test.ts` |
 
 ## Make it yours
 
@@ -45,6 +45,7 @@ Legend: **Reuse** = works, ship as is; **Fix** = exists but broken or rough; **M
 | Redaction | Reuse | `src/redact.ts` | None |
 | Origin gate and public route allowlist | Reuse | `src/agent.ts` | None |
 | Secrets file, no env vars | Reuse | `src/secrets.ts` | None |
+| Public dollar spend hidden by default | Reuse (new 2026-11-01) | `toPublicState` in `src/state.ts`, `publicShowCost` setting | None; owner decision, reversible with `vibe privacy cost show` |
 | Snapshot preview before publish | Fix | `/state.json` exists | No dedicated "this is exactly what will be published" screen |
 | Open-source license | Missing | none | Blocks the whole positioning |
 | Public repository | Missing | repo is private | Needs a final secret scan (done 2026-11-01, clean) and a decision |
@@ -58,7 +59,7 @@ Legend: **Reuse** = works, ship as is; **Fix** = exists but broken or rough; **M
 | CI | Missing | No workflow; add test + typecheck + audit for root and `worker/` |
 | Lint | Missing | No ESLint or Biome config |
 | Single package manager | Fix | Root pnpm, worker npm; make `worker/` a pnpm workspace package |
-| Duplicated page copies | Fix | `worker/public/*.html` hand-copied; generate at build or serve one source |
+| Duplicated page copies | Fix | `worker/public/*.html` hand-copied (drift now fails `worker/src/public-sync.test.ts`); generate at build or serve one source |
 | Cross-platform docs | Fix | WSL + Windows OBS is the documented path; add macOS and Linux |
 | Dependency audit | Reuse (fixed) | Both packages audit clean after this pass |
 
@@ -67,17 +68,17 @@ Legend: **Reuse** = works, ship as is; **Fix** = exists but broken or rough; **M
 | Feature | State | Where | Gap |
 |---|---|---|---|
 | Snapshot publisher | Reuse | `src/publish.ts` | Cadence and token config only in secrets file |
-| Self-host Worker + KV | Reuse | `worker/` | Single tenant; KV write limit caps free-tier publishers; custom domain not attached |
+| Self-host Worker + KV | Reuse | `worker/` | Single tenant; KV write limit caps free-tier publishers; custom domain (`vibelogs.dev`) not attached |
 | Self-host guide | Fix | `docs/DEPLOY_RUNBOOK.md`, `worker/README.md` | Written for the owner; needs a user-facing version |
 | Hosted multi-tenant relay | Missing | none | Handles, per-user tokens, D1 or Durable Objects, rate limits |
 | Owner auth and agent pairing | Missing | none | Device-code style pairing; GitHub sign-in |
-| Billing | Missing | none | Stripe checkout + webhook for Pro |
+| Billing | Missing | none | Stripe checkout + webhook for the hosted plan |
 | Custom domains | Missing | none | Cloudflare for SaaS custom hostnames |
 | Public history beyond "latest" | Missing | none | Daily rollups per handle |
 
 ## Summary
 
 - **Reuse:** almost everything a single user sees.
-- **Fix (small):** ccusage invocation, demo state, snapshot preview, package-manager split, page duplication, onboarding.
+- **Fix (small):** ccusage invocation, snapshot preview, package-manager split, page duplication, onboarding.
 - **Missing, before any hosting:** license, public repo, installable CLI, CI, lint, multi-agent token sources.
-- **Missing, hosted tier:** multi-tenant relay, pairing, billing, custom domains, history.
+- **Missing, hosted plan:** multi-tenant relay, pairing, billing, custom domains, history.

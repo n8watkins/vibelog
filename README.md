@@ -165,6 +165,16 @@ routes only (`/`, `/overlay`, `/live`, `/landing`, `/share`, `/share/card.png`,
 and the private `/dashboard` return `403` for them — a viewer can't end your
 session, inject overlay text, change your theme, or read your dashboard.
 
+**Dollar spend is private by default.** Public surfaces (`/state.json`, `/live`,
+the embed widget and any snapshot you publish) carry token counts but not the
+session's dollar cost. The private dashboard and your local OBS HUD still show
+it. To show spend publicly, tick "Show dollar spend publicly" in the dashboard
+settings or run `pnpm vibe privacy cost show` (`hide` reverts; it sets
+`publicShowCost` in `~/.vibelog/settings.json`).
+
+`vibe demo` keeps its fake session in memory and never writes your real
+`~/.vibelog/state.json`, `session.json` or `events.jsonl`.
+
 **Credentials** (Gemini key, OBS password, Twitch/YouTube/Discord/GitHub app
 creds, OAuth tokens) live only in `~/.vibelog/` (chmod 600) — VibeLog reads **no
 environment variables**. Copy [`secrets.example.json`](./secrets.example.json) to

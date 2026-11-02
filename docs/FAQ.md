@@ -72,6 +72,9 @@ subdomain, `n8builds.dev` is the domain, and `/live` is the path.
 - **Path** = what comes after the domain. DNS never sees paths, only hostnames, so `/vibelog` is always
   served by whatever already handles the bare domain — *a department inside the same store.*
 
+> Update 2026-11-01: the canonical domain is now `vibelogs.dev` (owned); the Worker gets a subdomain of it
+> (recommended `live.vibelogs.dev`). The reasoning below still applies, just with the new domain.
+
 The MVP uses **`vibelog.n8builds.dev`** (subdomain) for two concrete reasons:
 1. **Cloudflare Worker routing attaches to a hostname.** A subdomain gets a single route + auto-SSL
    pointing straight at the Worker. A path (`n8builds.dev/vibelog`) instead requires the main site to

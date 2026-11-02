@@ -13,7 +13,7 @@ The public live page makes exactly three GETs (verified in `public/live.html`):
 
 | Request | Response body | Server source |
 |---|---|---|
-| `GET /state.json` | the full `LiveState` object | `src/state.ts` → `state` (already redacted + capped) |
+| `GET /state.json` | the public `LiveState` (see note) | `toPublicState(state)` in `src/state.ts` (already redacted + capped) |
 | `GET /api/profile.json` | `{ profile: SanitizedProfile }` | `sanitizeProfile(settings.profile)` — 4 fields |
 | `GET /api/theme.json?page=live` | `{ vars: ThemeVars }` | `resolveTheme(settings, "live")` — allowlisted CSS vars |
 
@@ -21,6 +21,11 @@ The public live page makes exactly three GETs (verified in `public/live.html`):
 (`sanitizeProfile` in `src/theme.ts`). `ThemeVars` = the allowlist-validated CSS custom-property map
 (`validateVars` in `src/theme.ts`). `LiveState` is `src/state.ts`'s contract — every string in it has
 already passed `redact()` + the 140-char cap before it was stored.
+
+> **Narrowed 2026-11-01 (owner decision):** public `/state.json` and `snapshot.state` omit
+> `stats.costUsd` unless `publicShowCost: true` is set in `~/.vibelog/settings.json`. This removes a
+> field, it never widens the contract. The local OBS HUD reads `/state.json?hud=1`, which returns the
+> full state to loopback callers only.
 
 ## 2. The snapshot object (the wire format publisher ⇄ Worker)
 

@@ -101,7 +101,7 @@ Streaming is the wedge and the most visual demo; the share page and embed are th
 | Option | Fit | Notes |
 |---|---|---|
 | Free open-source local agent + overlay | Core | Trust and distribution; matches Hackatime, ccusage, devcard |
-| Paid hosted `/live` + share pages (Pro) | Best | Always on, custom domain, no badge, full history, fast publish cadence |
+| Paid hosted `/live` + share pages ("hosted by us") | Best | Always on, custom domain, no badge, full history, fast publish cadence |
 | Premium themes / overlay packs | Good add-on | Proven by OWN3D and Streamlabs; can be a one-time purchase |
 | Sponsorship / affiliate (AI tools, hosting) | Opportunistic | Fits the owner's own streams; do not build the product around it |
 | Team / org dashboards | Later, uncertain | Different buyer, different privacy expectations |
@@ -119,7 +119,7 @@ Streaming is the wedge and the most visual demo; the share page and embed are th
 
 1. The owner's own vibe coding streams: the HUD is on screen every stream, which is a live demo with every broadcast.
 2. The "powered by VibeLog" badge on `/live`, embeds and share cards (the Calendly/Linktree loop).
-3. n8builds.dev: an upcoming-products page with a VibeLog section and waitlist (`/upcoming?interest=vibelog#vibelog`).
+3. n8builds.dev: an upcoming-products page with a VibeLog section and waitlist (`/upcoming?interest=vibelog#vibelog`); the landing page itself lives at `https://vibelogs.dev`.
 4. X: daily share cards from the owner's sessions; each card is an ad.
 5. Open-source discovery: GitHub, Hacker News "Show HN", r/ClaudeAI, the ccusage and Claude Code communities, awesome-claude-code lists.
 6. Partnerships with other coding streamers: give them a themed setup for free in exchange for visibility.

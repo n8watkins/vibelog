@@ -26,6 +26,9 @@ the user-facing quickstart; `V0_SPEC.md` / `PRD.md` / `NEXT_STEPS.md` are **hist
   `/share`, `/share/card.png`, `/state.json`, `/api/theme.json`, `/api/presets.json`,
   `/api/profile.json`, `/shots/*.png`. **Every write and every key-touching route stays
   OUT of that set**, so `isRemote()` in `src/agent.ts` 403s any tunneled/LAN caller.
+- Dollar spend (`stats.costUsd`) is hidden on public surfaces by default (owner decision
+  2026-11-01): every public read of the state goes through `toPublicState()` (`src/state.ts`)
+  unless `publicShowCost` is true. Only a loopback `/state.json?hud=1` (the OBS HUD) gets it.
 - Public settings-derived data is limited to allowlisted theme vars (`validateVars`) + the
   four sanitised profile fields (`sanitizeProfile`); both in `src/theme.ts`. Integration
   `connected` state is **derived** from token/secret presence (`integrationStatus()` in

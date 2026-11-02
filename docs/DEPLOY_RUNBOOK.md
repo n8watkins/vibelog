@@ -8,12 +8,13 @@
 > **End-to-end proven:** agent published its real snapshot to KV; with the agent **stopped**
 > the Worker still serves `/live`, `/embed`, `/embed.js`, `/state.json` (and the shutdown
 > final-publish flipped `isLive→false`); `POST /publish` returns **403** on a bad token.
-> **Only Step 6 (custom domain `vibelog.n8builds.dev`) remains** — needs the zone on Cloudflare.
+> **Only Step 6 (custom domain) remains.** Update 2026-11-01: the target is now a `vibelogs.dev` hostname
+> (owned; recommended `live.vibelogs.dev`, since the apex serves the landing page), not `vibelog.n8builds.dev`.
 > The original pre-flight steps below are kept as the reference procedure / for a re-deploy.
 
 The code is complete and committed through G4 (embed widget). This is the exact,
 paste-ready sequence to take `vibelog-live` from "never deployed" to "live 24/7 on
-`vibelog.n8builds.dev`". Pre-flight already done (see bottom). Budget ~5–10 min.
+`live.vibelogs.dev`". Pre-flight already done (see bottom). Budget ~5–10 min.
 
 > **⚠️ STREAMING SAFETY.** Steps that touch the **publish token** (Step 4) generate and
 > handle a secret. Do them **while NOT live on stream.** The commands below are written
@@ -96,14 +97,17 @@ Then:
 3. Reload `$WORKER_URL` → page still serves the last snapshot. ✅ That's the whole point:
    profile stays up with your machine off.
 
-## Step 6 — PR4: custom domain `vibelog.n8builds.dev` *(unblocked — domain is registered)*
-1. In the Cloudflare dashboard, ensure `n8builds.dev` is added as a zone (nameservers
+## Step 6 - PR4: custom domain on `vibelogs.dev` *(unblocked - the owner owns `vibelogs.dev`)*
+Decided 2026-11-01: `https://vibelogs.dev` is the canonical VibeLog URL and replaces the older
+`vibelog.n8builds.dev` plan. The apex serves the landing page, so the Worker gets a subdomain
+(recommended `live.vibelogs.dev`).
+1. In the Cloudflare dashboard, ensure `vibelogs.dev` is added as a zone (nameservers
    pointed at Cloudflare). If you registered it through Cloudflare Registrar it's already a zone.
 2. Worker → `vibelog-live` → **Settings → Domains & Routes → Add → Custom Domain** →
-   `vibelog.n8builds.dev`. Cloudflare provisions the DNS record + SSL automatically (~1 min).
+   `live.vibelogs.dev`. Cloudflare provisions the DNS record + SSL automatically (~1 min).
 3. Re-point `secrets.publish.url` to the custom domain (optional but tidy):
    ```bash
-   jq '.publish.url="https://vibelog.n8builds.dev/publish"' \
+   jq '.publish.url="https://live.vibelogs.dev/publish"' \
       ~/.vibelog/secrets.json > ~/.vibelog/secrets.json.tmp \
      && mv ~/.vibelog/secrets.json.tmp ~/.vibelog/secrets.json \
      && chmod 600 ~/.vibelog/secrets.json

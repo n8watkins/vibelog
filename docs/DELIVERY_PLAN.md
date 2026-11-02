@@ -1,13 +1,14 @@
 # VibeLog - delivery plan
 
-Status: proposal, 2026-11-01.
-Strategy: **open source and self-host first, hosted later**, the same path as Rewire.
+Status: proposal, 2026-11-01, with the owner decisions of 2026-11-01 applied (section 6).
+Strategy: **self-host free from the start, "hosted by us" as a paid plan later**, the same model as Relink.
+Canonical URL: `https://vibelogs.dev`.
 This plan builds on `docs/VISION.md` section 6 and `docs/PLATFORM_PLAN.md`; where they disagree on sequencing, this plan proposes the change and the owner decides.
 
 ## 1. Architecture
 
 ```
-YOUR MACHINE (always)                        RELAY (self-host or VibeLog Cloud)            VIEWER
+YOUR MACHINE (always)                        RELAY (self-host or hosted by us)             VIEWER
 +-------------------------------+   HTTPS    +--------------------------------+   GET     +---------+
 | vibe agent (Node, tsx/bundled) | --------> | Cloudflare Worker              | <-------- | browser |
 |  git / AI tokens / OBS / social|  signed   |  POST /v1/snapshot (auth)      |           | no login|
@@ -49,6 +50,10 @@ YOUR MACHINE (always)                        RELAY (self-host or VibeLog Cloud) 
 - Default: nothing leaves the machine.
 - Publishing is opt-in per field group: `activity` (commits, lines), `ai` (tokens), `cost` (dollars), `stream`, `social`, `now_building`.
   **Cost is off by default** because dollar spend is the most sensitive number for many developers and employers.
+- **Implemented 2026-11-01:** `publicShowCost` in `~/.vibelog/settings.json` (default `false`) drops `stats.costUsd` from public `/state.json`, `/live`, the embed widget and the published Worker snapshot; share cards never carried it.
+  Token counts stay public; the private dashboard and the local HUD (`/state.json?hud=1`, loopback only) keep spend.
+  Toggle with the dashboard setting or `vibe privacy cost show|hide`.
+  This is the first field group; the rest of the per-group consent screen lands in M2.
 - Snapshot preview screen shows the literal JSON before the first publish and after any field change.
 - Snapshots contain only `buildShareData` output: four profile fields, numbers, theme variables and a redacted, capped label. Never prompts, paths, diffs, repo names unless the user typed them as project names, or keys.
 - Hosted relay stores the latest snapshot plus daily numeric rollups; deleting the account deletes both.
@@ -60,15 +65,16 @@ Effort is for one developer working with coding agents, in focused days.
 
 ### M0 - Open-source ready (first milestone, about 4-6 days)
 
-- Add MIT license (or Apache-2.0 if patent language matters), `CONTRIBUTING.md`, `SECURITY.md`, code of conduct.
+- Add a license (MIT or Apache-2.0, **owner decision still open**), `CONTRIBUTING.md`, `SECURITY.md`, code of conduct.
 - CI on GitHub Actions: test, typecheck and audit for root and `worker/`.
 - Lint (ESLint flat config or Biome) and fix findings.
 - Make `worker/` a pnpm workspace package; generate `worker/public` pages from `public/` instead of copying.
-- Fix demo mode so it never writes `~/.vibelog/state.json`.
+- ~~Fix demo mode so it never writes `~/.vibelog/state.json`.~~ Done 2026-11-01 (also `session.json` and `events.jsonl`; covered by an E2E test).
 - Replace `npx --yes ccusage` with the local transcript parser (or a pinned dependency).
 - Rewrite the README for strangers: install, OBS, hooks, privacy.
-- Final history secret scan (2026-11-01 scan was clean), then flip the repo public.
-- Ship the landing page (`landing/`) and the n8builds.dev upcoming-page section.
+- Final history secret scan (2026-11-01 scan was clean), then flip the repo public **if the owner decides to** (still open).
+- Ship the landing page (`landing/`) at `https://vibelogs.dev` and the n8builds.dev upcoming-page section (n8builds-web PR #117).
+  Every early-access CTA links to `https://n8builds.dev/upcoming?interest=vibelog#vibelog`.
 
 ### M1 - Installable and multi-agent (about 5-8 days)
 
@@ -82,20 +88,21 @@ Effort is for one developer working with coding agents, in focused days.
 
 - User-facing self-host guide: deploy the Worker to your own Cloudflare account in 10 minutes.
 - Snapshot preview screen and per-field publish consent.
-- Attach `vibelog.n8builds.dev` to the owner's Worker and keep it publishing (dogfood).
+- Attach a `vibelogs.dev` hostname to the owner's Worker and keep it publishing (dogfood).
+  Recommended: `live.vibelogs.dev`, because the apex `vibelogs.dev` serves the landing page.
 - Daily rollups so `/live` offline mode shows history from the relay.
 
-### M3 - VibeLog Cloud beta (about 10-15 days, only if kill criteria pass)
+### M3 - Hosted by us, beta (about 10-15 days, only if kill criteria pass)
 
 - Multi-tenant relay: handles, D1 schema, per-device tokens, rate limits, abuse controls.
 - GitHub sign-in, handle claim, device-code pairing.
-- Hosted free tier with badge and 30-day history.
+- No free hosted tier at launch (see `docs/PRODUCT.md`); beta users get the paid plan free during the beta, then a 14-day trial.
 - Card rendering and R2 caching.
 - Invite-only beta from the waitlist.
 
-### M4 - Pro (about 6-10 days)
+### M4 - Hosted plan billing (about 6-10 days)
 
-- Stripe billing, plan flags, fast cadence, badge removal, full history.
+- Stripe billing ($6/month or $60/year, planned), 14-day trial, plan flags, fast cadence, badge removal, full history.
 - Custom domains via Cloudflare for SaaS.
 - Premium theme pack format (optional).
 
@@ -138,13 +145,18 @@ Stop work on VibeLog entirely if, after M1, fewer than 3 external users keep it 
 | M1 | npm weekly downloads | 100+ |
 | M2 | Self-hosted public pages seen in the wild (badge referrals) | 10+ |
 | M3 beta | Weekly active publishers | 50+ |
-| M4 | Paying Pro users | 25+ within 3 months (covers hosting many times over) |
+| M4 | Paying hosted users | 25+ within 3 months (covers hosting many times over) |
 | Ongoing | Owner streams with the HUD | Every stream |
 
-## 6. Owner decisions needed
+## 6. Owner decisions
 
-1. License: MIT (recommended) or Apache-2.0.
-2. Make the repository public after M0.
-3. Keep the name VibeLog (recommended) and publish as `vibelog-cli`.
-4. Whether to buy `vibelog.live` as a vanity domain.
-5. Cost field off by default on public surfaces (recommended).
+| Date | Decision | Status |
+|---|---|---|
+| 2026-11-01 | Model: self-host free and open source from the start; "hosted by us" is a paid plan (planned), same as Relink. No free hosted tier at launch. | Decided |
+| 2026-11-01 | Domain: the owner owns `vibelogs.dev`; `https://vibelogs.dev` is canonical. `vibelog.live` looked unregistered via RDAP (unconfirmed, not purchased). `vibelog.n8builds.dev` dropped. | Decided |
+| 2026-11-01 | Waitlist: every early-access CTA links to `https://n8builds.dev/upcoming?interest=vibelog#vibelog`. | Decided |
+| 2026-11-01 | Public dollar spend: decided 2026-11-01: hide dollar spend publicly by default; owner may change this back; flip `publicShowCost` to restore. | Decided, implemented |
+| - | License: MIT or Apache-2.0. | Open |
+| - | Make the repository public after M0. | Open |
+| - | Keep the name VibeLog and publish as `vibelog-cli`. | Recommended, open |
+| - | Whether to buy `vibelog.live` as an extra domain. | Optional, open |

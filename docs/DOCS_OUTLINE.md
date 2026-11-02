@@ -1,7 +1,7 @@
 # VibeLog - user documentation outline
 
 Status: proposal, 2026-11-01.
-Target: a docs site at `vibelog.n8builds.dev/docs` (or the repo `docs/` rendered on GitHub until then).
+Target: a docs site at `vibelogs.dev/docs` (or the repo `docs/` rendered on GitHub until then).
 Every page should open with a one-sentence summary and end with "Next:" links.
 
 ## 1. Get started
@@ -40,16 +40,17 @@ Every page should open with a one-sentence summary and end with "Next:" links.
 
 1. **Public routes and the tunnel** - `vibe share`, what remote viewers can and cannot reach.
 2. **Self-host your public page** - deploy the Worker to your own Cloudflare account, set the publish token, attach a custom domain.
-3. **VibeLog Cloud (planned)** - claiming a handle, pairing the agent, Pro features.
+3. **Hosted by us (planned, paid)** - claiming a handle, pairing the agent, hosted plan features.
 4. **Snapshot preview** - see exactly what gets published.
 
 ## 6. Privacy and security
 
 1. **What VibeLog reads, and what it never reads** - commits and counts, not keystrokes or code.
 2. **What leaves your machine** - nothing by default; the snapshot field list when you publish.
-3. **Secrets** - `~/.vibelog/secrets.json`, chmod 600, no environment variables.
-4. **Streaming safety checklist** - the three leak surfaces, what to do if a key appears on screen.
-5. **Threat model** - origin gate, redactor, allowlists, card escaping.
+3. **Dollar spend** - hidden on public surfaces by default; token counts stay public; `vibe privacy cost show|hide` or the dashboard toggle (`publicShowCost`).
+4. **Secrets** - `~/.vibelog/secrets.json`, chmod 600, no environment variables.
+5. **Streaming safety checklist** - the three leak surfaces, what to do if a key appears on screen.
+6. **Threat model** - origin gate, redactor, allowlists, card escaping.
 
 ## 7. Reference
 
