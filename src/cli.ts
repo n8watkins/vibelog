@@ -13,7 +13,8 @@ import { localDateString } from "./ccusage.ts";
 import { formatReport, formatWeekly, readEvents, summarizeDay, summarizeWeek } from "./report.ts";
 import { formatChart, summarizeRange } from "./chart.ts";
 import { recapSummary } from "./summarize.ts";
-import { readConfig, readSession, readState, writeConfig, writeSession, appendEvent } from "./store.ts";
+import { readConfig, readSession, readSettings, readState, writeConfig, writeSession, writeSettings, appendEvent } from "./store.ts";
+import { publicShowCost } from "./theme.ts";
 import { runAgent } from "./agent.ts";
 import { loginCommand as twitchLogin } from "./twitch-oauth.ts";
 
@@ -103,7 +104,7 @@ program
 
 program
   .command("demo")
-  .description("Preview the overlay with fake data (no git/session needed)")
+  .description("Preview the overlay with fake data (no git/session needed; never touches your real state)")
   .option("--port <port>", "HTTP port", String(DEFAULT_PORT))
   .action(async (opts: { port: string }) => {
     await runAgent(Number(opts.port) || DEFAULT_PORT, { demo: true });
@@ -344,6 +345,27 @@ program
     console.log("\n" + formatChart(stats) + "\n");
   });
 
+const privacy = program.command("privacy").description("Control what your public surfaces reveal");
+privacy
+  .command("cost [mode]")
+  .description("Show or hide dollar spend on /live, /embed and published snapshots (show | hide; default hidden)")
+  .action(async (mode?: string) => {
+    const settings = await readSettings();
+    if (mode === undefined) {
+      const on = publicShowCost(settings);
+      console.log(`Public dollar spend: ${on ? "shown" : "hidden"}${on ? "" : " (default)"}.`);
+      console.log("Token counts are always public; spend always shows on your local dashboard and HUD.");
+      return;
+    }
+    if (mode !== "show" && mode !== "hide") {
+      console.error('Usage: vibe privacy cost [show|hide]');
+      process.exit(1);
+    }
+    const base = settings ?? { version: 1 as const, theme: { sync: true, shared: {} } };
+    await writeSettings({ ...base, publicShowCost: mode === "show" });
+    console.log(`✓ Public dollar spend ${mode === "show" ? "shown" : "hidden"}. A running agent picks this up on the next poll.`);
+  });
+
 program
   .command("mcp")
   .description("Run the VibeLog MCP server (stdio) for Claude Desktop — read state + apply themes")
@@ -362,7 +384,8 @@ program
       return;
     }
     try {
-      const res = await fetch(`http://127.0.0.1:${session.port}/state.json`);
+      // ?hud=1 from loopback = the full local state (incl. spend).
+      const res = await fetch(`http://127.0.0.1:${session.port}/state.json?hud=1`);
       const state = await res.json();
       console.log(JSON.stringify(state, null, 2));
     } catch {

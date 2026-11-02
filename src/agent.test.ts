@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isRemote, originOf } from "./agent.ts";
+import { isRemote, originOf, stateForRequest } from "./agent.ts";
+import { emptyState } from "./state.ts";
 
 type Req = Parameters<typeof isRemote>[0];
 const req = (headers: Record<string, string>, remoteAddress = "127.0.0.1"): Req =>
@@ -58,4 +59,32 @@ test("originOf rejects a host that tries to smuggle a scheme/path", () => {
     originOf(oreq({ "x-forwarded-host": "ok.example.com space" }), 4545),
     "http://localhost:4545",
   );
+});
+
+function costlyState() {
+  const s = emptyState();
+  s.stats.costUsd = 7.5;
+  s.stats.claudeTokens = 500_000;
+  return s;
+}
+
+test("stateForRequest hides dollar spend from public /state.json by default", () => {
+  const out = stateForRequest(costlyState(), { hud: false, remote: false, showCost: false });
+  assert.equal("costUsd" in out.stats, false);
+  assert.equal(out.stats.claudeTokens, 500_000);
+});
+
+test("stateForRequest gives the local HUD the full state", () => {
+  const out = stateForRequest(costlyState(), { hud: true, remote: false, showCost: false });
+  assert.equal(out.stats.costUsd, 7.5);
+});
+
+test("a remote caller cannot unlock spend with ?hud=1", () => {
+  const out = stateForRequest(costlyState(), { hud: true, remote: true, showCost: false });
+  assert.equal("costUsd" in out.stats, false);
+});
+
+test("publicShowCost restores spend on public /state.json", () => {
+  const out = stateForRequest(costlyState(), { hud: false, remote: true, showCost: true });
+  assert.equal(out.stats.costUsd, 7.5);
 });

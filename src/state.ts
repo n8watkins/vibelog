@@ -135,3 +135,24 @@ export function emptyState(): LiveState {
     updatedAt: new Date().toISOString(),
   };
 }
+
+/**
+ * The stats a public surface may carry. Identical to LiveStats except the
+ * dollar figure is optional: it is omitted entirely (not zeroed) unless the
+ * owner opts in, so the number never leaves the machine by default.
+ */
+export type PublicLiveStats = Omit<LiveStats, "costUsd"> & { costUsd?: number };
+
+/** LiveState as served on public surfaces (/state.json, /live, /embed, the Worker snapshot). */
+export type PublicLiveState = Omit<LiveState, "stats"> & { stats: PublicLiveStats };
+
+/**
+ * Project the live state onto its public form. Decided 2026-11-01: dollar
+ * spend is hidden publicly by default (`publicShowCost: false` in
+ * settings.json); token counts stay visible. Pure: never mutates `state`.
+ */
+export function toPublicState(state: LiveState, opts: { showCost: boolean }): PublicLiveState {
+  const { costUsd, ...rest } = state.stats;
+  const stats: PublicLiveStats = opts.showCost ? { ...rest, costUsd } : rest;
+  return { ...state, stats };
+}

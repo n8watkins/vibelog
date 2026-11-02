@@ -52,7 +52,19 @@ export type Settings = {
     baseUrl?: string;
     model?: string;
   };
+  /**
+   * Show the session's dollar spend on public surfaces (/live, /embed,
+   * public /state.json, the published Worker snapshot). Decided 2026-11-01:
+   * hidden by default; the owner may flip this to true to restore it. The
+   * private dashboard and the local OBS HUD always show spend.
+   */
+  publicShowCost?: boolean;
 };
+
+/** True only when the owner explicitly opted in to public dollar spend. Pure. */
+export function publicShowCost(settings: Pick<Settings, "publicShowCost"> | null | undefined): boolean {
+  return settings?.publicShowCost === true;
+}
 
 /** Only chars that appear in colors and gradient functions. No ;{}<>\"' etc. */
 const SAFE_VALUE = /^[#0-9a-z.,%()\s-]+$/i;

@@ -209,7 +209,9 @@
         <div class="tile glass"><div class="v" id="s-feat">0</div><div class="k">features built</div></div>
         <div class="tile glass"><div class="v" id="s-commits">0</div><div class="k">commits</div></div>
         <div class="tile glass"><div class="v tok" id="s-tok">0</div><div class="k">tokens</div></div>
-        <div class="tile glass"><div class="v cost" id="s-cost">$0</div><div class="k">spend</div></div>
+        <!-- Dollar spend is hidden publicly by default (decided 2026-11-01); the
+             tile shows prompts instead unless the owner sets publicShowCost. -->
+        <div class="tile glass"><div class="v" id="s-cost">0</div><div class="k" id="s-cost-k">prompts</div></div>
         <div class="tile glass"><div class="v" id="s-agents">0</div><div class="k">sub-agents</div></div>
         <div class="tile glass"><div class="v streak" id="s-streak">0</div><div class="k"><svg class="ic-flame" viewBox="0 0 24 24"><path d="M12 2c1.2 3.2-1 4.4-2 6.4-.9 1.8.2 3.6 2 3.6 1.1 0 1.9-.9 2-2.6 1.9 1.9 3 4 3 6.2a7 7 0 1 1-14 0c0-3 1.7-5.2 3-7 .7 1.8 1.8 2 2.7 1.1C13.6 8 12.8 4.6 12 2Z"/></svg> day streak</div></div>
       </section>
@@ -337,7 +339,11 @@
         $("s-feat").textContent = fmt(s.features ?? 0);
         $("s-commits").textContent = fmt(s.commits ?? 0);
         $("s-tok").textContent = fmt(s.claudeTokens ?? 0);
-        $("s-cost").textContent = money(s.costUsd ?? 0);
+        // costUsd is only present when the owner opted in (publicShowCost).
+        const showCost = typeof s.costUsd === "number";
+        $("s-cost").classList.toggle("cost", showCost);
+        $("s-cost").textContent = showCost ? money(s.costUsd) : fmt(s.prompts ?? 0);
+        $("s-cost-k").textContent = showCost ? "spend" : "prompts";
         $("s-agents").textContent = fmt(s.subAgents ?? 0);
         $("s-streak").textContent = fmt(s.streak ?? 0);
       }

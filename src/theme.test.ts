@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateVars, resolveTheme, sanitizeProfile, sanitizeSummarizer, isLoopbackUrl, DEFAULT_THEME, PRESETS, THEME_VAR_KEYS, type Settings } from "./theme.ts";
+import { publicShowCost, validateVars, resolveTheme, sanitizeProfile, sanitizeSummarizer, isLoopbackUrl, DEFAULT_THEME, PRESETS, THEME_VAR_KEYS, type Settings } from "./theme.ts";
 
 test("validateVars keeps allowlisted color/gradient values", () => {
   const out = validateVars({
@@ -166,4 +166,15 @@ test("isLoopbackUrl accepts only loopback http(s) hosts", () => {
   for (const bad of ["http://evil.com", "http://10.0.0.5:1234", "https://api.openai.com", "http://localhost.evil.com", "file:///etc/passwd", "not-a-url", ""]) {
     assert.equal(isLoopbackUrl(bad), false, bad);
   }
+});
+
+test("publicShowCost is hidden by default and only true when explicitly opted in", () => {
+  assert.equal(publicShowCost(null), false);
+  assert.equal(publicShowCost(undefined), false);
+  assert.equal(publicShowCost({}), false);
+  assert.equal(publicShowCost({ publicShowCost: false }), false);
+  assert.equal(publicShowCost({ publicShowCost: true }), true);
+  // A hand-edited settings.json with a truthy non-boolean must not unlock it.
+  assert.equal(publicShowCost({ publicShowCost: "true" as unknown as boolean }), false);
+  assert.equal(publicShowCost({ publicShowCost: 1 as unknown as boolean }), false);
 });

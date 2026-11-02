@@ -399,6 +399,12 @@
         </div>
 
         <div class="field">
+          <label>Public page <span class="hint">— what /live, the embed widget and published snapshots show</span></label>
+          <label class="toggle"><input type="checkbox" id="pubCost"> <span>Show dollar spend publicly</span></label>
+          <div class="sheet-note">Off by default. Token counts are always public; spend stays on this dashboard and your local overlay.</div>
+        </div>
+
+        <div class="field">
           <label>Summarizer <span class="hint">— how prompts become "Now Building" labels</span></label>
           <div class="pgrid">
             <div class="wide">
@@ -974,6 +980,7 @@
         const st = data.theme || null;
         loadProfile(data.profile || {});
         loadSummarizer(data.summarizer || {});
+        $("pubCost").checked = data.publicShowCost === true;
         renderIntegrations(data.integrations || {});
         sync = st ? st.sync !== false : true;
         shared = (st && st.shared && Object.keys(st.shared).length) ? { ...base, ...st.shared } : { ...base };
@@ -1040,7 +1047,7 @@
         if (sync) { theme.shared = shared; theme.presetId = activePreset || undefined; }
         else { theme.perPage = perPage; }
         try {
-          await (await fetch("/api/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ theme, profile: readProfile(), summarizer: readSummarizer() }) })).json();
+          await (await fetch("/api/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ theme, profile: readProfile(), summarizer: readSummarizer(), publicShowCost: $("pubCost").checked }) })).json();
           $("sheetNote").textContent = "Saved — your overlay & /live will update within ~10s.";
           setTimeout(closeSettings, 700);
         } catch {

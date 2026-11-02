@@ -13,7 +13,7 @@
  */
 
 import { createHash } from "node:crypto";
-import type { LiveState } from "./state.ts";
+import type { PublicLiveState } from "./state.ts";
 import type { ThemeVars } from "./theme.ts";
 import type { Profile } from "./theme.ts";
 
@@ -23,7 +23,9 @@ import type { Profile } from "./theme.ts";
 
 /** The published JSON. Exactly three fields, nothing more. */
 export type Snapshot = {
-  state: LiveState;
+  /** The public projection of LiveState: dollar spend omitted unless the
+   *  owner set `publicShowCost: true` (see toPublicState in state.ts). */
+  state: PublicLiveState;
   profile: Profile;
   theme: ThemeVars;
 };

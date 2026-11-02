@@ -11,11 +11,13 @@ import {
   BUILD_LOG_MAX,
   BUILD_MODES,
   emptyState,
+  toPublicState,
   type BuildMode,
   type LiveState,
+  type PublicLiveState,
 } from "./state.ts";
 import { appendEvent, readConfig, readSession, readSettings, writeSession, writeSettings, writeState, type Session } from "./store.ts";
-import { PRESETS, resolveTheme, sanitizeProfile, sanitizeSummarizer, validateVars, type Settings } from "./theme.ts";
+import { PRESETS, publicShowCost, resolveTheme, sanitizeProfile, sanitizeSummarizer, validateVars, type Settings } from "./theme.ts";
 import { isShareKind, renderCardPng, shareCardSvg, timeLiveLabel, type ShareData } from "./share.ts";
 import { beginAuth, completeAuth, disconnect, integrationStatus, isProvider } from "./oauth.ts";
 import { demoDashboard, demoToday, demoWeek, demoSocialGrowth } from "./demodata.ts";
@@ -128,6 +130,21 @@ export function originOf(
   return `${proto === "https" ? "https" : "http"}://${safeHost}`;
 }
 
+/**
+ * The /state.json body for one request. Public by default: the dollar spend is
+ * omitted unless the owner set `publicShowCost: true` (decided 2026-11-01).
+ * The local OBS HUD asks with `?hud=1` and gets the full state, but only when
+ * the request is NOT remote, so a tunneled or LAN viewer can never unlock the
+ * spend figure by adding the flag.
+ */
+export function stateForRequest(
+  state: LiveState,
+  opts: { hud: boolean; remote: boolean; showCost: boolean },
+): LiveState | PublicLiveState {
+  if (opts.hud && !opts.remote) return state;
+  return toPublicState(state, { showCost: opts.showCost });
+}
+
 /** HTML-attribute/text escape for values injected into the share page meta. */
 function htmlEscape(s: string): string {
   return String(s ?? "")
@@ -153,6 +170,13 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   let publisher: Publisher = noopPublisher;
   let publishEnabled = false;
 
+  // Demo mode is a throwaway in-memory session: it must never overwrite the
+  // real ~/.vibelog/state.json, session.json or events.jsonl. Every disk write
+  // of live data in this function goes through these three wrappers.
+  const persist = !opts.demo;
+  const saveState = (s: LiveState): Promise<void> => (persist ? writeState(s) : Promise.resolve());
+  const logEvent = (e: Record<string, unknown>): Promise<void> => (persist ? appendEvent(e) : Promise.resolve());
+
   function render(): void {
     state.isLive = true;
     state.sessionTitle = session!.title;
@@ -165,7 +189,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     state.stats.prompts = session!.prompts;
     state.startedAt = session!.startedAt;
     state.updatedAt = new Date().toISOString();
-    void writeState(state);
+    void saveState(state);
     // Snapshot publish — non-blocking; throttle+dedup inside the publisher.
     // Skip building the snapshot entirely when no publisher is configured
     // (the common case) so render() stays a cheap local-only operation.
@@ -175,6 +199,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   }
 
   async function persistSession(): Promise<void> {
+    if (!persist) return;
     await writeSession(session!);
   }
 
@@ -282,7 +307,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     for (const platform of ["twitch", "youtube"] as const) {
       const ch = social[platform];
       if (ch?.followers != null) {
-        await appendEvent({ type: "social_snapshot", platform, followers: ch.followers, views: ch.views ?? null });
+        await logEvent({ type: "social_snapshot", platform, followers: ch.followers, views: ch.views ?? null });
       }
     }
   }
@@ -371,7 +396,8 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   async function buildSnapshot(): Promise<Snapshot> {
     const settings = await readSettings();
     return {
-      state,
+      // Public projection: dollar spend is dropped unless the owner opted in.
+      state: toPublicState(state, { showCost: publicShowCost(settings) }),
       profile: sanitizeProfile(settings?.profile),
       theme: resolveTheme(settings, "live"),
     };
@@ -383,7 +409,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     const title = redact(rawTitle).slice(0, 140);
     session!.nowBuilding = { title, mode };
     await persistSession();
-    await appendEvent({ type: "now_building", title, mode });
+    await logEvent({ type: "now_building", title, mode });
     render();
   }
 
@@ -395,7 +421,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     if (kind === "feature") session!.features += 1;
     if (kind === "bug") session!.bugs += 1;
     await persistSession();
-    await appendEvent({ type: "mark", kind, text });
+    await logEvent({ type: "mark", kind, text });
     render();
     void refreshHistory();
   }
@@ -403,8 +429,8 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   async function endSession(): Promise<void> {
     state.isLive = false;
     state.updatedAt = new Date().toISOString();
-    await writeState(state);
-    await appendEvent({ type: "session_ended", title: session!.title });
+    await saveState(state);
+    await logEvent({ type: "session_ended", title: session!.title });
   }
 
   // ---- claude hooks (dumb script in, smart agent here) ---------------------
@@ -420,7 +446,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     const firstLine = rawPrompt.split("\n").map((l) => l.trim()).find(Boolean) ?? "";
     const title = redact(firstLine).slice(0, 120);
     session!.prompts += 1;
-    await appendEvent({ type: "prompt_submitted", title });
+    await logEvent({ type: "prompt_submitted", title });
     const mode = session!.nowBuilding?.mode ?? "coding";
     if (title) {
       session!.nowBuilding = { title, mode };
@@ -446,18 +472,18 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
    *  The `Task` tool spawns a sub-agent — count those; they're the signal we
    *  surface on /live (raw tool calls are noise). */
   async function onTool(tool: string): Promise<void> {
-    await appendEvent({ type: "tool_used", tool });
+    await logEvent({ type: "tool_used", tool });
     if (tool === "Task") {
       session!.subAgents += 1;
       await persistSession();
-      await appendEvent({ type: "subagent_used" });
+      await logEvent({ type: "subagent_used" });
     }
     void pollGit();
   }
 
   /** Stop → Claude finished a response; refresh stats. */
   async function onStop(): Promise<void> {
-    await appendEvent({ type: "claude_stopped" });
+    await logEvent({ type: "claude_stopped" });
     void pollGit();
   }
 
@@ -596,7 +622,11 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
       }
 
       if (req.method === "GET" && route === "/state.json") {
-        sendJson(res, 200, state);
+        sendJson(res, 200, stateForRequest(state, {
+          hud: url.searchParams.get("hud") === "1",
+          remote: isRemote(req),
+          showCost: publicShowCost(await readSettings()),
+        }));
         return;
       }
 
@@ -638,6 +668,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
           // Gemini API key is NOT here — it lives in secrets.json and is never
           // exposed over any route.
           summarizer: sanitizeSummarizer(s?.summarizer),
+          publicShowCost: publicShowCost(s),
           integrations: await integrationStatus(),
         });
         return;
@@ -784,9 +815,18 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         if (body.summarizer && typeof body.summarizer === "object") {
           summarizer = sanitizeSummarizer({ ...current.summarizer, ...(body.summarizer as object) });
         }
-        const next: Settings = { ...current, version: 1, theme, profile, summarizer };
+        // Public dollar-spend toggle (decided 2026-11-01: hidden by default).
+        // Only a real boolean is accepted; anything else keeps the current value.
+        const showCost = typeof body.publicShowCost === "boolean" ? body.publicShowCost : publicShowCost(current);
+        const next: Settings = { ...current, version: 1, theme, profile, summarizer, publicShowCost: showCost };
         await writeSettings(next);
-        return sendJson(res, 200, { ok: true, theme: next.theme, profile: next.profile ?? {}, summarizer: next.summarizer ?? {} });
+        return sendJson(res, 200, {
+          ok: true,
+          theme: next.theme,
+          profile: next.profile ?? {},
+          summarizer: next.summarizer ?? {},
+          publicShowCost: showCost,
+        });
       }
 
       // ── Integrations OAuth (S3) — all localhost-only ──────────────────────
@@ -913,7 +953,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         // A fresh live session starts/ends here — reset the per-session viewer
         // high-water mark so peakViewers tracks THIS stream, not the last one.
         peakViewers = {};
-        void appendEvent({ type: active ? "live_started" : "live_ended" });
+        void logEvent({ type: active ? "live_started" : "live_ended" });
         render();
       },
     });
@@ -964,7 +1004,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     timers.forEach(clearInterval);
     obs?.close();
     state.isLive = false;
-    void writeState(state);
+    void saveState(state);
     // Best-effort final publish (state is now offline). Give the POST a brief
     // window to land, but never let it block shutdown past the timeout.
     if (publishEnabled) {
