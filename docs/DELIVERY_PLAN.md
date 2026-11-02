@@ -73,7 +73,7 @@ Effort is for one developer working with coding agents, in focused days.
 - Replace `npx --yes ccusage` with the local transcript parser (or a pinned dependency).
 - Rewrite the README for strangers: install, OBS, hooks, privacy.
 - Final history secret scan (2026-11-01 scan was clean), then flip the repo public **if the owner decides to** (still open).
-- Ship the landing page (`landing/`) at `https://vibelogs.dev` and the n8builds.dev upcoming-page section (n8builds-web PR #117).
+- Ship the landing page (`landing/`) at `https://vibelogs.dev` (done 2026-11-01: live, `www` redirects to the apex, see `landing/DEPLOY.md`) and the n8builds.dev upcoming-page section (n8builds-web PR #117).
   Every early-access CTA links to `https://n8builds.dev/upcoming?interest=vibelog#vibelog`.
 
 ### M1 - Installable and multi-agent (about 5-8 days)

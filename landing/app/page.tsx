@@ -331,12 +331,15 @@ export default function Home() {
               <WaitlistButton />
               <GhostButton href="#how">See how it works</GhostButton>
             </div>
-            <p className="mt-4 text-sm text-balance text-muted">Free to self-host, available first. Hosted by us comes later.</p>
+            <p className="mt-4 text-sm text-muted">
+              <span className="inline-block">Free to self-host, available first.</span>{" "}
+              <span className="inline-block">Hosted by us comes later.</span>
+            </p>
           </div>
 
           <div className="relative mx-auto mt-14 max-w-5xl md:pb-24">
             <Shot
-              src="/shots/live.png"
+              src="/shots/live.webp"
               alt="The VibeLog public live page with a now-building headline, stat tiles for features, commits, tokens, prompts, sub-agents and streak, a projects list and a build feed"
               width={1440}
               height={900}
@@ -346,7 +349,7 @@ export default function Home() {
             <div className="mt-4 md:absolute md:right-[-2%] md:bottom-0 md:left-[6%] md:mt-0">
               <figure className="ring overflow-hidden rounded-xl border border-line bg-bg-2 shadow-[0_30px_90px_rgba(0,0,0,0.75)]">
                 <Image
-                  src="/shots/hud-strip.png"
+                  src="/shots/hud-strip.webp"
                   alt="The VibeLog OBS HUD strip: projects ticker, a now-building card, and live stats for features, commits, prompts, sub-agents, tokens, spend and day streak"
                   width={1920}
                   height={320}
@@ -394,7 +397,7 @@ export default function Home() {
               <div className="lg:col-span-2">
                 <h3 className="mb-3 text-lg font-bold">OBS HUD</h3>
                 <Shot
-                  src="/shots/hud.png"
+                  src="/shots/hud.webp"
                   alt="The full 1920 by 1080 VibeLog OBS overlay: a corner milestone toast, a camera frame with a personal-best badge, a projects ticker, a now-building card and live stats"
                   width={1600}
                   height={900}
@@ -405,7 +408,7 @@ export default function Home() {
               <div className="min-w-0">
                 <h3 className="mb-3 text-lg font-bold">Public /live page</h3>
                 <Shot
-                  src="/shots/live.png"
+                  src="/shots/live.webp"
                   alt="The VibeLog public live page with a now-building headline, stat tiles for features, commits, tokens, prompts, sub-agents and streak, a projects list and a build feed"
                   width={1440}
                   height={900}
@@ -416,7 +419,7 @@ export default function Home() {
               <div className="min-w-0">
                 <h3 className="mb-3 text-lg font-bold">Share cards</h3>
                 <Shot
-                  src="/shots/share-card.png"
+                  src="/shots/share-card.webp"
                   alt="A 1200 by 630 VibeLog share card showing features, time live, tokens, commits and what is being built"
                   width={1200}
                   height={630}
@@ -427,7 +430,7 @@ export default function Home() {
               <div className="lg:col-span-2">
                 <h3 className="mb-3 text-lg font-bold">Private dashboard</h3>
                 <Shot
-                  src="/shots/dashboard.png"
+                  src="/shots/dashboard.webp"
                   alt="The VibeLog dashboard with a year-long activity heatmap of Claude tokens per day, totals, a session panel, a weekly streaming chart, channel growth sparklines and an embed snippet"
                   width={1440}
                   height={1198}

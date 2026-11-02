@@ -5,6 +5,9 @@ process tracks your git activity, Claude token spend, stream time and channel
 growth, and serves a live HUD (OBS Browser Source), a private dashboard, a public
 **/live** page, and shareable **/share** cards. **Local-first, no accounts, $0.**
 
+The marketing site is live at https://vibelogs.dev (source in `landing/`, deploy steps in
+[`landing/DEPLOY.md`](./landing/DEPLOY.md)).
+
 Roadmap & direction live in [`docs/VISION.md`](./docs/VISION.md) (canonical) and
 [`docs/HANDOFF.md`](./docs/HANDOFF.md) (architecture cold-start). The root
 `V0_SPEC.md`, `PRD.md`, and `NEXT_STEPS.md` are **historical** — superseded by

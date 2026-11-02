@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Static assets only: no Worker script runs, requests are served straight from out/.
+  "name": "vibelog-landing",
+  "compatibility_date": "2026-10-20",
+  "assets": {
+    "directory": "./out",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "vibelogs.dev", "custom_domain": true }]
+}

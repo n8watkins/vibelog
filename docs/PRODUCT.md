@@ -157,6 +157,7 @@ Recommendation: **keep VibeLog.**
 - **Canonical URL: `https://vibelogs.dev`** (note the s).
   Decided 2026-11-01: the owner already owns `vibelogs.dev`; it is the canonical URL for the landing page and the docs.
   The earlier `vibelog.n8builds.dev` recommendation is dropped.
+  The landing page is live at https://vibelogs.dev (`www.vibelogs.dev` redirects to it); see `landing/DEPLOY.md`.
 - Optional extra domain: `vibelog.live` looked available on 2026-11-01 via RDAP (no registration record; unconfirmed, not purchased).
   It is an option only, for example as a redirect; nothing depends on it.
 - npm package: `vibelog-cli` (appears free) or a scoped `@n8builds/vibelog`; the command stays `vibe`.

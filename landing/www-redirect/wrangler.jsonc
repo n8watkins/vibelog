@@ -1,0 +1,10 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  // Sends www.vibelogs.dev (any path) to the apex with a permanent redirect.
+  "name": "vibelog-www-redirect",
+  "main": "index.js",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "www.vibelogs.dev", "custom_domain": true }]
+}

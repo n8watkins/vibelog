@@ -8,7 +8,10 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "preview": "wrangler dev",
+    "deploy": "pnpm build && wrangler deploy",
+    "deploy:www": "wrangler deploy -c www-redirect/wrangler.jsonc"
   },
   "dependencies": {
     "next": "16.4.3",
@@ -23,6 +26,14 @@
     "eslint": "^9.39.0",
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.151.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
   }
 }
