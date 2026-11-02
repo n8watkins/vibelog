@@ -25,8 +25,8 @@ importers:
         specifier: ^22.19.20
         version: 22.19.20
       release-kit:
-        specifier: github:n8watkins/release-kit#v2.2.0
-        version: https://codeload.github.com/n8watkins/release-kit/tar.gz/0a2f1d2c628e51fb501786c6c658c8a2749f2139
+        specifier: github:n8watkins/release-kit#v2.3.2
+        version: https://codeload.github.com/n8watkins/release-kit/tar.gz/702fa47df7133de259a3dab1637edfacb98a183e
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -573,9 +573,9 @@ packages:
     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
     engines: {node: '>= 0.10'}
 
-  release-kit@https://codeload.github.com/n8watkins/release-kit/tar.gz/0a2f1d2c628e51fb501786c6c658c8a2749f2139:
-    resolution: {tarball: https://codeload.github.com/n8watkins/release-kit/tar.gz/0a2f1d2c628e51fb501786c6c658c8a2749f2139}
-    version: 2.2.0
+  release-kit@https://codeload.github.com/n8watkins/release-kit/tar.gz/702fa47df7133de259a3dab1637edfacb98a183e:
+    resolution: {tarball: https://codeload.github.com/n8watkins/release-kit/tar.gz/702fa47df7133de259a3dab1637edfacb98a183e}
+    version: 2.3.2
     hasBin: true
 
   require-from-string@2.0.2:
@@ -1140,7 +1140,7 @@ snapshots:
       iconv-lite: 0.7.3
       unpipe: 1.0.0
 
-  release-kit@https://codeload.github.com/n8watkins/release-kit/tar.gz/0a2f1d2c628e51fb501786c6c658c8a2749f2139: {}
+  release-kit@https://codeload.github.com/n8watkins/release-kit/tar.gz/702fa47df7133de259a3dab1637edfacb98a183e: {}
 
   require-from-string@2.0.2: {}
 
