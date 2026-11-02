@@ -52,7 +52,7 @@
       }
       @keyframes drift1 { from { transform: translate(0, 0) scale(1); } to { transform: translate(-8vw, 10vh) scale(1.15); } }
       @keyframes drift2 { from { transform: translate(0, 0) scale(1); } to { transform: translate(10vw, -8vh) scale(1.1); } }
-      .wrap { width: min(1120px, 94vw); margin: 0 auto; padding: 20px 0; height: 100vh; display: flex; flex-direction: column; gap: 13px; }
+      .wrap { width: min(1120px, 94vw); margin: 0 auto; padding: 20px 0; min-height: 100vh; display: flex; flex-direction: column; gap: 13px; }
       .topbar { display: flex; align-items: center; justify-content: space-between; }
       .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -0.01em; font-size: 18px; }
       .brand .spark { width: 22px; height: 22px; border-radius: 7px; background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 0 18px rgba(124, 92, 255, 0.5); }
@@ -707,12 +707,18 @@
         const months = $("heatMonths");
         months.innerHTML = "";
         let lastMon = -1;
+        let lastLabel = null; // { w, span } of the most recent label
         for (let w = 0; w < weeks; w++) {
           const idx = w * 7 - pad; // first day index of this column in `chart`
           const day = chart[Math.max(0, idx)];
           const mon = day ? new Date(day.date + "T00:00:00").getMonth() : -1;
           const span = document.createElement("span");
-          span.textContent = mon !== lastMon && mon >= 0 ? MON[mon] : "";
+          if (mon !== lastMon && mon >= 0) {
+            // a 3-letter label needs ~3 columns; drop a cramped leading partial month
+            if (lastLabel && w - lastLabel.w < 3) lastLabel.span.textContent = "";
+            span.textContent = MON[mon];
+            lastLabel = { w, span };
+          }
           if (mon !== lastMon) lastMon = mon;
           months.append(span);
         }
