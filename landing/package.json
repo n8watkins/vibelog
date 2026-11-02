@@ -27,7 +27,7 @@
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
-    "wrangler": "^4.151.3"
+    "wrangler": "^4.156.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
