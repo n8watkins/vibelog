@@ -46,8 +46,12 @@ function SectionHeading({ eyebrow, title, intro, id }: { eyebrow: string; title:
   );
 }
 
-function PlannedBadge() {
-  return (
+function StatusBadge({ status }: { status: "first" | "planned" }) {
+  return status === "first" ? (
+    <span className="inline-flex items-center rounded-full border border-accent/50 bg-accent/15 px-2.5 py-0.5 font-mono text-[11px] font-semibold tracking-wider text-ink uppercase">
+      Available first
+    </span>
+  ) : (
     <span className="inline-flex items-center rounded-full border border-teal/40 bg-teal/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold tracking-wider text-teal uppercase">
       Planned
     </span>
@@ -162,33 +166,39 @@ const comparison: { label: string; vibelog: Cell; wakatime: Cell; overlays: Cell
   { label: "Runs fully on your machine", vibelog: "yes", wakatime: "no", overlays: "no", trackers: "yes" },
 ];
 
-const tiers = [
+const paths = [
   {
-    name: "Open source",
-    price: "$0",
-    period: "forever",
-    blurb: "The whole local product, on your machine.",
-    items: ["Agent, HUD, dashboard and recaps", "Themes and profile", "/live, /share and embed from your machine", "Self-host your public page on your own Cloudflare account"],
+    name: "Self-host",
+    price: "Free",
+    period: "open source",
+    status: "first" as const,
+    blurb: "Run everything yourself, on your machine and your own Cloudflare account.",
+    items: [
+      "Agent, OBS HUD, dashboard and recaps",
+      "Themes and profile",
+      "/live, /share and the embed widget from your machine",
+      "Your public page on your own free Cloudflare Worker",
+      "No account, no telemetry",
+    ],
     cta: "Get notified at release",
-    featured: false,
-  },
-  {
-    name: "Hosted free",
-    price: "$0",
-    period: "hosted, planned",
-    blurb: "A public page that stays up when your laptop is off.",
-    items: ["Your page at a VibeLog handle", "30 days of public history", "Publish every few minutes while live", "Small “powered by VibeLog” badge"],
-    cta: "Join early access",
-    featured: false,
-  },
-  {
-    name: "Pro",
-    price: "$6",
-    period: "per month, planned",
-    blurb: "For people who treat their build log as a portfolio.",
-    items: ["Custom domain with SSL", "Full public history", "Near real-time updates while live", "No badge, premium themes"],
-    cta: "Join early access",
     featured: true,
+  },
+  {
+    name: "Hosted by us",
+    price: "$6",
+    period: "per month",
+    status: "planned" as const,
+    blurb: "We run the public page, so it stays up when your laptop is off.",
+    items: [
+      "Everything in self-host, nothing to deploy",
+      "Your page at a VibeLog handle, always on",
+      "Custom domain with SSL",
+      "Full public history and near real-time updates",
+      "Hosted share-card images and link unfurls",
+      "14-day free trial",
+    ],
+    cta: "Join the hosted waitlist",
+    featured: false,
   },
 ];
 
@@ -200,6 +210,14 @@ const faqs = [
   {
     q: "Does anything leave my machine?",
     a: "Not by default. The overlay and dashboard are served from localhost. If you choose to publish, the agent sends a small snapshot with your public profile fields, numbers and theme, never prompts, file paths, diffs or keys.",
+  },
+  {
+    q: "Will viewers see how much I spend on AI?",
+    a: "Not unless you want them to. Dollar spend is hidden by default on every public surface: the /live page, share cards, the embed widget and anything you publish. Token counts stay visible. Your private dashboard and your local HUD still show spend, and one setting (in the dashboard, or vibe privacy cost show) turns it back on publicly.",
+  },
+  {
+    q: "What is the difference between self-hosting and hosted?",
+    a: "Self-hosting is free and comes first: you run the agent and, if you want an always-on page, deploy it to your own Cloudflare account. Hosted by us is a planned paid plan for people who would rather not deploy anything; we keep the page up, add a custom domain and keep the full history.",
   },
   {
     q: "Which AI tools does it track?",
@@ -313,13 +331,13 @@ export default function Home() {
               <WaitlistButton />
               <GhostButton href="#how">See how it works</GhostButton>
             </div>
-            <p className="mt-4 text-sm text-muted">Free and open source. Hosted pages planned.</p>
+            <p className="mt-4 text-sm text-balance text-muted">Free to self-host, available first. Hosted by us comes later.</p>
           </div>
 
           <div className="relative mx-auto mt-14 max-w-5xl md:pb-24">
             <Shot
               src="/shots/live.png"
-              alt="The VibeLog public live page with the headline Itinerary auto-builder, stat tiles for features, commits, tokens, spend, sub-agents and streak, a projects list and a build feed"
+              alt="The VibeLog public live page with a now-building headline, stat tiles for features, commits, tokens, prompts, sub-agents and streak, a projects list and a build feed"
               width={1440}
               height={900}
               priority
@@ -388,7 +406,7 @@ export default function Home() {
                 <h3 className="mb-3 text-lg font-bold">Public /live page</h3>
                 <Shot
                   src="/shots/live.png"
-                  alt="The VibeLog public live page with the headline Itinerary auto-builder, stat tiles for features, commits, tokens, spend, sub-agents and streak, a projects list and a build feed"
+                  alt="The VibeLog public live page with a now-building headline, stat tiles for features, commits, tokens, prompts, sub-agents and streak, a projects list and a build feed"
                   width={1440}
                   height={900}
                   sizes="(min-width: 1024px) 560px, 100vw"
@@ -557,18 +575,18 @@ export default function Home() {
             <SectionHeading
               id="pricing-title"
               eyebrow="Pricing"
-              title="Free to run. Pay only for hosting."
-              intro="Hosted tiers are planned and not yet available. Prices may change before launch."
+              title="Self-host free. Or let us host it."
+              intro="Two paths, same product. Self-hosting is free, open source and comes first. The hosted plan is planned, not yet available, and its price may change before launch."
             />
-            <div className="mt-14 grid gap-5 lg:grid-cols-3">
-              {tiers.map((t) => (
+            <div className="mx-auto mt-14 grid max-w-4xl gap-5 md:grid-cols-2">
+              {paths.map((t) => (
                 <div
                   key={t.name}
                   className={`flex flex-col rounded-2xl border p-7 ${t.featured ? "ring border-accent/50 bg-accent/[0.07]" : "border-line bg-panel"}`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-lg font-bold">{t.name}</h3>
-                    {t.period.endsWith("planned") ? <PlannedBadge /> : null}
+                    <StatusBadge status={t.status} />
                   </div>
                   <p className="mt-4 flex items-baseline gap-2">
                     <span className="text-4xl font-extrabold tracking-tight">{t.price}</span>
@@ -626,7 +644,7 @@ export default function Home() {
               Let people watch you <span className="text-gradient">ship.</span>
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-muted">
-              Get the open-source release and a spot in the hosted beta. One email when it is ready, no spam.
+              Hear first when the self-host release ships, and get a spot in the hosted beta. One email when it is ready, no spam.
             </p>
             <div className="mt-8 flex justify-center">
               <WaitlistButton />
