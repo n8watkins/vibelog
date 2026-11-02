@@ -1,6 +1,6 @@
 {
   "name": "vibelog",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Live coding telemetry + OBS overlay for vibe coding streams (V0, 100% local)",
