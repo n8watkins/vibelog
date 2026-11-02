@@ -3,7 +3,7 @@
  *
  * Drop this one line anywhere on your own site:
  *
- *   <script src="https://vibelog.n8builds.dev/embed.js" async
+ *   <script src="https://vibelogs.dev/embed.js" async
  *           data-vibelog data-width="380" data-height="250"></script>
  *
  * It injects an <iframe> pointing at <this script's origin>/embed — the compact
