@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/* Palette mirrors the product's neon theme (public/*.html) so the page and the
+   screenshots read as one brand. The product is dark-first, so the page is too. */
+@theme {
+  --color-bg: #07060d;
+  --color-bg-2: #0d0b18;
+  --color-panel: rgba(22, 18, 40, 0.72);
+  --color-line: rgba(160, 130, 255, 0.18);
+  --color-ink: #f3f0ff;
+  --color-muted: #a9a3c7;
+  --color-accent: #a06bff;
+  --color-pink: #ff5fd2;
+  --color-teal: #2ee6b6;
+  --color-live: #ff4d5e;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.aurora {
+  background:
+    radial-gradient(60rem 30rem at 85% -10%, rgba(160, 107, 255, 0.28), transparent 60%),
+    radial-gradient(40rem 26rem at -5% 25%, rgba(46, 230, 182, 0.12), transparent 60%),
+    radial-gradient(50rem 30rem at 50% 110%, rgba(255, 95, 210, 0.12), transparent 60%);
+}
+
+.text-gradient {
+  background: linear-gradient(100deg, #c9a8ff 0%, #ff8ae0 55%, #7ff3d3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Travelling gradient ring, same idea as the product's panels. */
+@property --ring-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.ring {
+  position: relative;
+  isolation: isolate;
+}
+
+.ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--ring-angle),
+    transparent 30%,
+    var(--color-accent) 50%,
+    var(--color-pink) 63%,
+    var(--color-teal) 76%,
+    transparent 92%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: ring-spin 18s linear infinite;
+  z-index: 1;
+}
+
+@keyframes ring-spin {
+  to {
+    --ring-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .ring::after {
+    animation: none;
+  }
+}
+
+/* FAQ disclosure marker */
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details[open] .faq-chevron {
+  transform: rotate(45deg);
+}
