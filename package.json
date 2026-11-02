@@ -10,7 +10,10 @@
   "scripts": {
     "vibe": "tsx src/cli.ts",
     "test": "node --test --import tsx \"src/*.test.ts\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "release:check": "release-kit check && npm run typecheck && npm test && npm --prefix worker ci && npm --prefix worker run typecheck && npm --prefix worker test",
+    "release": "release-kit release",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
@@ -19,6 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.19.20",
+    "release-kit": "github:n8watkins/release-kit#v2.2.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   },
@@ -27,5 +31,11 @@
       "zod": "^4.6.6"
     }
   },
-  "license": "MIT"
+  "license": "MIT",
+  "overrides": {
+    "zod": "^4.6.6"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
 }

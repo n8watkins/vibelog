@@ -250,6 +250,18 @@ docs/
   HANDOFF.md  VISION.md  THEMING.md  INFRA_PLAN.md   (architecture + roadmap)
 ```
 
+## Commits and releases
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org) (`feat: ...`, `fix: ...`, `docs: ...`), and releases are cut with [release-kit](https://github.com/n8watkins/release-kit); see [`RELEASING.md`](RELEASING.md).
+Installing turns on a `commit-msg` hook that checks each message, and CI checks pushed commits and pull request titles.
+Day to day the repo uses pnpm, but the release tooling installs with npm, so `package-lock.json` sits next to `pnpm-lock.yaml`: after changing dependencies, run `pnpm install` and then `npm install` so both stay in sync (CI checks both).
+
+Releasing is optional and only for this repository: a fork never has to tag, release or set up anything.
+The Release workflow runs only in `n8watkins/vibelog`, so pushing a tag in a fork publishes nothing.
+The hook only checks message format; `git commit --no-verify` skips it.
+
+VibeLog reads no environment variables, so there is no `.env.example`: credentials go in `~/.vibelog/secrets.json` (see [Safety](#safety)).
+
 ## License
 
 MIT, see [LICENSE](./LICENSE).

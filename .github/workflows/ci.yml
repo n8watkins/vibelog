@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    name: Types and tests (app and worker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            worker/package-lock.json
+      # Day to day the repo uses pnpm; the release tooling installs with npm.
+      # Both lock files must match package.json.
+      - name: pnpm-lock.yaml matches package.json
+        run: npx -y pnpm@10.8.1 install --frozen-lockfile --lockfile-only
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm --prefix worker ci
+      - run: npm --prefix worker run typecheck
+      - run: npm --prefix worker test
+
+  landing:
+    name: Landing (landing/)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: landing
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npx -y pnpm@10.8.1 install --frozen-lockfile
+      - run: npx -y pnpm@10.8.1 lint
+      - run: npx -y pnpm@10.8.1 build
