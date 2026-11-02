@@ -37,8 +37,7 @@ the user-facing quickstart; `V0_SPEC.md` / `PRD.md` / `NEXT_STEPS.md` are **hist
 
 ## Conventions
 
-- **Commit after each logical, verified change** with the trailer
-  `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`. **Push only when asked.**
+- **Commit after each logical, verified change.** Never add a Co-Authored-By or agent trailer. **Push only when asked.**
 - Match surrounding style: vanilla TS, no new deps unless justified; pages are no-build
   static HTML + CSS vars. Ask before major/irreversible decisions or any [LATER] roadmap item.
 - **Typecheck:** `pnpm exec tsc --noEmit`. **Tests:** `node --test --import tsx "src/*.test.ts"`.
