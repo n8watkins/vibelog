@@ -4,16 +4,13 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  zod: ^4.6.6
-
 importers:
 
   .:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.32.2
-        version: 1.32.2(zod@4.6.7)
+        version: 1.32.2(supports-color@10.2.2)(zod@4.6.7)
       '@resvg/resvg-js':
         specifier: ^2.6.2
         version: 2.6.2
@@ -25,8 +22,8 @@ importers:
         specifier: ^22.19.20
         version: 22.19.20
       release-kit:
-        specifier: github:n8watkins/release-kit#v2.4.0
-        version: https://codeload.github.com/n8watkins/release-kit/tar.gz/f22fe472946550e7d940602da30bbaa3c3a8bf0b
+        specifier: github:n8watkins/release-kit#v2.4.1
+        version: https://codeload.github.com/n8watkins/release-kit/tar.gz/fb7b3f235ed7b8fbeaf403f4f836566d241c4e2a
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -203,7 +200,7 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
-      zod: ^4.6.6
+      zod: ^3.25 || ^4.0
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
@@ -243,24 +240,28 @@ packages:
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@resvg/resvg-js-linux-arm64-musl@2.6.2':
     resolution: {integrity: sha512-3h3dLPWNgSsD4lQBJPb4f+kvdOSJHa5PjTYVsWHxLUzH4IFTJUAnmuWpw4KqyQ3NA5QCyhw4TWgxk3jRkQxEKg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@resvg/resvg-js-linux-x64-gnu@2.6.2':
     resolution: {integrity: sha512-IVUe+ckIerA7xMZ50duAZzwf1U7khQe2E0QpUxu5MBJNao5RqC0zwV/Zm965vw6D3gGFUl7j4m+oJjubBVoftw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@resvg/resvg-js-linux-x64-musl@2.6.2':
     resolution: {integrity: sha512-UOf83vqTzoYQO9SZ0fPl2ZIFtNIz/Rr/y+7X8XRX1ZnBYsQ/tTb+cj9TE+KHOdmlTFBxhYzVkP2lRByCzqi4jQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@resvg/resvg-js-win32-arm64-msvc@2.6.2':
     resolution: {integrity: sha512-7C/RSgCa+7vqZ7qAbItfiaAWhyRSoD4l4BQAbVDqRRsRgY+S+hgS3in0Rxr7IorKUpGE69X48q6/nOAuTJQxeQ==}
@@ -293,11 +294,6 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
-    peerDependencies:
-      ajv: ^8.0.0
-    peerDependenciesMeta:
-      ajv:
-        optional: true
 
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
@@ -573,9 +569,9 @@ packages:
     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
     engines: {node: '>= 0.10'}
 
-  release-kit@https://codeload.github.com/n8watkins/release-kit/tar.gz/f22fe472946550e7d940602da30bbaa3c3a8bf0b:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/n8watkins/release-kit/tar.gz/f22fe472946550e7d940602da30bbaa3c3a8bf0b}
-    version: 2.3.3
+  release-kit@https://codeload.github.com/n8watkins/release-kit/tar.gz/fb7b3f235ed7b8fbeaf403f4f836566d241c4e2a:
+    resolution: {gitHosted: true, integrity: sha512-F7jfvbwqtz0aNtIXwcHh0pLar0mO896p3jIUVDTk9dWsngLEk2hdQGDZ8MhOI1NF7uO42xCJFFNLKcf6q+7CRw==, tarball: https://codeload.github.com/n8watkins/release-kit/tar.gz/fb7b3f235ed7b8fbeaf403f4f836566d241c4e2a}
+    version: 2.4.1
     hasBin: true
 
   require-from-string@2.0.2:
@@ -628,6 +624,10 @@ packages:
     resolution: {integrity: sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==}
     engines: {node: '>= 0.8'}
 
+  supports-color@10.2.2:
+    resolution: {integrity: sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g==}
+    engines: {node: '>=18'}
+
   toidentifier@1.0.1:
     resolution: {integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==}
     engines: {node: '>=0.6'}
@@ -668,7 +668,7 @@ packages:
   zod-to-json-schema@3.25.2:
     resolution: {integrity: sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA==}
     peerDependencies:
-      zod: ^4.6.6
+      zod: ^3.25.28 || ^4
 
   zod@4.6.7:
     resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
@@ -757,18 +757,18 @@ snapshots:
     dependencies:
       hono: 4.13.16
 
-  '@modelcontextprotocol/sdk@1.32.2(zod@4.6.7)':
+  '@modelcontextprotocol/sdk@1.32.2(supports-color@10.2.2)(zod@4.6.7)':
     dependencies:
       '@hono/node-server': 2.1.5(hono@4.13.16)
       ajv: 8.20.0
-      ajv-formats: 3.0.1(ajv@8.20.0)
+      ajv-formats: 3.0.1
       content-type: 1.0.5
       cors: 2.8.6
       cross-spawn: 7.0.6
       eventsource: 3.0.7
       eventsource-parser: 3.1.1
-      express: 5.3.0
-      express-rate-limit: 8.7.2(express@5.3.0)
+      express: 5.3.0(supports-color@10.2.2)
+      express-rate-limit: 8.7.2(express@5.3.0(supports-color@10.2.2))(supports-color@10.2.2)
       hono: 4.13.16
       jose: 6.2.15
       json-schema-typed: 8.0.2
@@ -839,8 +839,8 @@ snapshots:
       mime-types: 3.0.2
       negotiator: 1.1.0
 
-  ajv-formats@3.0.1(ajv@8.20.0):
-    optionalDependencies:
+  ajv-formats@3.0.1:
+    dependencies:
       ajv: 8.20.0
 
   ajv@8.20.0:
@@ -850,11 +850,11 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  body-parser@2.4.0:
+  body-parser@2.4.0(supports-color@10.2.2):
     dependencies:
       bytes: 3.1.2
       content-type: 2.1.0
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       http-errors: 2.0.1
       iconv-lite: 0.7.3
       on-finished: 2.4.2
@@ -899,9 +899,11 @@ snapshots:
       shebang-command: 2.0.0
       which: 2.0.2
 
-  debug@4.4.3:
+  debug@4.4.3(supports-color@10.2.2):
     dependencies:
       ms: 2.1.3
+    optionalDependencies:
+      supports-color: 10.2.2
 
   depd@2.0.0: {}
 
@@ -962,28 +964,28 @@ snapshots:
     dependencies:
       eventsource-parser: 3.1.1
 
-  express-rate-limit@8.7.2(express@5.3.0):
+  express-rate-limit@8.7.2(express@5.3.0(supports-color@10.2.2))(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
-      express: 5.3.0
+      debug: 4.4.3(supports-color@10.2.2)
+      express: 5.3.0(supports-color@10.2.2)
       ip-address: 10.7.5
     transitivePeerDependencies:
       - supports-color
 
-  express@5.3.0:
+  express@5.3.0(supports-color@10.2.2):
     dependencies:
       accepts: 2.0.0
-      body-parser: 2.4.0
+      body-parser: 2.4.0(supports-color@10.2.2)
       content-disposition: 2.0.1
       content-type: 2.1.0
       cookie: 0.7.2
       cookie-signature: 1.2.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       depd: 2.0.0
       encodeurl: 2.0.1
       escape-html: 1.0.3
       etag: 1.8.1
-      finalhandler: 2.1.1
+      finalhandler: 2.1.1(supports-color@10.2.2)
       fresh: 2.0.0
       http-errors: 2.0.1
       merge-descriptors: 2.0.0
@@ -994,9 +996,9 @@ snapshots:
       proxy-addr: 2.0.8
       qs: 6.17.1
       range-parser: 1.3.0
-      router: 2.2.0
-      send: 1.2.1
-      serve-static: 2.2.1
+      router: 2.2.0(supports-color@10.2.2)
+      send: 1.2.1(supports-color@10.2.2)
+      serve-static: 2.2.1(supports-color@10.2.2)
       statuses: 2.0.2
       type-is: 2.1.0
       vary: 1.1.2
@@ -1007,9 +1009,9 @@ snapshots:
 
   fast-uri@3.1.9: {}
 
-  finalhandler@2.1.1:
+  finalhandler@2.1.1(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       encodeurl: 2.0.1
       escape-html: 1.0.3
       on-finished: 2.4.2
@@ -1140,13 +1142,13 @@ snapshots:
       iconv-lite: 0.7.3
       unpipe: 1.0.0
 
-  release-kit@https://codeload.github.com/n8watkins/release-kit/tar.gz/f22fe472946550e7d940602da30bbaa3c3a8bf0b: {}
+  release-kit@https://codeload.github.com/n8watkins/release-kit/tar.gz/fb7b3f235ed7b8fbeaf403f4f836566d241c4e2a: {}
 
   require-from-string@2.0.2: {}
 
-  router@2.2.0:
+  router@2.2.0(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       depd: 2.0.0
       is-promise: 4.0.0
       parseurl: 1.3.3
@@ -1156,9 +1158,9 @@ snapshots:
 
   safer-buffer@2.1.2: {}
 
-  send@1.2.1:
+  send@1.2.1(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       encodeurl: 2.0.1
       escape-html: 1.0.3
       etag: 1.8.1
@@ -1172,12 +1174,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  serve-static@2.2.1:
+  serve-static@2.2.1(supports-color@10.2.2):
     dependencies:
       encodeurl: 2.0.1
       escape-html: 1.0.3
       parseurl: 1.3.3
-      send: 1.2.1
+      send: 1.2.1(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -1218,6 +1220,9 @@ snapshots:
       side-channel-weakmap: 1.0.2
 
   statuses@2.0.2: {}
+
+  supports-color@10.2.2:
+    optional: true
 
   toidentifier@1.0.1: {}
 
