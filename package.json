@@ -26,11 +26,6 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   },
-  "pnpm": {
-    "overrides": {
-      "zod": "^4.6.6"
-    }
-  },
   "license": "MIT",
   "overrides": {
     "zod": "^4.6.6"

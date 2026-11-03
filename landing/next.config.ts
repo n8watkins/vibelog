@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: { unoptimized: true },
   // landing/ is a standalone app inside the agent repo; pin the root so
-  // Turbopack does not pick the agent's pnpm-lock.yaml one level up.
+  // Turbopack does not pick the agent's package-lock.json one level up.
   turbopack: { root: path.resolve(import.meta.dirname) },
 };
 

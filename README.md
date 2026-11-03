@@ -18,16 +18,16 @@ What only the owner can do (tests that need real accounts and OBS) is in [`OWNER
 ## Quick start
 
 ```bash
-pnpm install
+npm install
 
 # Optional: set a default project name
-pnpm vibe init --project "VibeLog"
+npm run vibe -- init --project "VibeLog"
 
 # Start a session + the overlay agent (runs in the foreground — leave it up)
-pnpm vibe start --cwd /path/to/the/repo/youre/streaming --title "Building the live tracker"
+npm run vibe -- start --cwd /path/to/the/repo/youre/streaming --title "Building the live tracker"
 
 # …or just preview everything with seeded fake data (no git/session needed):
-pnpm vibe demo
+npm run vibe -- demo
 ```
 
 Then in **OBS** add a **Browser Source** pointing at:
@@ -41,19 +41,19 @@ http://localhost:4545/overlay
 From **another terminal**, drive the overlay while you code:
 
 ```bash
-pnpm vibe building "wiring the live stats card" --mode coding
-pnpm vibe mark feature "live LOC counter works"
-pnpm vibe mark bug "fixed double-count on stash"
-pnpm vibe status        # dump current live state
-pnpm vibe end           # end session, stop the agent
+npm run vibe -- building "wiring the live stats card" --mode coding
+npm run vibe -- mark feature "live LOC counter works"
+npm run vibe -- mark bug "fixed double-count on stash"
+npm run vibe -- status        # dump current live state
+npm run vibe -- end           # end session, stop the agent
 ```
 
 When you wrap up, get a recap built from your local log (no AI, no network):
 
 ```bash
-pnpm vibe report             # today
-pnpm vibe report yesterday
-pnpm vibe report 2026-06-01
+npm run vibe -- report             # today
+npm run vibe -- report yesterday
+npm run vibe -- report 2026-06-01
 ```
 
 ```
@@ -73,9 +73,9 @@ pnpm vibe report 2026-06-01
 Get a weekly rollup, or a GitHub-style activity heatmap with a Vibe Score:
 
 ```bash
-pnpm vibe report week        # 7-day recap with per-day bars
-pnpm vibe chart              # activity heatmap (last 84 days)
-pnpm vibe chart --days 365   # a full year
+npm run vibe -- report week        # 7-day recap with per-day bars
+npm run vibe -- chart              # activity heatmap (last 84 days)
+npm run vibe -- chart --days 365   # a full year
 ```
 
 ```
@@ -99,7 +99,7 @@ Build modes: `planning designing coding debugging polishing deploying shipping`.
 
 ### Make `vibe` a real command (recommended)
 
-So `vibe` targets whatever repo you're in (instead of `pnpm vibe` from this dir):
+So `vibe` targets whatever repo you're in (instead of `npm run vibe --` from this dir):
 
 ```bash
 alias vibe="npx tsx $(pwd)/src/cli.ts"
@@ -112,9 +112,9 @@ Wire VibeLog into Claude Code so the overlay updates itself while you code — y
 prompt becomes the "Now Building" card and git stats refresh right after each edit.
 
 ```bash
-pnpm vibe hooks print              # preview the settings.json block
-pnpm vibe hooks install --global   # ~/.claude/settings.json (all projects)
-pnpm vibe hooks install --dir .    # ./.claude/settings.json (this project only)
+npm run vibe -- hooks print              # preview the settings.json block
+npm run vibe -- hooks install --global   # ~/.claude/settings.json (all projects)
+npm run vibe -- hooks install --dir .    # ./.claude/settings.json (this project only)
 ```
 
 Restart Claude Code afterwards. The hook script is fire-and-forget: it never blocks
@@ -141,8 +141,8 @@ See where your Claude tokens actually go — across *all* your work, not just
 VibeLog sessions. Parses local Claude Code transcripts (no network, no ccusage):
 
 ```bash
-pnpm vibe tokens --days 7        # last 7 days
-pnpm vibe tokens --since 2026-06-01 --top 20
+npm run vibe -- tokens --days 7        # last 7 days
+npm run vibe -- tokens --since 2026-06-01 --top 20
 ```
 
 ```
@@ -174,7 +174,7 @@ session, inject overlay text, change your theme, or read your dashboard.
 the embed widget and any snapshot you publish) carry token counts but not the
 session's dollar cost. The private dashboard and your local OBS HUD still show
 it. To show spend publicly, tick "Show dollar spend publicly" in the dashboard
-settings or run `pnpm vibe privacy cost show` (`hide` reverts; it sets
+settings or run `npm run vibe -- privacy cost show` (`hide` reverts; it sets
 `publicShowCost` in `~/.vibelog/settings.json`).
 
 `vibe demo` keeps its fake session in memory and never writes your real
@@ -188,8 +188,8 @@ runs in zero-config local mode. Keys never reach `LiveState`/the overlay; see
 [`CLAUDE.md`](./CLAUDE.md) and [`docs/INFRA_PLAN.md`](./docs/INFRA_PLAN.md) §1/§4.
 
 ```bash
-pnpm test        # redactor tests
-pnpm typecheck
+npm test        # redactor tests
+npm run typecheck
 ```
 
 ## Going public (still free)
@@ -200,12 +200,12 @@ It shows an "Offline — back soon" state when no session is running, so the URL
 safe to share permanently. There's also a **`/share`** page with proper OG/Twitter
 meta and a server-rendered card image (`/share/card.png?kind=stats|join`) so links
 unfurl nicely, plus a marketing **`/landing`** page. To track Twitch follower
-counts, authorize once with `pnpm vibe twitch login`.
+counts, authorize once with `npm run vibe -- twitch login`.
 
 To expose it to viewers over the internet, run a free Cloudflare Tunnel:
 
 ```bash
-pnpm vibe share            # wraps `cloudflared tunnel --url http://localhost:4545`
+npm run vibe -- share            # wraps `cloudflared tunnel --url http://localhost:4545`
 # → viewers visit <the trycloudflare URL>/live
 ```
 
@@ -256,7 +256,7 @@ docs/
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org) (`feat: ...`, `fix: ...`, `docs: ...`), and releases are cut with [release-kit](https://github.com/n8watkins/release-kit); see [`RELEASING.md`](RELEASING.md).
 Installing turns on a `commit-msg` hook that checks each message, and CI checks pushed commits and pull request titles.
-Day to day the repo uses pnpm, but the release tooling installs with npm, so `package-lock.json` sits next to `pnpm-lock.yaml`: after changing dependencies, run `pnpm install` and then `npm install` so both stay in sync (CI checks both).
+The repo uses npm throughout (the agent, `worker/` and `landing/` each have their own `package-lock.json`), which is also what the release tooling installs with.
 
 Releasing is optional and only for this repository: a fork never has to tag, release or set up anything.
 The Release workflow runs only in `n8watkins/vibelog`, so pushing a tag in a fork publishes nothing.
