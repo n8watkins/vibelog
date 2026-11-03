@@ -1,5 +1,6 @@
 {
   "versionFiles": [],
   "workflows": "package",
-  "repository": "n8watkins/vibelog"
+  "repository": "n8watkins/vibelog",
+  "visibility": "public"
 }
