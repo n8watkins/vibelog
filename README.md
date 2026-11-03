@@ -13,6 +13,8 @@ Roadmap & direction live in [`docs/VISION.md`](./docs/VISION.md) (canonical) and
 `V0_SPEC.md`, `PRD.md`, and `NEXT_STEPS.md` are **historical** — superseded by
 `docs/VISION.md`.
 
+What only the owner can do (tests that need real accounts and OBS) is in [`OWNER-TODO.md`](./OWNER-TODO.md).
+
 ## Quick start
 
 ```bash
