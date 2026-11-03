@@ -68,7 +68,7 @@ cd worker
 npm install
 ```
 
-(Do NOT run `pnpm install` at the repo root — the root package is isolated
+(Do NOT run `npm install` at the repo root — the root package is isolated
 from this worker.)
 
 ### 2. Create the KV namespace
@@ -193,7 +193,7 @@ npm run typecheck
 # (Requires @cloudflare/workers-types: cd worker && npm install first)
 ```
 
-The root `pnpm exec tsc --noEmit` is unaffected — it only covers `src/**/*.ts`.
+The root `npm run typecheck` is unaffected — it only covers `src/**/*.ts`.
 
 ## Security notes
 

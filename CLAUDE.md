@@ -3,7 +3,7 @@
 VibeLog is a **local-first OBS-overlay coding/streaming telemetry tool**: one Node/tsx
 process (`src/agent.ts`, HTTP on `:4545`) serves a live **overlay** (OBS), a private
 **dashboard**, a public **/live** page, and a **/share** card surface. No build step
-(runtime is **tsx**); package manager is **pnpm**; pages are no-framework static HTML
+(runtime is **tsx**); package manager is **npm**; pages are no-framework static HTML
 driven by CSS custom properties.
 
 **Start here:** read `docs/HANDOFF.md` (cold-start brief), then `docs/VISION.md`
@@ -43,8 +43,8 @@ the user-facing quickstart; `V0_SPEC.md` / `PRD.md` / `NEXT_STEPS.md` are **hist
 - **Commit after each logical, verified change.** Never add a Co-Authored-By or agent trailer. **Push only when asked.**
 - Match surrounding style: vanilla TS, no new deps unless justified; pages are no-build
   static HTML + CSS vars. Ask before major/irreversible decisions or any [LATER] roadmap item.
-- **Two lock files:** pnpm is the dev package manager, but release-kit installs with `npm ci`; after any dependency change run `pnpm install` then `npm install` and commit both lock files.
-- **Typecheck:** `pnpm exec tsc --noEmit`. **Tests:** `node --test --import tsx "src/*.test.ts"`.
+- **npm only:** the agent, `worker/` and `landing/` each have one `package-lock.json`; release-kit and Dependabot both use npm, so never add a pnpm or yarn lock file.
+- **Typecheck:** `npm run typecheck`. **Tests:** `node --test --import tsx "src/*.test.ts"`.
   Add tests for pure logic (see `src/theme.test.ts` / `src/share.test.ts` as the pattern).
 
 <!-- release-kit -->

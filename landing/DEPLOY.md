@@ -13,10 +13,10 @@ There is no runtime image optimizer, so screenshots in `public/shots/` are commi
 ## Redeploy
 
 Log in once with `npx wrangler login` (check with `npx wrangler whoami`).
-From `landing/`, run `pnpm lint && pnpm typecheck`, then `pnpm run deploy` (not `pnpm deploy`, which is a different built-in pnpm command).
-`pnpm run deploy` runs `next build` (writes `out/`) and then `wrangler deploy`, which uploads only changed assets.
-The redirect rarely changes; redeploy it with `pnpm run deploy:www`.
-To check the build locally first, run `pnpm build && pnpm run preview` and open http://localhost:8787.
+From `landing/`, run `npm run lint && npm run typecheck`, then `npm run deploy`.
+`npm run deploy` runs `next build` (writes `out/`) and then `wrangler deploy`, which uploads only changed assets.
+The redirect rarely changes; redeploy it with `npm run deploy:www`.
+To check the build locally first, run `npm run build && npm run preview` and open http://localhost:8787.
 
 ## Roll back
 
@@ -24,7 +24,7 @@ Run `npx wrangler deployments list` to see recent deployments, or `npx wrangler 
 Run `npx wrangler rollback` to return to the previous version, or `npx wrangler rollback <version-id>` for a specific one.
 Add `-c www-redirect/wrangler.jsonc` to any of these commands to act on the redirect Worker instead.
 Static assets are versioned with the Worker, so a rollback restores the old pages too.
-Fix forward afterwards by reverting the commit and running `pnpm run deploy` again, so the repository matches what is live.
+Fix forward afterwards by reverting the commit and running `npm run deploy` again, so the repository matches what is live.
 
 ## Taking it down
 
