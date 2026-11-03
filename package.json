@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.19.20",
-    "release-kit": "github:n8watkins/release-kit#v2.2.0",
+    "release-kit": "github:n8watkins/release-kit#v2.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   },

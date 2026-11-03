@@ -20,11 +20,10 @@ permissions:
 
 jobs:
   release:
-    # Forks never publish: releasing is optional and only runs in n8watkins/vibelog.
-    # Re-running npx release-kit apply rewrites this file; put this guard back.
-    if: github.repository == 'n8watkins/vibelog'
+    # Only the upstream repo publishes: a fork's tags and runs release nothing.
+    if: github.repository == 'n8watkins/vibelog' # release-kit: fork guard
     permissions:
       contents: write # only the kit's publish job uses it
-    uses: n8watkins/release-kit/.github/workflows/release.yml@v2.2.0
+    uses: n8watkins/release-kit/.github/workflows/release.yml@v2.3.3
     with:
       tag: ${{ inputs.tag || '' }}
