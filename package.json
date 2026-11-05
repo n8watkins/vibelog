@@ -18,13 +18,13 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
     "@resvg/resvg-js": "^2.6.2",
-    "commander": "^12.1.0"
+    "commander": "^15.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.19.20",
+    "@types/node": "^26.6.6",
     "release-kit": "github:n8watkins/release-kit#v2.8.1",
     "tsx": "^4.23.15",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   },
   "license": "MIT",
   "overrides": {
