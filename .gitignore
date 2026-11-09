@@ -6,3 +6,4 @@ dist/
 .env.*
 secrets.json
 .vibelog/
+.wrangler/
