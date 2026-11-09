@@ -1,18 +1,14 @@
 import { createReadStream } from "node:fs";
-import { readdir } from "node:fs/promises";
 import { createInterface } from "node:readline";
-import os from "node:os";
 import path from "node:path";
-import { localDateString } from "./ccusage.ts";
+import { localDateString, transcriptFiles, usageIndex } from "./usage.ts";
 
 /**
- * Tokens-by-project from Claude Code transcripts (PRD §17 V2). ccusage has no
- * project dimension, but the JSONL transcripts under ~/.claude/projects/ carry a
+ * Tokens-by-project from Claude Code transcripts (PRD §17 V2). The JSONL
+ * transcripts under ~/.claude/projects/ (and ~/.config/claude/projects/) carry a
  * `cwd` per line, so we sum usage and group by project. This reads ALL Claude
  * usage, not just VibeLog sessions — answering "what did I spend tokens on?".
  */
-
-const PROJECTS_DIR = path.join(os.homedir(), ".claude", "projects");
 
 export type UsageLike = {
   input_tokens?: number;
@@ -50,7 +46,7 @@ export function sumUsage(u: UsageLike | undefined | null): number {
 
 /**
  * Pure aggregation: group rows by cwd, dedupe by `id:requestId` (same scheme
- * ccusage uses to avoid double-counting), optionally filter by `since` date
+ * src/usage.ts and ccusage use to avoid double-counting), optionally filter by `since` date
  * (YYYY-MM-DD, inclusive, compared against the UTC date of each timestamp).
  */
 export function aggregate(rows: Row[], since?: string | null): ProjectTokens[] {
@@ -137,38 +133,28 @@ async function* readJsonl(file: string): AsyncGenerator<unknown> {
 
 /** Read every Claude transcript line that carries token usage into flat Rows. */
 async function readAllRows(): Promise<Row[]> {
-  let dirs: string[];
-  try {
-    dirs = await readdir(PROJECTS_DIR);
-  } catch {
-    return [];
-  }
-
   const rows: Row[] = [];
-  for (const dir of dirs) {
-    const dirPath = path.join(PROJECTS_DIR, dir);
-    let files: string[];
-    try {
-      files = (await readdir(dirPath)).filter((f) => f.endsWith(".jsonl"));
-    } catch {
-      continue;
-    }
-    for (const file of files) {
-      for await (const obj of readJsonl(path.join(dirPath, file))) {
-        const o = obj as Record<string, unknown>;
-        if (o.type !== "assistant") continue;
-        const msg = o.message as Record<string, unknown> | undefined;
-        const usage = msg?.usage as UsageLike | undefined;
-        if (!usage) continue;
-        rows.push({
-          cwd: typeof o.cwd === "string" ? o.cwd : dir,
-          file,
-          usage,
-          id: typeof msg?.id === "string" ? msg.id : undefined,
-          requestId: typeof o.requestId === "string" ? o.requestId : undefined,
-          timestamp: typeof o.timestamp === "string" ? o.timestamp : undefined,
-        });
-      }
+  for (const filePath of await transcriptFiles()) {
+    // Sub-agent transcripts sit in <project>/<session>/subagents/; count them
+    // as the parent session's file so `sessions` stays a count of sessions.
+    const rel = filePath.split(path.sep);
+    const sub = rel.lastIndexOf("subagents");
+    const file = sub > 0 ? `${rel[sub - 1]!}.jsonl` : path.basename(filePath);
+    const dir = path.basename(path.dirname(sub > 0 ? path.dirname(path.dirname(filePath)) : filePath));
+    for await (const obj of readJsonl(filePath)) {
+      const o = obj as Record<string, unknown>;
+      if (o.type !== "assistant") continue;
+      const msg = o.message as Record<string, unknown> | undefined;
+      const usage = msg?.usage as UsageLike | undefined;
+      if (!usage) continue;
+      rows.push({
+        cwd: typeof o.cwd === "string" ? o.cwd : dir,
+        file,
+        usage,
+        id: typeof msg?.id === "string" ? msg.id : undefined,
+        requestId: typeof o.requestId === "string" ? o.requestId : undefined,
+        timestamp: typeof o.timestamp === "string" ? o.timestamp : undefined,
+      });
     }
   }
   return rows;
@@ -179,7 +165,12 @@ export async function getTokensByProject(opts: { since?: string | null } = {}): 
   return aggregate(await readAllRows(), opts.since ?? null);
 }
 
-/** Read all transcripts and aggregate tokens by cwd, per local day. */
+/**
+ * Tokens by cwd, per local day, from the shared incremental index (the
+ * dashboard polls this, so it must not re-read every transcript each time).
+ */
 export async function getDailyUsageByCwd(): Promise<Record<string, Record<string, number>>> {
-  return aggregateDaily(await readAllRows());
+  const idx = usageIndex();
+  await idx.refresh();
+  return idx.dailyByCwd();
 }

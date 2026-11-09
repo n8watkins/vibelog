@@ -1,4 +1,4 @@
-import { localDateString } from "./ccusage.ts";
+import { localDateString } from "./usage.ts";
 import { summarizeDay, type VibeEvent, type DaySummary } from "./report.ts";
 
 /**

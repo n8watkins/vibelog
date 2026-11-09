@@ -1,6 +1,6 @@
 import { readSecrets, type Secrets } from "./secrets.ts";
 import { twitchUserToken } from "./twitch-oauth.ts";
-import { localDateString } from "./ccusage.ts";
+import { localDateString } from "./usage.ts";
 import type { VibeEvent } from "./report.ts";
 import type { SocialChannel, SocialState } from "./state.ts";
 

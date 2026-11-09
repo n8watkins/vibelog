@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { getBranch, getStats } from "./git.ts";
-import { getClaudeUsageToday, dailyUsageMap, sessionTokenDelta, localDateString } from "./ccusage.ts";
+import { getClaudeUsageToday, dailyUsageMap, sessionTokenDelta, localDateString } from "./usage.ts";
 import { readEvents, summarizeDay, summarizeWeek } from "./report.ts";
 import { summarizeRange, currentStreak, records } from "./chart.ts";
 import { redact } from "./redact.ts";
@@ -161,7 +161,7 @@ function htmlEscape(s: string): string {
 
 /**
  * The agent: one process that owns the authoritative LiveState in memory,
- * polls git/ccusage to keep stats fresh, accepts mutations over HTTP, and
+ * polls git and Claude usage to keep stats fresh, accepts mutations over HTTP, and
  * serves the overlay + /state.json. See V0_SPEC.md §4 / §7.
  */
 export async function runAgent(port: number, opts: { demo?: boolean } = {}): Promise<void> {
@@ -271,7 +271,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
   async function pollTokens(): Promise<void> {
     const usage = await getClaudeUsageToday();
-    if (usage === null) return; // ccusage unavailable — leave at 0
+    if (usage === null) return; // transcripts unreadable — keep last values
 
     const tok = sessionTokenDelta(usage.tokens, session!.tokenBaseline);
     const cost = sessionTokenDelta(usage.cost, session!.costBaseline);
@@ -321,7 +321,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   }
 
   // Per-day usage is for the dashboard heatmap only and barely changes, but the
-  // dashboard polls every 4s — cache it so we don't spawn ccusage 15×/min.
+  // dashboard polls every 4s — cache it so it doesn't rescan transcripts 15×/min.
   let usageCache: { at: number; data: Record<string, { tokens: number; cost: number }> } = {
     at: 0,
     data: {},
@@ -735,7 +735,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         const project = url.searchParams.get("project");
 
         // Demo: a full seeded year so the calendar looks alive, plus per-project
-        // attribution that ccusage/git can't give us yet (see docs/INFRA_PLAN.md).
+        // attribution that transcripts/git can't give us yet (see docs/INFRA_PLAN.md).
         if (opts.demo) {
           const dd = demoDashboard({ days, project });
           sendJson(res, 200, {
@@ -757,8 +757,8 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         const today = localDateString();
         const usage = await cachedUsageByDay();
 
-        // Blended $/token from ccusage totals — used to estimate per-project cost
-        // (ccusage gives no project dimension). Fallback ~$2/Mtok if unknown.
+        // Blended $/token from the daily totals — used to estimate per-project
+        // cost (projects are tracked in tokens only). Fallback ~$2/Mtok if unknown.
         let sumTok = 0;
         let sumCost = 0;
         for (const u of Object.values(usage)) {
@@ -772,7 +772,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         const streamByDay = streamMinutesByDay(events);
 
         // Scope the heatmap: a single project (colored by commits) or all
-        // projects (real ccusage tokens, with per-day commits summed across repos).
+        // projects (real Claude tokens, with per-day commits summed across repos).
         const sel = project && project !== "all"
           ? activity.projects.find((p) => p.name === project)
           : null;
@@ -1097,7 +1097,7 @@ function ago(m: number): string {
 /**
  * Fake but coherent demo data — a looping stream of features being built across
  * a handful of projects, with the projects ticker reordering as focus shifts.
- * Pure UI prototype (no git/ccusage/AI); the loop resets so it visibly restarts.
+ * Pure UI prototype (no git/transcripts/AI); the loop resets so it visibly restarts.
  * Writes session-backed fields (nowBuilding/buildLog/features/prompts/subAgents)
  * to `session` so render() carries them; stats render() doesn't own go on state.
  */

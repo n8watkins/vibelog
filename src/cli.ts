@@ -9,7 +9,7 @@ import { DEFAULT_PORT } from "./config.ts";
 import { getHead, isGitRepo } from "./git.ts";
 import { BUILD_MODES, type BuildMode } from "./state.ts";
 import { getTokensByProject, labelProjects } from "./claude-projects.ts";
-import { localDateString } from "./ccusage.ts";
+import { localDateString } from "./usage.ts";
 import { formatReport, formatWeekly, readEvents, summarizeDay, summarizeWeek } from "./report.ts";
 import { formatChart, summarizeRange } from "./chart.ts";
 import { recapSummary } from "./summarize.ts";

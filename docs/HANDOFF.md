@@ -39,7 +39,7 @@ download it, set it up in minutes, and stream their public development. See `doc
 ## 2. Architecture (what you must know before editing)
 
 - **One process:** `src/agent.ts` — an HTTP server on `:4545` (binds `0.0.0.0`). Polls
-  git + `ccusage` + social APIs + OBS, owns the in-memory `LiveState`, serves the pages
+  git + local Claude transcripts + social APIs + OBS, owns the in-memory `LiveState`, serves the pages
   and JSON. Runtime is **tsx** (no build step). Package manager **pnpm**.
 - **CLI:** `src/cli.ts` (commander) — `vibe start`, `vibe demo`, `vibe share`,
   `vibe twitch login`, etc.
@@ -49,7 +49,7 @@ download it, set it up in minutes, and stream their public development. See `doc
   by an allowlisted `GET /shots/<name>.png` handler (exact basenames in `SHOT_FILES`, no traversal).
 - **State contract:** `src/state.ts` (`LiveState`) → `~/.vibelog/state.json` → served at
   `/state.json`, read by overlay + live.
-- **Data sources:** `src/ccusage.ts` (tokens/cost), `src/claude-projects.ts` +
+- **Data sources:** `src/usage.ts` + `src/pricing.ts` (tokens/cost from local transcripts), `src/claude-projects.ts` +
   `src/projects.ts` + `src/git.ts` (per-project tokens/commits keyed on git remote),
   `src/obs.ts` + `src/stream.ts` (live time via OBS WebSocket), `src/social.ts` +
   `src/twitch-oauth.ts` (Twitch/YouTube), `src/summarize.ts` (Gemini Flash-Lite prompt →

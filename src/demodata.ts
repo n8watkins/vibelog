@@ -1,8 +1,8 @@
-import { localDateString } from "./ccusage.ts";
+import { localDateString } from "./usage.ts";
 
 /**
  * Deterministic demo data for `vibe demo`. Synthesizes a full, coherent *year*
- * of activity so /dashboard looks alive (GitHub-style) without touching ccusage
+ * of activity so /dashboard looks alive (GitHub-style) without reading transcripts
  * or the real event log. Uses the same project names the overlay ticker uses, so
  * all three surfaces (/overlay, /live, /dashboard) tell one consistent story.
  * Pure + seeded → identical every render, and easy to test.
