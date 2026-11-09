@@ -32,6 +32,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - name: Worker pages match public/
+        run: node scripts/sync-worker-public.mjs --check
       - run: npm --prefix worker ci
       - run: npm --prefix worker run typecheck
       - run: npm --prefix worker test

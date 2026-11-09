@@ -1,21 +1,14 @@
 /**
- * The Worker serves committed copies of the root public/ pages (see
- * worker/README.md). Drift means the 24/7 cloud /live behaves differently
- * from the local one, so fail loudly if a copy goes stale.
+ * The Worker serves copies of root public/ pages, made by
+ * scripts/sync-worker-public.mjs. Drift means the 24/7 cloud /live behaves
+ * differently from the local one (it shipped a stale page from June to
+ * November 2026), so fail loudly if a copy is stale or a stray file appears.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+// @ts-expect-error - plain .mjs script without type declarations
+import { drift } from "../../scripts/sync-worker-public.mjs";
 
-const WORKER = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ROOT = path.join(WORKER, "..");
-
-for (const file of ["live.html", "embed.html", "embed.js", "landing.html"]) {
-  test(`worker/public/${file} matches public/${file}`, () => {
-    const src = readFileSync(path.join(ROOT, "public", file), "utf8");
-    const copy = readFileSync(path.join(WORKER, "public", file), "utf8");
-    assert.equal(copy, src, `run: cp public/${file} worker/public/${file}`);
-  });
-}
+test("worker/public matches public/ (run: node scripts/sync-worker-public.mjs)", () => {
+  assert.deepEqual(drift(), []);
+});

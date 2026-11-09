@@ -9,10 +9,10 @@
  *
  * Routes:
  *   POST /publish              — ingest a new snapshot (token-gated)
- *   GET  /state.json           — snapshot.state verbatim
+ *   GET  /state.json           — snapshot.state (costUsd stripped unless opted in)
  *   GET  /api/profile.json     — { profile: snapshot.profile }
  *   GET  /api/theme.json       — { vars: snapshot.theme } (ignores ?page=)
- *   GET  /                     — landing.html (marketing front door, via assets binding)
+ *   GET  /                     — 301 to https://vibelogs.dev/ (the one landing page)
  *   GET  /live                 — live.html (the public profile, via static assets binding)
  *   GET  /embed                — embed.html (the G4 widget, via assets binding)
  *   GET  /embed.js             — loader script (auto-served from worker/public/)
@@ -20,8 +20,15 @@
  * Security notes:
  *   - Only POST /publish writes; it is token-gated with a constant-time compare.
  *   - All GETs are public read-only; the snapshot surface contains no secrets.
+ *   - Dollar spend (state.stats.costUsd) is stripped from /state.json unless the
+ *     Worker itself opts in with PUBLIC_SHOW_COST = "true", so an old or
+ *     misconfigured agent can never publish it.
+ *   - HEAD is answered like GET without a body; every response carries the
+ *     landing page's security headers (the /embed widget stays framable).
  *   - PUBLISH_TOKEN is never logged.
  */
+
+import { SNAPSHOT_KEY } from "./keys.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,7 +41,12 @@ export interface Env {
   PUBLISH_TOKEN: string;
   /** Static assets binding — serves files from worker/public/. */
   ASSETS: Fetcher;
+  /** Optional var: "true" lets /state.json carry stats.costUsd. Default: stripped. */
+  PUBLIC_SHOW_COST?: string;
 }
+
+/** Where the Worker's root sends visitors: the single marketing site. */
+const LANDING_URL = "https://vibelogs.dev/";
 
 /** The shape written by POST /publish and read back on GET routes. */
 interface Snapshot {
@@ -47,8 +59,6 @@ interface Snapshot {
 // Pure helpers (exported for unit tests)
 // ---------------------------------------------------------------------------
 
-/** KV key for the single-user MVP snapshot. */
-export const SNAPSHOT_KEY = "snapshot:nate";
 
 /**
  * Constant-time string equality — prevents timing attacks on the token compare.
@@ -79,7 +89,7 @@ export type RouteKind =
   | "state"
   | "profile"
   | "theme"
-  | "landing"
+  | "home"
   | "page"
   | "embed"
   | "not_found";
@@ -89,7 +99,8 @@ export type RouteKind =
  * Pure; usable in tests without a live Worker runtime.
  */
 export function routeKind(method: string, pathname: string): RouteKind {
-  const m = method.toUpperCase();
+  // HEAD is GET without a body (answered in the fetch handler).
+  const m = method.toUpperCase() === "HEAD" ? "GET" : method.toUpperCase();
   // Normalise trailing slash for comparison, but keep "/" itself.
   const p = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
 
@@ -100,7 +111,7 @@ export function routeKind(method: string, pathname: string): RouteKind {
   // "/" is the marketing front door (landing.html); "/live" is the public
   // profile (live.html). Keeping them distinct lets a stranger who lands on the
   // root learn what VibeLog is + grab it from GitHub, while shared links go to /live.
-  if (m === "GET" && p === "/") return "landing";
+  if (m === "GET" && (p === "/" || p === "/landing")) return "home";
   if (m === "GET" && p === "/live") return "page";
   // The G4 embed widget. /embed.js is a real file served directly by the
   // static-assets binding; only the extensionless /embed page needs a rewrite.
@@ -112,8 +123,14 @@ export function routeKind(method: string, pathname: string): RouteKind {
 // Snapshot field extractors (exported for unit tests)
 // ---------------------------------------------------------------------------
 
-export function extractState(snap: Snapshot): string {
-  return JSON.stringify(snap.state ?? {});
+export function extractState(snap: Snapshot, opts: { showCost?: boolean } = {}): string {
+  const state = snap.state ?? {};
+  const stats = state.stats;
+  if (opts.showCost || !stats || typeof stats !== "object" || !("costUsd" in stats)) {
+    return JSON.stringify(state);
+  }
+  const { costUsd: _hidden, ...publicStats } = stats as Record<string, unknown>;
+  return JSON.stringify({ ...state, stats: publicStats });
 }
 
 export function extractProfile(snap: Snapshot): string {
@@ -135,6 +152,22 @@ const EMPTY_THEME = JSON.stringify({ vars: {} });
 // ---------------------------------------------------------------------------
 // Response helpers
 // ---------------------------------------------------------------------------
+
+/** Same baseline as vibelogs.dev. X-Frame-Options is added per route (not /embed). */
+const SECURITY_HEADERS: Record<string, string> = {
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+};
+
+/** Stamp security headers (and drop the body for HEAD) on any response. */
+export function finalize(res: Response, opts: { head: boolean; framable: boolean }): Response {
+  const headers = new Headers(res.headers);
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) headers.set(k, v);
+  if (!opts.framable) headers.set("X-Frame-Options", "DENY");
+  return new Response(opts.head ? null : res.body, { status: res.status, statusText: res.statusText, headers });
+}
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -296,65 +329,68 @@ export default {
   async fetch(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const kind = routeKind(request.method, url.pathname);
+    const res = await route(kind, request, env, ctx);
+    return finalize(res, { head: request.method.toUpperCase() === "HEAD", framable: kind === "embed" });
+  },
+} satisfies ExportedHandler<Env>;
 
-    // CORS pre-flight for GET routes (unlikely but tidy)
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-        },
+async function route(kind: RouteKind, request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
+  // CORS pre-flight for GET routes (unlikely but tidy)
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
+    });
+  }
+
+  switch (kind) {
+    case "publish":
+      return handlePublish(request, env);
+
+    case "state":
+      return cachedJson(request, ctx, async () => {
+        const snap = await getSnapshot(env);
+        return snap ? extractState(snap, { showCost: env.PUBLIC_SHOW_COST === "true" }) : EMPTY_STATE;
+      });
+
+    case "profile":
+      return cachedJson(request, ctx, async () => {
+        const snap = await getSnapshot(env);
+        return snap ? extractProfile(snap) : EMPTY_PROFILE;
+      });
+
+    case "theme":
+      return cachedJson(request, ctx, async () => {
+        const snap = await getSnapshot(env);
+        return snap ? extractTheme(snap) : EMPTY_THEME;
+      });
+
+    case "home":
+      // One landing page: the old copy that lived here drifted from vibelogs.dev.
+      return Response.redirect(LANDING_URL, 301);
+
+    case "page":
+    case "embed": {
+      // Serve a static HTML page from the assets binding: "/live" is the
+      // public profile (live.html), "/embed" the G4 widget (embed.html). The
+      // extra hop rewrites the extensionless route and stamps Cache-Control.
+      const file = kind === "embed" ? "/embed.html" : "/live.html";
+      const assetUrl = new URL(request.url);
+      assetUrl.pathname = file;
+      const assetReq = new Request(assetUrl.toString(), { method: "GET", headers: request.headers });
+      const assetRes = await env.ASSETS.fetch(assetReq);
+      const headers = new Headers(assetRes.headers);
+      headers.set("Cache-Control", "public, max-age=30");
+      return new Response(assetRes.body, {
+        status: assetRes.status,
+        headers,
       });
     }
 
-    switch (kind) {
-      case "publish":
-        return handlePublish(request, env);
-
-      case "state":
-        return cachedJson(request, ctx, async () => {
-          const snap = await getSnapshot(env);
-          return snap ? extractState(snap) : EMPTY_STATE;
-        });
-
-      case "profile":
-        return cachedJson(request, ctx, async () => {
-          const snap = await getSnapshot(env);
-          return snap ? extractProfile(snap) : EMPTY_PROFILE;
-        });
-
-      case "theme":
-        return cachedJson(request, ctx, async () => {
-          const snap = await getSnapshot(env);
-          return snap ? extractTheme(snap) : EMPTY_THEME;
-        });
-
-      case "landing":
-      case "page":
-      case "embed": {
-        // Serve a static HTML page from the assets binding. "/" maps to
-        // landing.html (the marketing front door); "/live" to live.html (the
-        // public profile); "/embed" to embed.html (the G4 widget). The extra hop
-        // (vs. letting assets auto-serve) lets us rewrite the extensionless route
-        // and stamp a consistent Cache-Control. /shots/*.png referenced by the
-        // landing page are auto-served by the assets binding (real file paths).
-        const file =
-          kind === "landing" ? "/landing.html" : kind === "embed" ? "/embed.html" : "/live.html";
-        const assetUrl = new URL(request.url);
-        assetUrl.pathname = file;
-        const assetReq = new Request(assetUrl.toString(), request);
-        const assetRes = await env.ASSETS.fetch(assetReq);
-        const headers = new Headers(assetRes.headers);
-        headers.set("Cache-Control", "public, max-age=30");
-        return new Response(assetRes.body, {
-          status: assetRes.status,
-          headers,
-        });
-      }
-
-      default:
-        return errorResponse(404, "Not found");
-    }
-  },
-} satisfies ExportedHandler<Env>;
+    default:
+      return errorResponse(404, "Not found");
+  }
+}

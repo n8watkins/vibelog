@@ -14,13 +14,13 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { SNAPSHOT_KEY } from "./keys.ts";
 import {
   timingSafeEqualStr,
   routeKind,
   extractState,
   extractProfile,
   extractTheme,
-  SNAPSHOT_KEY,
 } from "./worker.ts";
 
 // ---------------------------------------------------------------------------
@@ -89,8 +89,14 @@ describe("routeKind", () => {
     assert.equal(routeKind("GET", "/api/theme.json"), "theme");
   });
 
-  it("maps GET / to landing (marketing front door)", () => {
-    assert.equal(routeKind("GET", "/"), "landing");
+  it("maps GET / and /landing to home (redirects to vibelogs.dev)", () => {
+    assert.equal(routeKind("GET", "/"), "home");
+    assert.equal(routeKind("GET", "/landing"), "home");
+  });
+
+  it("treats HEAD like GET", () => {
+    assert.equal(routeKind("HEAD", "/state.json"), "state");
+    assert.equal(routeKind("HEAD", "/live"), "page");
   });
 
   it("maps GET /live to page (the public profile)", () => {
@@ -178,5 +184,19 @@ describe("extractTheme", () => {
 describe("SNAPSHOT_KEY", () => {
   it("is the expected KV key", () => {
     assert.equal(SNAPSHOT_KEY, "snapshot:nate");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Entry module exports
+// ---------------------------------------------------------------------------
+
+describe("worker.ts exports", () => {
+  it("exports only functions and the default handler (workerd refuses to start otherwise)", async () => {
+    const mod = (await import("./worker.ts")) as Record<string, unknown>;
+    for (const [name, value] of Object.entries(mod)) {
+      if (name === "default") continue;
+      assert.equal(typeof value, "function", `export ${name} must be a function; move constants to keys.ts`);
+    }
   });
 });

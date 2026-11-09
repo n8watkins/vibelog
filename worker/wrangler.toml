@@ -17,14 +17,15 @@ compatibility_date = "2024-09-23"
 # ---------------------------------------------------------------------------
 # Static assets — serves worker/public/ at the Worker's origin.
 # Wrangler copies these files at deploy time; no build step needed.
-# live.html is committed to worker/public/ (a copy of public/live.html).
-# The Worker rewrites / and /live to /live.html before forwarding to ASSETS.
+# worker/public/ holds copies of public/{live.html,embed.html,embed.js}, made by
+# scripts/sync-worker-public.mjs (`npm run deploy` runs it; CI fails on drift).
+# The Worker redirects / to https://vibelogs.dev and rewrites /live and /embed.
 # ---------------------------------------------------------------------------
 [assets]
 directory = "./public"
 binding   = "ASSETS"
 # Serve files at their exact path — no .html→extensionless 307 redirects. The
-# Worker explicitly rewrites "/" → /landing.html, "/live" → /live.html, etc., so
+# Worker explicitly rewrites "/live" → /live.html and "/embed" → /embed.html, so
 # we want ASSETS to return those files directly (200), not redirect them.
 html_handling      = "none"
 not_found_handling = "none"
@@ -41,3 +42,10 @@ preview_id = "181065580ec043bd8d89a61c8bed8a9c"
 # Secret
 # PUBLISH_TOKEN is set via `wrangler secret put PUBLISH_TOKEN` (not stored here).
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Dollar spend: /state.json strips stats.costUsd unless this is "true" (the
+# owner's explicit opt-in, matching publicShowCost in the local settings).
+# ---------------------------------------------------------------------------
+# [vars]
+# PUBLIC_SHOW_COST = "true"

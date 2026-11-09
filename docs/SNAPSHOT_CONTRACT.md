@@ -25,7 +25,9 @@ already passed `redact()` + the 140-char cap before it was stored.
 > **Narrowed 2026-11-01 (owner decision):** public `/state.json` and `snapshot.state` omit
 > `stats.costUsd` unless `publicShowCost: true` is set in `~/.vibelog/settings.json`. This removes a
 > field, it never widens the contract. The local OBS HUD reads `/state.json?hud=1`, which returns the
-> full state to loopback callers only.
+> full state to loopback callers only. Since 2026-11-09 the Worker also drops `stats.costUsd`
+> from `GET /state.json` unless its own `PUBLIC_SHOW_COST` var is `"true"`, so an old agent cannot
+> leak it.
 
 ## 2. The snapshot object (the wire format publisher ⇄ Worker)
 
@@ -50,7 +52,8 @@ type Snapshot = {
 | `GET /state.json` | `snapshot.state` (verbatim) | `.state` |
 | `GET /api/profile.json` | `{ profile: snapshot.profile }` | `.profile` |
 | `GET /api/theme.json` (any `?page=`) | `{ vars: snapshot.theme }` | `.theme` (MVP serves the "live" resolution regardless of `page`) |
-| `GET /` and `GET /live` | the `public/live.html` template (static asset) | — |
+| `GET /live` | the `public/live.html` template (static asset) | — |
+| `GET /` | 301 to https://vibelogs.dev/ (since 2026-11-09) | — |
 | `POST /publish` | `204`/`403` — token-gated write of a `Snapshot` to KV | (the only write) |
 
 ## 3. Invariants (must hold for all three tasks)

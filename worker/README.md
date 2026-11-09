@@ -19,45 +19,41 @@ Local agent (src/agent.ts)
                   { state, profile, theme }           ↓ stored in KV
 
 Browser / OBS
-  GET /             →  landing.html (marketing front door, static assets)
+  GET /             →  301 to https://vibelogs.dev/ (the one landing page)
   GET /live         →  live.html (static assets)
   GET /embed        →  embed.html (G4 widget, static assets)
   GET /embed.js     →  loader script
-  GET /shots/*.png  →  product screenshots (static assets)
   GET /state.json   →  { ...LiveState }   (KV snapshot.state)
   GET /api/profile.json  →  { profile }  (KV snapshot.profile)
   GET /api/theme.json    →  { vars }     (KV snapshot.theme)
 ```
 
-### How live.html is served
+### How the pages are served
 
-`live.html` is committed to `worker/public/live.html` (a copy of
-`public/live.html`). Wrangler's `[assets]` binding serves this directory at
-the Worker's origin. The Worker rewrites `GET /` and `GET /live` to
-`/live.html` before forwarding to the `ASSETS` binding, so the client page is
-served byte-for-byte identically to what `src/agent.ts` serves.
+`worker/public/` holds byte-for-byte copies of `public/live.html`,
+`public/embed.html` and `public/embed.js`, made by
+`scripts/sync-worker-public.mjs`. Wrangler's `[assets]` binding serves that
+directory; the Worker rewrites `/live` to `/live.html` and `/embed` to
+`/embed.html`, so viewers get the same client the local agent serves.
 
-The same applies to the embed widget (G4): `worker/public/embed.html` and
-`worker/public/embed.js` are copies of the root `public/` files, served at
-`/embed` and `/embed.js` (the `/embed.js` loader derives its origin at runtime,
-so the same file works on `*.workers.dev` and the custom domain).
+`/` (and `/landing`) redirect to https://vibelogs.dev/, the one marketing site.
 
-`/` is the **marketing front door** — the Worker rewrites it to `landing.html` (a copy
-of `public/landing.html`), with the landing page's screenshots served from
-`worker/public/shots/*.png`. `/live` is the public profile, `/embed` the G4 widget.
-
-When `public/{live,landing,embed}.html`, `public/embed.js`, or `public/shots/*.png`
-are updated, re-copy:
+Never edit `worker/public/` by hand. After changing those files in `public/`:
 
 ```bash
-cp public/live.html    worker/public/live.html
-cp public/landing.html worker/public/landing.html
-cp public/embed.html   worker/public/embed.html
-cp public/embed.js     worker/public/embed.js
-cp public/shots/*.png  worker/public/shots/
+node scripts/sync-worker-public.mjs        # from the repo root
+cd worker && npm run deploy                # runs the sync again, then wrangler deploy
 ```
 
-Then re-deploy (`wrangler deploy` from the `worker/` directory).
+CI runs `node scripts/sync-worker-public.mjs --check`, which fails when a copy is
+stale or when any other file sits in `worker/public/` (everything there is public).
+
+### Dollar spend
+
+`/state.json` drops `stats.costUsd` even if an agent publishes it (for example an
+old agent from before the 2026-11-01 privacy default). To show spend publicly,
+set `publicShowCost` locally and also uncomment `PUBLIC_SHOW_COST = "true"` under
+`[vars]` in `wrangler.toml`, then redeploy.
 
 ## First-time setup
 
