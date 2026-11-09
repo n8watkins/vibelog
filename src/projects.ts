@@ -17,7 +17,7 @@ export type ProjectInfo = {
   /** Normalized remote, e.g. `github.com/owner/repo`, or null if local-only. */
   repo: string | null;
   tokens: number;
-  /** Estimated USD (tokens × blended ccusage rate — we have no per-project cost). */
+  /** Estimated USD (tokens × blended daily $/token rate — we have no per-project cost). */
   cost: number;
   commits: number;
   activeDays: number;

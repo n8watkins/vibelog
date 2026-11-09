@@ -125,8 +125,10 @@ session is running. Prompt text is redacted before it can reach the overlay.
 
 - **Git**, polled every 5s: lines added/removed, files changed (incl. untracked),
   commits since session start, current branch.
-- **Claude tokens for this session**, polled every 30s via `npx ccusage --json`
-  (today's total minus the total captured at `vibe start`).
+- **Claude tokens for this session**, read every 30s from your local Claude Code
+  transcripts (today's total minus the total captured at `vibe start`). No network
+  and no extra package: the cost figure is an estimate from Anthropic's list prices
+  in `src/pricing.ts`.
 - **Milestones** you mark: features, bugs, etc. → the build log.
 - **Now Building**: whatever you type via `vibe building`, or — when Claude Code hooks
   are wired — your prompt, turned into a short feature label by the summarizer
@@ -241,7 +243,8 @@ src/
   state.ts           LiveState contract (the public-safe overlay schema)
   redact.ts          secret scrubber for overlay-bound text  (+ redact.test.ts)
   git.ts             git metrics (lines/files/commits/branch)
-  ccusage.ts         Claude token + cost totals via ccusage  (+ ccusage.test.ts)
+  usage.ts           Claude token + cost totals from local transcripts  (+ usage.test.ts)
+  pricing.ts         Claude list prices for the cost estimate  (+ pricing.test.ts)
   claude-projects.ts tokens-by-project from local transcripts  (+ test)
   projects.ts        per-project activity (transcripts × git)  (+ projects.test.ts)
   report.ts          `vibe report` daily/weekly recaps  (+ report.test.ts)

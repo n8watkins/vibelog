@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { EVENTS_FILE } from "./config.ts";
-import { localDateString } from "./ccusage.ts";
+import { localDateString } from "./usage.ts";
 import type { LiveStats } from "./state.ts";
 
 /**

@@ -33,7 +33,7 @@ export type LiveStats = {
   features: number;
   bugs: number;
   claudeTokens: number;
-  /** Estimated USD cost of this session's Claude usage (from ccusage). */
+  /** Estimated USD cost of this session's Claude usage (local transcripts × src/pricing.ts list prices). */
   costUsd: number;
   /** Sub-agents spawned this session (Task tool invocations). */
   subAgents: number;
