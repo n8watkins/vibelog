@@ -1,19 +1,25 @@
 @import "tailwindcss";
 
-/* Palette mirrors the product's neon theme (public/*.html) so the page and the
-   screenshots read as one brand. The product is dark-first, so the page is too. */
+/*
+ * A broadcast control room, not a neon poster: graphite surfaces, hairline
+ * rules, one violet accent from the product, tally red only for "live", and
+ * teal only for numbers. The product's own screens bring the colour.
+ * Dark only: VibeLog's surfaces (OBS HUD, /live, dashboard) are dark, and a
+ * light page would frame every screenshot in a glare box.
+ */
 @theme {
-  --color-bg: #07060d;
-  --color-bg-2: #0d0b18;
-  --color-panel: rgba(22, 18, 40, 0.72);
-  --color-line: rgba(160, 130, 255, 0.18);
-  --color-ink: #f3f0ff;
-  --color-muted: #a9a3c7;
-  --color-accent: #a06bff;
-  --color-pink: #ff5fd2;
-  --color-teal: #2ee6b6;
-  --color-live: #ff4d5e;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --color-bg: #0b0b0e;
+  --color-bg-2: #111116;
+  --color-bg-3: #17171e;
+  --color-line: #26262f;
+  --color-line-2: #34343f;
+  --color-ink: #eeedf3;
+  --color-muted: #a3a1b2;
+  --color-dim: #8b8999;
+  --color-accent: #b18cff;
+  --color-tally: #ff4747;
+  --color-teal: #3ee0b4;
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono-face), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -23,66 +29,66 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 5rem;
+  scroll-padding-top: 4.5rem;
 }
 
 body {
   background: var(--color-bg);
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
+  font-variation-settings: "wdth" 100;
 }
 
-.aurora {
+@layer components {
+/* Condensed display type (Archivo wdth axis). */
+.display {
+  font-variation-settings: "wdth" 72;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+/* Small mono labels: the "slate" text of a broadcast graphic. */
+.slate {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+}
+
+/* Program monitor: safe-area corner marks drawn with gradients. */
+.monitor {
+  --mark: rgba(238, 237, 243, 0.55);
   background:
-    radial-gradient(60rem 30rem at 85% -10%, rgba(160, 107, 255, 0.28), transparent 60%),
-    radial-gradient(40rem 26rem at -5% 25%, rgba(46, 230, 182, 0.12), transparent 60%),
-    radial-gradient(50rem 30rem at 50% 110%, rgba(255, 95, 210, 0.12), transparent 60%);
+    linear-gradient(var(--mark), var(--mark)) top 10px left 10px / 18px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) top 10px left 10px / 1.5px 18px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) top 10px right 10px / 18px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) top 10px right 10px / 1.5px 18px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom 10px left 10px / 18px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom 10px left 10px / 1.5px 18px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom 10px right 10px / 18px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom 10px right 10px / 1.5px 18px no-repeat;
 }
 
-.text-gradient {
-  background: linear-gradient(100deg, #c9a8ff 0%, #ff8ae0 55%, #7ff3d3 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* Travelling gradient ring, same idea as the product's panels. */
-@property --ring-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
-
-.ring {
-  position: relative;
-  isolation: isolate;
-}
-
-.ring::after {
+/* Faint scanline texture on the hero monitor only. */
+.scanlines::after {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--ring-angle),
-    transparent 30%,
-    var(--color-accent) 50%,
-    var(--color-pink) 63%,
-    var(--color-teal) 76%,
-    transparent 92%
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
   pointer-events: none;
-  animation: ring-spin 18s linear infinite;
-  z-index: 1;
+  background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px);
 }
 
-@keyframes ring-spin {
-  to {
-    --ring-angle: 360deg;
+.tally-dot {
+  animation: tally 1.6s ease-in-out infinite;
+}
+
+@keyframes tally {
+  50% {
+    opacity: 0.35;
   }
 }
 
@@ -90,18 +96,7 @@ body {
   html {
     scroll-behavior: auto;
   }
-  .ring::after {
+  .tally-dot {
     animation: none;
   }
-}
-
-/* FAQ disclosure marker */
-details > summary {
-  list-style: none;
-}
-details > summary::-webkit-details-marker {
-  display: none;
-}
-details[open] .faq-chevron {
-  transform: rotate(45deg);
 }
