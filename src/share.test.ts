@@ -5,6 +5,7 @@ import {
   timeLiveLabel,
   xmlEscape,
   shareCardSvg,
+  channelFrom,
   isShareKind,
   type ShareData,
 } from "./share.ts";
@@ -140,4 +141,36 @@ test("shareCardSvg falls back to default theme vars when unset", () => {
   const svg = shareCardSvg("join", data({ theme: {}, displayName: "VibeLog" }));
   // default --accent is #a06bff (see DEFAULT_THEME)
   assert.ok(svg.includes("#a06bff"), "default accent present");
+});
+
+test("channelFrom accepts only twitch.tv/<login> and youtube.com/@handle", () => {
+  assert.deepEqual(channelFrom({ twitch: "https://www.twitch.tv/yourchannel" }), {
+    platform: "twitch",
+    handle: "yourchannel",
+    url: "twitch.tv/yourchannel",
+  });
+  assert.equal(channelFrom({ youtube: "youtube.com/@your.channel" })?.url, "youtube.com/@your.channel");
+  assert.equal(channelFrom({ twitch: "https://evil.example/twitch.tv/x" }), null);
+  assert.equal(channelFrom({ twitch: "https://twitch.tv/<script>" }), null);
+  assert.equal(channelFrom({ youtube: "https://youtube.com/watch?v=abc" }), null);
+  assert.equal(channelFrom({}), null);
+});
+
+test("channelFrom prefers the platform that is live", () => {
+  const urls = { twitch: "twitch.tv/aaa", youtube: "youtube.com/@bbb" };
+  assert.equal(channelFrom(urls)?.platform, "twitch");
+  assert.equal(channelFrom(urls, { youtube: true })?.platform, "youtube");
+});
+
+test("the stats card sends viewers to the creator's channel and keeps VibeLog small", () => {
+  const channel = { platform: "twitch" as const, handle: "yourchannel", url: "twitch.tv/yourchannel" };
+  const live = shareCardSvg("stats", data({ channel, live: true }));
+  assert.match(live, /Watch live on Twitch/);
+  assert.match(live, /twitch\.tv\/yourchannel/);
+  assert.doesNotMatch(live, /powered by/);
+  const offline = shareCardSvg("stats", data({ channel, live: false }));
+  assert.match(offline, /Follow on Twitch/);
+  // No channel: fall back to the Twitter handle.
+  assert.match(shareCardSvg("stats", data({ channel: null, live: false })), /@nathan/);
+  assert.match(shareCardSvg("join", data({ channel })), /Come watch/);
 });

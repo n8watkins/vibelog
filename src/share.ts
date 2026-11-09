@@ -25,8 +25,49 @@ export function isShareKind(s: string): s is ShareKind {
   return (SHARE_KINDS as string[]).includes(s);
 }
 
+/** The creator's stream channel, derived from the channel URL they configured. */
+export type Channel = { platform: "twitch" | "youtube"; handle: string; url: string };
+
+const PLATFORM_LABEL: Record<Channel["platform"], string> = { twitch: "Twitch", youtube: "YouTube" };
+
+/**
+ * Turn configured channel URLs into a public, display-safe channel. Only
+ * twitch.tv/<login> and youtube.com/@<handle> are accepted, and the handle must
+ * match the platform's character set, so a card can never carry an arbitrary
+ * URL. Prefers the platform that is live right now, then Twitch, then YouTube.
+ */
+export function channelFrom(
+  urls: { twitch?: string | null; youtube?: string | null },
+  live: { twitch?: boolean; youtube?: boolean } = {},
+): Channel | null {
+  const parse = (raw: string | null | undefined, platform: Channel["platform"]): Channel | null => {
+    if (!raw) return null;
+    let u: URL;
+    try {
+      u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    } catch {
+      return null;
+    }
+    const host = u.hostname.toLowerCase().replace(/^(www|m)\./, "");
+    const seg = u.pathname.split("/").filter(Boolean)[0] ?? "";
+    if (platform === "twitch" && host === "twitch.tv" && /^[a-z0-9_]{2,25}$/i.test(seg)) {
+      return { platform, handle: seg, url: `twitch.tv/${seg}` };
+    }
+    if (platform === "youtube" && host === "youtube.com" && /^@[a-z0-9._-]{3,30}$/i.test(seg)) {
+      return { platform, handle: seg, url: `youtube.com/${seg}` };
+    }
+    return null;
+  };
+  const tw = parse(urls.twitch, "twitch");
+  const yt = parse(urls.youtube, "youtube");
+  if (live.youtube && yt && !live.twitch) return yt;
+  return tw ?? yt;
+}
+
 export type ShareData = {
   displayName: string;
+  /** Where viewers should go: the creator's channel (public, see channelFrom). */
+  channel?: Channel | null;
   channelHeader?: string;
   bio?: string;
   twitter?: string;
@@ -126,6 +167,10 @@ function frame(d: ShareData, inner: string): string {
       <stop offset="0%" stop-color="${accent}"/>
       <stop offset="100%" stop-color="${accent2}"/>
     </linearGradient>
+    <linearGradient id="vmark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a06bff"/>
+      <stop offset="100%" stop-color="#2ee6b6"/>
+    </linearGradient>
     <linearGradient id="flow" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#ffffff"/>
       <stop offset="42%" stop-color="${pink}"/>
@@ -137,14 +182,32 @@ function frame(d: ShareData, inner: string): string {
   <rect width="${CARD_W}" height="${CARD_H}" fill="url(#a1)"/>
   <rect width="${CARD_W}" height="${CARD_H}" fill="url(#a2)"/>
   <rect x="36" y="36" width="${CARD_W - 72}" height="${CARD_H - 72}" rx="28" fill="#000000" fill-opacity="0.28" stroke="url(#ring)" stroke-width="2"/>
-  <!-- brand -->
-  <g transform="translate(78 86)">
-    <rect width="40" height="40" rx="12" fill="url(#brandg)"/>
-    <text x="58" y="29" font-size="30" font-weight="800" fill="${text}" letter-spacing="-0.5">${name}</text>
-  </g>
+  <!-- the creator -->
+  <text x="78" y="114" font-size="34" font-weight="800" fill="${text}" letter-spacing="-0.5">${name}</text>
   ${inner}
-  <text x="78" y="${CARD_H - 64}" font-size="22" fill="${muted}" font-weight="600">powered by <tspan fill="${accent}" font-weight="800">VibeLog</tspan></text>
+  <!-- VibeLog, kept small: the card is about the creator's stream -->
+  <g transform="translate(${CARD_W - 78 - 136} ${CARD_H - 92})" opacity="0.8">
+    ${vMark(22)}
+    <text x="30" y="17" font-size="17" font-weight="700" fill="${muted}">VibeLog</text>
+  </g>
 </svg>`;
+}
+
+/** The VibeLog "V" mark (same artwork as the site favicon), `size` px square. */
+export function vMark(size: number): string {
+  const k = size / 64;
+  return `<g transform="scale(${k})"><rect width="64" height="64" rx="18" fill="url(#vmark)"/><path d="M18 22l9 22 4-10 4 10 11-22" fill="none" stroke="#07060d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+}
+
+/** "Watch live on Twitch" (live), "Follow on YouTube" (not live), or a fallback. */
+function callToAction(d: ShareData): { headline: string; target: string } {
+  if (d.channel) {
+    const where = PLATFORM_LABEL[d.channel.platform];
+    return { headline: d.live ? `Watch live on ${where}` : `Follow on ${where}`, target: d.channel.url };
+  }
+  const tw = (d.twitter || "").trim().replace(/^@+/, "");
+  if (tw) return { headline: d.live ? "Live now" : "Follow along", target: `@${tw}` };
+  return { headline: d.live ? "Live now" : "Building in public", target: "" };
 }
 
 /** A coloured "LIVE"/"ONLINE" status pill, top-right. */
@@ -161,61 +224,51 @@ function statusPill(d: ShareData): string {
   </g>`;
 }
 
-/** One big stat: value over a label. `x` is the column's left edge. */
-function stat(d: ShareData, x: number, value: string, label: string, color: string): string {
-  return `<g transform="translate(${x} 0)">
-    <text x="0" y="372" font-size="76" font-weight="800" fill="${color}" letter-spacing="-1">${xmlEscape(value)}</text>
-    <text x="2" y="416" font-size="24" font-weight="700" letter-spacing="2" fill="${v(d.theme, "--muted")}">${xmlEscape(label.toUpperCase())}</text>
-  </g>`;
-}
-
-/** "Today's stats" card — features / time-live / tokens / commits + now-building. */
+/** The default card: sends people to the creator's channel, with what they are
+ *  building and a small strip of today's numbers. */
 function statsCard(d: ShareData): string {
   const accent = v(d.theme, "--accent");
   const accent2 = v(d.theme, "--accent2");
   const pink = v(d.theme, "--pink");
   const text = v(d.theme, "--text");
-  const header = xmlEscape(ellipsize(d.channelHeader || d.bio || "Live coding, streamed.", 64));
-
-  const cols = [
-    { v: fmtNum(d.stats.features), l: "features", c: text },
-    { v: d.stats.timeLive, l: "time live", c: accent2 },
-    { v: fmtNum(d.stats.tokens), l: "tokens", c: pink },
-    { v: fmtNum(d.stats.commits), l: "commits", c: accent },
-  ];
-  const colW = 262;
-  const startX = 78;
-  const statsSvg = cols.map((c, i) => stat(d, startX + i * colW, c.v, c.l, c.c)).join("\n");
+  const muted = v(d.theme, "--muted");
+  const header = d.channelHeader || d.bio;
+  const cta = callToAction(d);
 
   const building = d.nowBuilding
-    ? `<g transform="translate(78 ${CARD_H - 132})">
-        <rect x="0" y="-30" width="14" height="14" rx="3" fill="${pink}"/>
-        <text x="30" y="-18" font-size="26" font-weight="600" fill="${text}">${xmlEscape(ellipsize("Building: " + d.nowBuilding, 56))}</text>
-      </g>`
+    ? `<text x="78" y="416" font-size="28" font-weight="600" fill="${text}"><tspan fill="${pink}">Building: </tspan>${xmlEscape(ellipsize(d.nowBuilding, 52))}</text>`
     : "";
+
+  const strip = [
+    `${fmtNum(d.stats.features)} features`,
+    `${fmtNum(d.stats.commits)} commits`,
+    `${d.stats.timeLive} live`,
+  ]
+    .map((t, i) => `<text x="${78 + i * 210}" y="${CARD_H - 74}" font-size="24" font-weight="700" fill="${muted}">${xmlEscape(t)}</text>`)
+    .join("\n");
 
   const inner = `
   ${statusPill(d)}
-  <text x="78" y="210" font-size="30" font-weight="600" fill="${v(d.theme, "--muted")}">${header}</text>
-  ${statsSvg}
-  ${building}`;
+  ${header ? `<text x="78" y="156" font-size="26" font-weight="600" fill="${muted}">${xmlEscape(ellipsize(header, 64))}</text>` : ""}
+  <text x="78" y="268" font-size="76" font-weight="800" fill="url(#flow)" letter-spacing="-2">${xmlEscape(cta.headline)}</text>
+  ${cta.target ? `<text x="80" y="330" font-size="38" font-weight="800" fill="${d.live ? accent2 : accent}">${xmlEscape(cta.target)}</text>` : ""}
+  ${building}
+  ${strip}`;
   return frame(d, inner);
 }
 
-/** "Join VibeLog" invite card — big gradient headline + tagline. */
+/** Invite card: "come watch <name> build", pointing at their channel. */
 function joinCard(d: ShareData): string {
-  const text = v(d.theme, "--text");
   const muted = v(d.theme, "--muted");
-  const who = d.displayName && d.displayName !== "VibeLog"
-    ? `${ellipsize(d.displayName, 28)} streams their builds with VibeLog.`
-    : "Stream your public development to the world.";
-
+  const accent2 = v(d.theme, "--accent2");
+  const name = d.displayName && d.displayName !== "VibeLog" ? ellipsize(d.displayName, 20) : "me";
+  const cta = callToAction(d);
   const inner = `
   ${statusPill(d)}
-  <text x="78" y="270" font-size="92" font-weight="800" fill="url(#flow)" letter-spacing="-3">Stream what</text>
-  <text x="78" y="368" font-size="92" font-weight="800" fill="url(#flow)" letter-spacing="-3">you build.</text>
-  <text x="78" y="446" font-size="30" font-weight="600" fill="${muted}">${xmlEscape(ellipsize(who, 66))}</text>
-  <text x="78" y="492" font-size="26" font-weight="700" fill="${text}">A live overlay, dashboard &amp; public page — local-first. Join VibeLog.</text>`;
+  <text x="78" y="262" font-size="88" font-weight="800" fill="url(#flow)" letter-spacing="-3">Come watch</text>
+  <text x="78" y="358" font-size="88" font-weight="800" fill="url(#flow)" letter-spacing="-3">${xmlEscape(name)} build.</text>
+  <text x="78" y="432" font-size="30" font-weight="600" fill="${muted}">${xmlEscape(ellipsize(d.channelHeader || d.bio || "Coding with AI agents, live.", 60))}</text>
+  ${cta.target ? `<text x="78" y="${CARD_H - 74}" font-size="34" font-weight="800" fill="${accent2}">${xmlEscape(cta.target)}</text>` : ""}`;
   return frame(d, inner);
 }
 

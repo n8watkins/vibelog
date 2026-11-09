@@ -18,7 +18,7 @@ import {
 } from "./state.ts";
 import { appendEvent, readConfig, readSession, readSettings, writeSession, writeSettings, writeState, type Session } from "./store.ts";
 import { PRESETS, publicShowCost, resolveTheme, sanitizeProfile, sanitizeSummarizer, validateVars, type Settings } from "./theme.ts";
-import { isShareKind, renderCardPng, shareCardSvg, timeLiveLabel, type ShareData } from "./share.ts";
+import { channelFrom, isShareKind, renderCardPng, shareCardSvg, timeLiveLabel, type ShareData } from "./share.ts";
 import { beginAuth, completeAuth, disconnect, integrationStatus, isProvider } from "./oauth.ts";
 import { demoDashboard, demoToday, demoWeek, demoSocialGrowth } from "./demodata.ts";
 import { getProjectActivity, type ProjectActivity } from "./projects.ts";
@@ -365,8 +365,15 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
       // event log unreadable — omit the recap (the card degrades to empty bars)
     }
 
+    const cfg = await readConfig();
     return {
       displayName: profile.displayName || "VibeLog",
+      // The creator's channel, from the URLs they set with `vibe init`; only a
+      // validated twitch.tv/<login> or youtube.com/@handle ever reaches a card.
+      channel: channelFrom(
+        { twitch: cfg?.twitch, youtube: cfg?.youtube },
+        { twitch: !!state.social?.twitch?.live, youtube: !!state.social?.youtube?.live },
+      ),
       channelHeader: profile.channelHeader,
       bio: profile.bio,
       twitter: profile.twitter,
