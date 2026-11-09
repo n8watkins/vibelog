@@ -957,12 +957,12 @@
         const p = b.dataset.p;
         if (b.dataset.act === "connect") {
           try {
-            const r = await (await fetch(`/api/oauth/${p}/start`, { method: "POST" })).json();
+            const r = await (await fetch(`/api/oauth/${p}/start`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })).json();
             if (r.url) { window.open(r.url, "vibelog_oauth", "width=560,height=760"); pollIntegrations(); }
             else $("intgNote").textContent = r.error || "Couldn't start the connect flow.";
           } catch { $("intgNote").textContent = "Couldn't start (is the agent running locally?)."; }
         } else {
-          try { renderIntegrations((await (await fetch(`/api/oauth/${p}/disconnect`, { method: "POST" })).json()).integrations || {}); } catch {}
+          try { renderIntegrations((await (await fetch(`/api/oauth/${p}/disconnect`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })).json()).integrations || {}); } catch {}
         }
       });
 

@@ -28,6 +28,7 @@ import { streamMinutesByDay } from "./stream.ts";
 import { readSecrets } from "./secrets.ts";
 import { createPublisher, noopPublisher, type Publisher, type Snapshot } from "./publish.ts";
 import { fetchSocial, socialGrowth } from "./social.ts";
+import { checkWrite, isAllowedHost } from "./guard.ts";
 
 const GIT_POLL_MS = 5_000;
 const TOKEN_POLL_MS = 30_000;
@@ -145,6 +146,10 @@ export function stateForRequest(
   return toPublicState(state, { showCost: opts.showCost });
 }
 
+/** Request bodies are small JSON objects; anything bigger is refused. */
+const MAX_BODY_BYTES = 256 * 1024;
+class BodyTooLarge extends Error {}
+
 /** HTML-attribute/text escape for values injected into the share page meta. */
 function htmlEscape(s: string): string {
   return String(s ?? "")
@@ -165,6 +170,9 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     console.error("No active session. Run `vibe start` first.");
     process.exit(1);
   }
+
+  // Extra trusted hostnames from ~/.vibelog/config.json (read once at start).
+  const allowedHosts = (await readConfig())?.allowedHosts?.filter((h) => typeof h === "string") ?? [];
 
   let state: LiveState = emptyState();
   let publisher: Publisher = noopPublisher;
@@ -489,11 +497,11 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
   // ---- http ----------------------------------------------------------------
 
+  // CORS is set per route in the handler (public read-only routes only), never here.
   function sendJson(res: ServerResponse, code: number, body: unknown): void {
     const payload = JSON.stringify(body);
     res.writeHead(code, {
       "content-type": "application/json",
-      "access-control-allow-origin": "*",
       "cache-control": "no-store",
     });
     res.end(payload);
@@ -501,7 +509,12 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
   async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
     const chunks: Buffer[] = [];
-    for await (const chunk of req) chunks.push(chunk as Buffer);
+    let size = 0;
+    for await (const chunk of req) {
+      size += (chunk as Buffer).length;
+      if (size > MAX_BODY_BYTES) throw new BodyTooLarge();
+      chunks.push(chunk as Buffer);
+    }
     if (!chunks.length) return {};
     try {
       return JSON.parse(Buffer.concat(chunks).toString("utf8"));
@@ -521,12 +534,31 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
         return;
       }
       const route = url.pathname;
+      const publicRead = req.method === "GET" && PUBLIC_GET_ROUTES.has(route);
 
       // Remote (tunneled / LAN) callers get read-only public routes only —
-      // never the write endpoints, hooks, or the private dashboard.
-      if (isRemote(req) && !(req.method === "GET" && PUBLIC_GET_ROUTES.has(route))) {
+      // never the write endpoints, hooks, or the private dashboard. A request
+      // whose Host is not this machine (DNS rebinding: a hostile name that
+      // resolves to 127.0.0.1) is treated the same way, so a web page can never
+      // reach the private routes through a name it controls.
+      const trusted = !isRemote(req) && isAllowedHost(req.headers.host, allowedHosts);
+      if (!trusted && !publicRead) {
         sendJson(res, 403, { error: "forbidden" });
         return;
+      }
+
+      // Only the public read-only routes may be read cross-origin (embeds,
+      // unfurl bots). The private dashboard/settings JSON gets no CORS header,
+      // so a page on another origin cannot read it.
+      if (publicRead) res.setHeader("access-control-allow-origin", "*");
+
+      // Every write must come from the agent's own tools or its own pages.
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        const rejected = checkWrite(req.headers);
+        if (rejected) {
+          sendJson(res, rejected.status, { error: rejected.error });
+          return;
+        }
       }
 
       if (req.method === "GET" && (route === "/" || route === "/overlay")) {
@@ -624,7 +656,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
       if (req.method === "GET" && route === "/state.json") {
         sendJson(res, 200, stateForRequest(state, {
           hud: url.searchParams.get("hud") === "1",
-          remote: isRemote(req),
+          remote: !trusted,
           showCost: publicShowCost(await readSettings()),
         }));
         return;
@@ -928,6 +960,7 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
 
       sendJson(res, 404, { error: "not found" });
     } catch (err) {
+      if (err instanceof BodyTooLarge) return sendJson(res, 413, { error: "body too large" });
       sendJson(res, 500, { error: (err as Error).message });
     }
   });
