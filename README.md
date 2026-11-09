@@ -170,6 +170,20 @@ routes only (`/`, `/overlay`, `/live`, `/landing`, `/share`, `/share/card.png`,
 and the private `/dashboard` return `403` for them — a viewer can't end your
 session, inject overlay text, change your theme, or read your dashboard.
 
+**Web pages in your own browser are kept out too** (`src/guard.ts`). A page you
+visit while live connects from localhost, so the agent also checks what the
+browser says about it:
+
+- Every write must be `Content-Type: application/json`, and when the browser
+  sends `Origin` or `Sec-Fetch-Site` they must name the agent's own origin. The
+  CLI, the Claude Code hook and the MCP server already send JSON with no Origin.
+- CORS headers go only on the public read-only routes above, so another site
+  can't read `/api/dashboard.json` or `/api/settings.json`.
+- The `Host` header must be `localhost`, `*.localhost`, `127.0.0.1`, `[::1]`,
+  an IP address (for example your LAN IP from Windows OBS), or a name you list
+  in `~/.vibelog/config.json` as `"allowedHosts": ["studio-pc.lan"]`. Any other
+  name (DNS rebinding) is treated like a remote viewer: public routes only.
+
 **Dollar spend is private by default.** Public surfaces (`/state.json`, `/live`,
 the embed widget and any snapshot you publish) carry token counts but not the
 session's dollar cost. The private dashboard and your local OBS HUD still show

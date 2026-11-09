@@ -46,6 +46,7 @@ async function waitForServer(url: string, timeoutMs = 20_000): Promise<void> {
   throw new Error(`demo agent did not start at ${url}`);
 }
 
+const JSON_HEADERS = { "content-type": "application/json" };
 const base = () => `http://127.0.0.1:${port}`;
 const getState = async (q = "", headers: Record<string, string> = {}) =>
   (await (await fetch(`${base()}/state.json${q}`, { headers })).json()) as { stats: Record<string, unknown> };
@@ -69,8 +70,8 @@ after(async () => {
 test("demo mode never writes the real state, session or event log", async () => {
   // Exercise every write path the demo can reach: the render loop, a mark
   // (session + event log) and a now-building update.
-  await fetch(`${base()}/mark`, { method: "POST", body: JSON.stringify({ kind: "feature", text: "demo mark" }) });
-  await fetch(`${base()}/building`, { method: "POST", body: JSON.stringify({ title: "demo building" }) });
+  await fetch(`${base()}/mark`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ kind: "feature", text: "demo mark" }) });
+  await fetch(`${base()}/building`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ title: "demo building" }) });
   await new Promise((r) => setTimeout(r, 2500)); // let the 2s demo tick render
   const dir = path.join(home, ".vibelog");
   const files = await readdir(dir).catch(() => [] as string[]);

@@ -32,6 +32,9 @@ export type Config = {
   /** Optional channel links shown on /dashboard next to the live pill. */
   twitch?: string | null;
   youtube?: string | null;
+  /** Extra hostnames (beyond localhost and IP literals) that may reach the
+   *  agent's private routes, e.g. a local DNS name for this machine. */
+  allowedHosts?: string[];
 };
 
 async function ensureDir(): Promise<void> {
