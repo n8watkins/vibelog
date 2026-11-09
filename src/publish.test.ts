@@ -19,9 +19,13 @@ import { emptyState } from "./state.ts";
 // Helpers
 // ---------------------------------------------------------------------------
 
+// emptyState() stamps the current time; pin it so two snapshots built a
+// millisecond apart still hash the same (this test used to flake).
+const FIXED_STATE = { ...emptyState(), updatedAt: "2026-01-01T00:00:00.000Z" };
+
 function makeSnap(overrides: Partial<Snapshot> = {}): Snapshot {
   return {
-    state: emptyState(),
+    state: structuredClone(FIXED_STATE),
     profile: { displayName: "Nathan" },
     theme: { "--bg": "#07060e" },
     ...overrides,
