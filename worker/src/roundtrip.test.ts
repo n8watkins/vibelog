@@ -13,7 +13,8 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import worker, { SNAPSHOT_KEY } from "./worker.ts";
+import worker from "./worker.ts";
+import { SNAPSHOT_KEY } from "./keys.ts";
 
 const TOKEN = "test-publish-token-123";
 
@@ -117,20 +118,48 @@ describe("worker round-trip: publish then serve", () => {
     assert.deepEqual(await theme.json(), { vars: {} });
   });
 
-  it("serves landing.html on / and live.html on /live via the assets binding", async () => {
+  it("redirects / to vibelogs.dev and serves live.html on /live", async () => {
     const env = makeEnv(makeKV());
+    const home = await worker.fetch(new Request("https://w.example/"), env);
+    assert.equal(home.status, 301);
+    assert.equal(home.headers.get("location"), "https://vibelogs.dev/");
+
     // The ASSETS stub echoes the rewritten pathname, proving the route→file map.
-    const cases: Array<[string, RegExp]> = [
-      ["/", /landing\.html/],
-      ["/live", /live\.html/],
-    ];
-    for (const [p, want] of cases) {
-      const res = await worker.fetch(new Request("https://w.example" + p), env);
-      assert.equal(res.status, 200);
-      const body = await res.text();
-      assert.match(body, want);
-      assert.equal(res.headers.get("cache-control"), "public, max-age=30");
+    const res = await worker.fetch(new Request("https://w.example/live"), env);
+    assert.equal(res.status, 200);
+    assert.match(await res.text(), /live\.html/);
+    assert.equal(res.headers.get("cache-control"), "public, max-age=30");
+  });
+
+  it("strips dollar spend from /state.json even if an agent published it", async () => {
+    const kv = makeKV();
+    const env = makeEnv(kv);
+    const costly = { ...SNAPSHOT, state: { ...SNAPSHOT.state, stats: { features: 3, costUsd: 0.3267, claudeTokens: 9000 } } };
+    await post(env, JSON.stringify(costly), TOKEN);
+    const state = (await (await worker.fetch(new Request("https://w.example/state.json"), env)).json()) as { stats: Record<string, unknown> };
+    assert.equal("costUsd" in state.stats, false);
+    assert.equal(state.stats.claudeTokens, 9000);
+
+    // The Worker owner can opt in explicitly.
+    const optIn = { ...env, PUBLIC_SHOW_COST: "true" } as typeof env;
+    const shown = (await (await worker.fetch(new Request("https://w.example/state.json"), optIn)).json()) as { stats: Record<string, unknown> };
+    assert.equal(shown.stats.costUsd, 0.3267);
+  });
+
+  it("answers HEAD like GET with no body, and stamps security headers", async () => {
+    const env = makeEnv(makeKV());
+    const head = await worker.fetch(new Request("https://w.example/state.json", { method: "HEAD" }), env);
+    assert.equal(head.status, 200);
+    assert.equal(await head.text(), "");
+    for (const p of ["/state.json", "/live", "/nope"]) {
+      const r = await worker.fetch(new Request("https://w.example" + p), env);
+      assert.equal(r.headers.get("x-content-type-options"), "nosniff", p);
+      assert.equal(r.headers.get("x-frame-options"), "DENY", p);
+      assert.match(r.headers.get("strict-transport-security") ?? "", /max-age=/, p);
     }
+    // The embed widget must stay framable on the streamer's own site.
+    const embed = await worker.fetch(new Request("https://w.example/embed"), env);
+    assert.equal(embed.headers.get("x-frame-options"), null);
   });
 
   it("serves embed.html on /embed via the assets binding", async () => {

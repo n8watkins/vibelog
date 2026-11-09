@@ -126,9 +126,6 @@ Decided 2026-11-01: `https://vibelogs.dev` is the canonical VibeLog URL and repl
 - ✅ `secrets.json` already has a `publish` block scaffold (`secrets.example.json:18`).
 
 ## If you change `public/` before deploying
-Re-copy the three files into the Worker and re-deploy:
-```bash
-cp public/live.html  worker/public/live.html
-cp public/embed.html worker/public/embed.html
-cp public/embed.js   worker/public/embed.js
-```
+`cd worker && npm run deploy` syncs the pages from `public/` (via
+`scripts/sync-worker-public.mjs`) and then deploys. CI fails on drift, so commit
+the synced copies too (`node scripts/sync-worker-public.mjs` from the repo root).
