@@ -63,14 +63,14 @@ body {
 .monitor {
   --mark: rgba(238, 237, 243, 0.55);
   background:
-    linear-gradient(var(--mark), var(--mark)) top 10px left 10px / 18px 1.5px no-repeat,
-    linear-gradient(var(--mark), var(--mark)) top 10px left 10px / 1.5px 18px no-repeat,
-    linear-gradient(var(--mark), var(--mark)) top 10px right 10px / 18px 1.5px no-repeat,
-    linear-gradient(var(--mark), var(--mark)) top 10px right 10px / 1.5px 18px no-repeat,
-    linear-gradient(var(--mark), var(--mark)) bottom 10px left 10px / 18px 1.5px no-repeat,
-    linear-gradient(var(--mark), var(--mark)) bottom 10px left 10px / 1.5px 18px no-repeat,
-    linear-gradient(var(--mark), var(--mark)) bottom 10px right 10px / 18px 1.5px no-repeat,
-    linear-gradient(var(--mark), var(--mark)) bottom 10px right 10px / 1.5px 18px no-repeat;
+    linear-gradient(var(--mark), var(--mark)) top 5px left 5px / 12px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) top 5px left 5px / 1.5px 12px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) top 5px right 5px / 12px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) top 5px right 5px / 1.5px 12px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom 5px left 5px / 12px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom 5px left 5px / 1.5px 12px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom 5px right 5px / 12px 1.5px no-repeat,
+    linear-gradient(var(--mark), var(--mark)) bottom 5px right 5px / 1.5px 12px no-repeat;
 }
 
 /* Faint scanline texture on the hero monitor only. */
@@ -92,11 +92,52 @@ body {
   }
 }
 
+.pane-cursor {
+  animation: blink 1.05s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.hud-feed:first-child {
+  animation: feed-in 0.5s ease-out;
+}
+
+@keyframes feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Sections fade up once as they scroll into view (see reveal.tsx). */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.6s ease-out,
+    transform 0.6s ease-out;
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .tally-dot {
+  .tally-dot,
+  .pane-cursor,
+  .hud-feed:first-child {
     animation: none;
+  }
+  .js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }

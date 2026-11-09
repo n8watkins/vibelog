@@ -8,9 +8,9 @@ import { SITE_URL } from "./site";
 const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono-face", display: "swap" });
 
-const title = "VibeLog - live coding telemetry for vibe-coding streams";
+const title = "VibeLog - live stats for coding with AI agents";
 const description =
-  "VibeLog reads your git repo and your Claude Code session and puts the real numbers on your stream: an OBS HUD, a public /live page, a private dashboard and share cards. Local-first and open source under MIT.";
+  "VibeLog follows your repo and your AI agent session and shows what you are building, prompts, commits, sub-agents and tokens: on your stream, on a page you can share, and in a card for your channel. Runs locally, MIT licensed.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -51,7 +51,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${archivo.variable} ${mono.variable}`}>
+    <html lang="en" className={`${archivo.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Marks JS as available before first paint, so scroll reveals never hide content without JS. */}
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+      </head>
       <body className="min-h-dvh font-sans">{children}</body>
     </html>
   );

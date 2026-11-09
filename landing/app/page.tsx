@@ -1,6 +1,24 @@
 import Image from "next/image";
+import { AgentScene } from "./agent-scene";
 import { CopyCommand } from "./copy-command";
-import { Timecode } from "./timecode";
+import { CountUp } from "./count-up";
+import {
+  IconBroadcast,
+  IconCard,
+  IconChart,
+  IconCheck,
+  IconClock,
+  IconEye,
+  IconGlobe,
+  IconLaptop,
+  IconLock,
+  IconMonitor,
+  IconRoute,
+  IconShield,
+  IconTerminal,
+  IconUsers,
+} from "./icons";
+import { Reveal } from "./reveal";
 import { N8BUILDS_URL, RELEASE_URL, REPO_URL, SITE_URL, WAITLIST_URL } from "./site";
 
 /* ------------------------------------------------------------------ */
@@ -8,6 +26,22 @@ import { N8BUILDS_URL, RELEASE_URL, REPO_URL, SITE_URL, WAITLIST_URL } from "./s
 /* ------------------------------------------------------------------ */
 
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent";
+
+/** The VibeLog mark: same artwork as app/icon.svg (the favicon) and the share card. */
+function Logo({ className = "size-7" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="vl-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#a06bff" />
+          <stop offset="1" stopColor="#2ee6b6" />
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" rx="18" fill="url(#vl-g)" />
+      <path d="M18 22l9 22 4-10 4 10 11-22" fill="none" stroke="#07060d" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function GitHubMark({ className = "size-4" }: { className?: string }) {
   return (
@@ -33,173 +67,94 @@ function StarButton({ size = "md" }: { size?: "sm" | "md" }) {
   );
 }
 
-function SectionLabel({ index, children }: { index: string; children: React.ReactNode }) {
+function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <p className="slate flex items-center gap-3 text-muted">
-      <span className="text-accent">{index}</span>
-      <span aria-hidden="true" className="h-px w-8 bg-line-2" />
+    <a href={href} className={`inline-flex min-h-11 items-center rounded-md px-3 text-[15px] font-semibold text-muted underline-offset-4 transition hover:text-ink hover:underline ${focusRing}`}>
       {children}
-    </p>
+    </a>
   );
+}
+
+function Eyebrow({ children, center = false }: { children: React.ReactNode; center?: boolean }) {
+  return <p className={`slate text-accent ${center ? "text-center" : ""}`}>{children}</p>;
 }
 
 function Audience({ kind }: { kind: "stream" | "public" | "private" | "social" }) {
   const map = {
-    stream: { text: "On stream", cls: "border-tally/50 text-[#ff8a8a]" },
-    public: { text: "Public link", cls: "border-teal/40 text-teal" },
-    private: { text: "Only you", cls: "border-line-2 text-muted" },
-    social: { text: "Social card", cls: "border-accent/50 text-accent" },
+    stream: { text: "On stream", icon: <IconBroadcast className="size-3.5" />, cls: "border-tally/50 text-[#ff8a8a]" },
+    public: { text: "Public link", icon: <IconGlobe className="size-3.5" />, cls: "border-teal/40 text-teal" },
+    private: { text: "Only you", icon: <IconLock className="size-3.5" />, cls: "border-line-2 text-muted" },
+    social: { text: "Social post", icon: <IconCard className="size-3.5" />, cls: "border-accent/50 text-accent" },
   }[kind];
-  return <span className={`slate inline-flex rounded-sm border px-2 py-1 ${map.cls}`}>{map.text}</span>;
-}
-
-/* ------------------------------------------------------------------ */
-/* Hero monitor: an editor scene with the real HUD composited on top    */
-/* ------------------------------------------------------------------ */
-
-const CODE: { n: number; html: React.ReactNode }[] = [
-  { n: 1, html: <><K>import</K> trails <K>from</K> <S>&quot;./trails.json&quot;</S>;</> },
-  { n: 2, html: <><K>export type</K> <T>Trail</T> = {"{"} name: <T>string</T>; miles: <T>number</T>; gain: <T>number</T> {"}"};</> },
-  { n: 3, html: <>&nbsp;</> },
-  { n: 4, html: <><K>export function</K> <F>byDistance</F>(list: <T>Trail</T>[] = trails): <T>Trail</T>[] {"{"}</> },
-  { n: 5, html: <>&nbsp;&nbsp;<K>return</K> [...list].<F>sort</F>((a, b) =&gt; a.miles - b.miles || a.name.<F>localeCompare</F>(b.name));</> },
-  { n: 6, html: <>{"}"}</> },
-  { n: 7, html: <>&nbsp;</> },
-  { n: 8, html: <><K>export function</K> <F>difficulty</F>(t: <T>Trail</T>): <S>&quot;easy&quot;</S> | <S>&quot;moderate&quot;</S> | <S>&quot;hard&quot;</S> {"{"}</> },
-  { n: 9, html: <>&nbsp;&nbsp;<K>const</K> perMile = t.gain / t.miles;</> },
-  { n: 10, html: <>&nbsp;&nbsp;<K>return</K> perMile &gt; <N>300</N> ? <S>&quot;hard&quot;</S> : perMile &gt; <N>150</N> ? <S>&quot;moderate&quot;</S> : <S>&quot;easy&quot;</S>;</> },
-  { n: 11, html: <>{"}"}</> },
-];
-
-function K({ children }: { children: React.ReactNode }) {
-  return <span className="text-[#c792ea]">{children}</span>;
-}
-function S({ children }: { children: React.ReactNode }) {
-  return <span className="text-[#a5e075]">{children}</span>;
-}
-function T({ children }: { children: React.ReactNode }) {
-  return <span className="text-[#7fd6e8]">{children}</span>;
-}
-function F({ children }: { children: React.ReactNode }) {
-  return <span className="text-[#82aaff]">{children}</span>;
-}
-function N({ children }: { children: React.ReactNode }) {
-  return <span className="text-[#f78c6c]">{children}</span>;
-}
-
-function ProgramMonitor() {
   return (
-    <figure className="relative">
-      <div className="mb-2 flex items-center justify-between font-mono text-[11px] text-muted">
-        <span className="slate flex items-center gap-2">
-          <span className="rounded-sm bg-tally px-1.5 py-0.5 text-white">PGM</span>
-          Scene: Coding
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="tally-dot size-2 rounded-full bg-tally" aria-hidden="true" />
-          <span className="slate text-ink">Live</span>
-          <Timecode />
-        </span>
-      </div>
-      <div className="monitor scanlines relative aspect-video overflow-hidden sm:aspect-[16/8] lg:aspect-[16/6] rounded-sm border border-line-2 bg-[#0e0f14]">
-        {/* Editor chrome (decorative stand-in for the streamer's screen). */}
-        <div aria-hidden="true" className="absolute inset-0 flex flex-col">
-          <div className="flex h-[7%] items-end gap-px border-b border-[#20212b] bg-[#0b0c10] px-[2%] text-[clamp(6px,1vw,12px)]">
-            <span className="rounded-t-sm border-t-2 border-accent bg-[#0e0f14] px-[1.4%] py-[0.5%] font-mono text-ink">list.ts</span>
-            <span className="px-[1.4%] py-[0.5%] font-mono text-dim">map.ts</span>
-            <span className="px-[1.4%] py-[0.5%] font-mono text-dim">trails.json</span>
-          </div>
-          <div className="flex-1 overflow-hidden px-[2%] pt-[1.6%] font-mono text-[clamp(5px,0.95vw,12px)] leading-[1.5] text-[#c9cbd6]">
-            {CODE.map((l) => (
-              <div key={l.n} className="flex whitespace-pre">
-                <span className="w-[3.2em] shrink-0 pr-[1em] text-right text-[#4b4d5c]">{l.n}</span>
-                <span>{l.html}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* The real OBS HUD, captured from a local `vibe start` session. */}
-        <Image
-          src="/shots/hud-strip.webp"
-          alt="The VibeLog HUD along the bottom of the stream: projects, now building with the build feed, and live stats such as 2 features, 3 commits, 4 prompts, 2 sub-agents and 443.9k tokens."
-          width={2400}
-          height={362}
-          priority
-          sizes="(min-width: 1280px) 1180px, 100vw"
-          className="absolute right-0 bottom-0 left-0 h-auto w-full"
-        />
-      </div>
-      <figcaption className="mt-3 text-sm text-dim">
-        The HUD is a real capture from a <code className="font-mono text-muted">vibe start</code> session on a test repo; the editor behind it is a
-        stand-in for your screen.
-      </figcaption>
-    </figure>
+    <span className={`slate inline-flex items-center gap-1.5 rounded-sm border px-2 py-1 ${map.cls}`}>
+      {map.icon}
+      {map.text}
+    </span>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Page                                                                */
+/* Content                                                             */
 /* ------------------------------------------------------------------ */
+
+const AUDIENCES = [
+  { icon: IconBroadcast, title: "Streamers", body: "You code on Twitch or YouTube with an agent doing a lot of the typing. Viewers see what it is doing and what got shipped." },
+  { icon: IconUsers, title: "Builders in public", body: "You post progress on X or Discord. A card with today's work beats a screenshot of a terminal." },
+  { icon: IconTerminal, title: "Anyone pairing with an agent", body: "No audience needed. The dashboard is a quiet record of what you and your agents built, day by day." },
+];
 
 const SCENES = [
   {
     id: "hud",
-    n: "01",
-    name: "OBS HUD",
+    icon: IconMonitor,
+    name: "Stream overlay",
     route: "localhost:4545/overlay",
     audience: "stream" as const,
-    body: "A transparent Browser Source that sits along the bottom of your scene: what you are building, the build feed, and live stats from git and Claude Code. It updates every few seconds while you work.",
-    img: { src: "/shots/hud-detail.webp", w: 1785, h: 435, alt: "Close-up of the HUD: the Now Building panel with the build feed, and live stats: 2 features, 3 commits, 4 prompts, 2 sub-agents, 443.9k tokens." },
+    body: "A transparent OBS Browser Source along the bottom of your scene: what you are building, the latest milestones, and live numbers from git and your agent session. It refreshes every few seconds.",
+    img: { src: "/shots/hud-detail.webp", w: 1785, h: 435, alt: "The overlay: a Now Building panel with recent milestones, and live stats for features, commits, prompts, sub-agents and tokens." },
   },
   {
     id: "live",
-    n: "02",
-    name: "/live page",
+    icon: IconGlobe,
+    name: "Live page",
     route: "/live",
     audience: "public" as const,
-    body: "A page anyone can open while you stream: your headline, what you are on right now, today's numbers and the build feed. Share it with vibe share (a Cloudflare tunnel, read-only) or publish snapshots to a Worker you own.",
-    img: { src: "/shots/live.webp", w: 1600, h: 1075, alt: "The public /live page: a large Now Building headline, Map preview cards for each trail, above stat tiles and the build feed." },
+    body: "A page anyone can open: your headline, what you are on right now, today's numbers and the build feed. Share it with a read-only tunnel (vibe share) or publish snapshots to a Cloudflare Worker you own.",
+    img: { src: "/shots/live.webp", w: 1600, h: 1075, alt: "The live page: a large Now Building headline, Map preview cards for each trail, above stat tiles and the build feed." },
   },
   {
     id: "dashboard",
-    n: "03",
+    icon: IconChart,
     name: "Dashboard",
     route: "localhost:4545/dashboard",
     audience: "private" as const,
-    body: "Your own history: Claude tokens per day for the past year, sessions, streaks, stream time and channel growth, per project. It only answers on localhost. Shown here with the built-in demo data (vibe demo).",
+    body: "Your history: agent tokens per day for the past year, sessions, streaks, stream time and per-project activity. It only answers on your own machine. Shown with the built-in demo data.",
     img: { src: "/shots/dashboard-demo.webp", w: 1800, h: 1373, alt: "The private dashboard with a year-long activity heatmap, session stats, the week and channel growth, using demo data." },
   },
   {
     id: "share",
-    n: "04",
+    icon: IconCard,
     name: "Share card",
     route: "/share/card.png",
     audience: "social" as const,
-    body: "A 1200 by 630 card for the post after the stream, rendered on your machine from the public numbers only. Links to your /share page unfurl with it.",
-    img: { src: "/shots/share-card.webp", w: 1200, h: 630, alt: "A share card: N8, Building trail-mix live with Claude Code, 2 features, 2m time live, 444k tokens, 3 commits." },
+    body: "A 1200 by 630 image for your post that points people at your channel: Watch live on Twitch (or Follow, when you are offline) with your handle, plus what you are building. VibeLog is a small mark in the corner.",
+    img: { src: "/shots/share-card.webp", w: 1200, h: 630, alt: "A share card: Your Name, Follow on Twitch, twitch.tv/yourchannel, Building: Map preview cards for each trail, and a small VibeLog mark." },
   },
 ];
 
 const STEPS = [
-  {
-    n: "1",
-    title: "Install",
-    body: "You need Node and git. There is no package to install yet, so it runs from the repo.",
-    label: "terminal",
-    lines: [`git clone ${REPO_URL}`, "cd vibelog && npm install"],
-  },
+  { n: "1", title: "Install", body: "You need Node and git. It runs from the repo for now.", lines: [`git clone ${REPO_URL}`, "cd vibelog && npm install"] },
   {
     n: "2",
-    title: "Start a session",
-    body: "Point it at the repo you are streaming. Then add a Browser Source in OBS for http://localhost:4545/overlay at 1920 by 1080.",
-    label: "terminal",
-    lines: ['npm run vibe -- start --cwd ~/code/my-app --title "Building my app"'],
+    title: "Start a session in your project",
+    body: "Then add a Browser Source in OBS for http://localhost:4545/overlay at 1920 by 1080.",
+    lines: ["npm run vibe -- start --cwd ~/code/my-app"],
   },
   {
     n: "3",
-    title: "Hook up Claude Code",
-    body: "Each prompt updates Now Building, sub-agents get counted, and you mark wins as you go. vibe end stops it and vibe report gives you the recap.",
-    label: "terminal",
+    title: "Connect your agent and code",
+    body: "This adds Claude Code hooks, so each prompt and sub-agent reaches VibeLog (other agents are on the roadmap). Mark wins as you go; vibe report gives you the recap.",
     lines: ["npm run vibe -- hooks install --global", 'npm run vibe -- mark feature "trail list renders"'],
   },
 ];
@@ -211,23 +166,22 @@ const ROADMAP: { title: string; note: string; tone: string; items: string[] }[] 
     tone: "text-teal",
     items: [
       "Git stats: lines, files, commits, branch",
-      "Claude Code hooks: prompts, sub-agents, Now Building",
-      "OBS HUD, /live, dashboard, share cards",
+      "Claude Code sessions: prompts, sub-agents, tokens",
+      "Overlay, live page, dashboard, share cards",
       "Secret scrubbing before anything reaches a page",
-      "Token and cost counts from local transcripts",
       "Daily and weekly recaps (vibe report)",
     ],
   },
   {
     title: "Built, not yet verified",
-    note: "Code is there; not tested with real accounts",
+    note: "The code is there; not tested with real accounts",
     tone: "text-[#ffc46b]",
     items: [
       "OBS stream time over the OBS WebSocket",
       "Twitch and YouTube live status and followers",
       "Discord and GitHub connect",
       "AI summaries with a Gemini key",
-      "Publishing /live to your own Cloudflare Worker",
+      "Publishing the live page to your own Worker",
     ],
   },
   {
@@ -235,11 +189,34 @@ const ROADMAP: { title: string; note: string; tone: string; items: string[] }[] 
     note: "Not built yet",
     tone: "text-muted",
     items: [
-      "A one-line install (npm package)",
+      "More agents: Codex, Gemini CLI and others",
+      "A one-line install",
       "macOS and Linux setup guides",
-      "Codex and Gemini CLI, not just Claude Code",
-      "A hosted /live page, no Worker of your own",
+      "A hosted live page, no Worker of your own",
     ],
+  },
+];
+
+const FAQ = [
+  {
+    q: "Which agents does it track?",
+    a: "Claude Code today, through its hooks and the transcripts it writes to your disk. More agents (Codex, Gemini CLI and others) are planned. Git stats work whatever you code with.",
+  },
+  {
+    q: "Which systems does it run on?",
+    a: "It is built and tested on Windows with WSL. macOS and Linux should work, since it is Node and git, but nobody has tested them yet.",
+  },
+  {
+    q: "Does anything leave my machine?",
+    a: "Not by default. Pages are served from localhost. Viewers only see something if you open a tunnel (vibe share) or publish snapshots to your own Worker, and then only the public numbers and labels.",
+  },
+  {
+    q: "Is dollar spend shown?",
+    a: "Never on a public page, the embed, share cards or published snapshots, unless you turn it on. Your dashboard shows it, and your overlay can, because they read your own machine.",
+  },
+  {
+    q: "What does it cost?",
+    a: "Nothing. It is MIT licensed and runs on your machine. A hosted live page may come later.",
   },
 ];
 
@@ -251,7 +228,7 @@ const jsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Windows (WSL)",
   description:
-    "Live coding telemetry for vibe-coding streams: an OBS HUD, a public /live page, a private dashboard and share cards, from your git repo and Claude Code session.",
+    "Live stats for coding with AI agents: a stream overlay, a public live page, a private dashboard and share cards, from your git repo and agent session.",
   license: "https://opensource.org/licenses/MIT",
   softwareVersion: "0.1.0",
   datePublished: "2026-11-02",
@@ -260,10 +237,15 @@ const jsonLd = {
   author: { "@type": "Person", name: "N8", url: N8BUILDS_URL },
 };
 
+/* ------------------------------------------------------------------ */
+/* Page                                                                */
+/* ------------------------------------------------------------------ */
+
 export default function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Reveal />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:bg-ink focus:px-4 focus:py-2 focus:text-bg"
@@ -272,12 +254,10 @@ export default function Home() {
       </a>
 
       <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur">
-        <nav aria-label="Primary" className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <a href="#top" className={`flex items-center gap-2 rounded-sm ${focusRing}`}>
-            <span aria-hidden="true" className="grid size-6 place-items-center rounded-sm bg-tally">
-              <span className="size-2 rounded-full bg-white" />
-            </span>
-            <span className="display text-xl normal-case tracking-tight">VibeLog</span>
+        <nav aria-label="Primary" className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
+          <a href="#top" className={`flex items-center gap-2.5 rounded-sm ${focusRing}`}>
+            <Logo className="size-7" />
+            <span className="text-[17px] font-bold tracking-tight">VibeLog</span>
           </a>
           <ul className="hidden items-center gap-7 text-sm text-muted md:flex">
             <li><a className="transition hover:text-ink" href="#product">Product</a></li>
@@ -290,252 +270,274 @@ export default function Home() {
       </header>
 
       <main id="main">
-        {/* Hero */}
-        <section id="top" aria-labelledby="hero-title" className="border-b border-line">
-          <div className="mx-auto max-w-6xl px-4 pt-10 pb-14 sm:px-6 sm:pt-12">
-            <p className="slate flex flex-wrap items-center gap-x-3 gap-y-1 text-muted">
-              <span>Live coding telemetry</span>
-              <span aria-hidden="true" className="text-line-2">/</span>
-              <span>Open source</span>
-              <span aria-hidden="true" className="hidden text-line-2 sm:inline">/</span>
-              <span className="hidden sm:inline">v0.1.0</span>
-            </p>
-            <h1 id="hero-title" className="display mt-4 text-[clamp(2.9rem,8.6vw,4.75rem)]">
-              Stream the build,{" "}
-              <br className="hidden sm:block" />
-              <span className="text-accent">not just the screen.</span>
+        {/* Hero: centred copy, then the scene */}
+        <section id="top" aria-labelledby="hero-title" className="relative overflow-hidden border-b border-line">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(50%_60%_at_50%_0%,rgba(177,140,255,0.13),transparent_70%)]" />
+          <div className="relative mx-auto max-w-3xl px-4 pt-12 text-center sm:px-6 sm:pt-14">
+            <h1 id="hero-title" className="display text-[clamp(2.6rem,7vw,4rem)]">
+              Your coding session,
+              <br />
+              <span className="text-accent">live on stream.</span>
             </h1>
-            <div className="mt-5 grid gap-6 lg:grid-cols-[1.7fr_1fr] lg:items-end lg:gap-12">
-              <div>
-                <p className="max-w-[46rem] text-[17px] leading-relaxed text-pretty text-muted">
-                  VibeLog reads your git repo and your Claude Code session and puts the real numbers on stream: what you are building,
-                  commits, lines, prompts, sub-agents and tokens. It runs on your machine, and nothing leaves it unless you share it.
-                </p>
-                <p className="mt-3 text-[15px] text-ink">For streamers and builders who code with AI agents, live.</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-                <StarButton />
-                <a
-                  href="#how"
-                  className={`inline-flex min-h-11 items-center rounded-md px-4 text-[15px] font-semibold text-muted underline-offset-4 transition hover:text-ink hover:underline ${focusRing}`}
-                >
-                  How it works
-                </a>
-              </div>
+            <p className="mx-auto mt-5 max-w-[44rem] text-[17px] leading-relaxed text-pretty text-muted">
+              VibeLog follows your repo and your AI agent session and shows what you are building, with prompts, commits, sub-agents and
+              tokens. On your stream, on a page you can share, and on a card for your channel.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <StarButton />
+              <TextLink href="#how">How it works</TextLink>
             </div>
-            <div className="mt-8">
-              <ProgramMonitor />
-            </div>
+          </div>
+
+          <div className="relative mx-auto mt-9 max-w-5xl px-4 pb-16 sm:px-6">
+            <AgentScene />
           </div>
         </section>
 
-        {/* Product: four outputs */}
+        {/* Who it is for: centred heading, three-up grid */}
+        <section aria-labelledby="who-title" className="border-b border-line bg-bg-2">
+          <div className="reveal mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
+            <Eyebrow center>Who it&apos;s for</Eyebrow>
+            <h2 id="who-title" className="display mx-auto mt-3 max-w-2xl text-center text-[clamp(2rem,4.6vw,3.25rem)]">
+              Anyone vibe coding with an agent.
+            </h2>
+            <ul className="mt-10 grid gap-4 sm:grid-cols-3">
+              {AUDIENCES.map(({ icon: Icon, title, body }) => (
+                <li key={title} className="rounded-sm border border-line bg-bg p-5">
+                  <span className="grid size-9 place-items-center rounded-md border border-line-2 bg-bg-3 text-accent">
+                    <Icon className="size-[18px]" />
+                  </span>
+                  <h3 className="mt-4 font-bold">{title}</h3>
+                  <p className="mt-2 text-[15px] leading-relaxed text-muted">{body}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* Product: zig-zag rows */}
         <section id="product" aria-labelledby="product-title" className="border-b border-line">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-            <SectionLabel index="01">The product</SectionLabel>
-            <h2 id="product-title" className="display mt-4 max-w-3xl text-[clamp(2.25rem,5vw,3.75rem)]">
-              One local process, four outputs.
-            </h2>
-            <p className="mt-4 max-w-2xl text-muted">
-              Every screen below is VibeLog itself, captured from a test session. Each one is for a different audience, so each one shows
-              different things.
-            </p>
-
-            <ol className="mt-12 divide-y divide-line border-y border-line">
-              {SCENES.map((s) => (
-                <li key={s.id} id={`scene-${s.id}`} className="grid gap-6 py-10 lg:grid-cols-[300px_1fr] lg:gap-12 [&>*]:min-w-0">
-                  <div>
-                    <p className="slate text-dim">Scene {s.n}</p>
-                    <h3 className="display mt-2 text-4xl normal-case">{s.name}</h3>
-                    <p className="mt-2 font-mono text-[13px] text-accent">{s.route}</p>
-                    <div className="mt-4">
-                      <Audience kind={s.audience} />
-                    </div>
-                    <p className="mt-4 leading-relaxed text-muted">{s.body}</p>
-                  </div>
-                  <figure className={s.id === "hud" ? "self-center rounded-sm border border-line bg-[linear-gradient(135deg,#1a1b22,#0e0f14)] p-3 sm:p-6" : ""}>
-                    {s.id === "live" ? (
-                      <div className="grid grid-cols-[1fr_auto] items-start gap-4">
-                        <Image src={s.img.src} alt={s.img.alt} width={s.img.w} height={s.img.h} sizes="(min-width: 1024px) 640px, 70vw" className="h-auto w-full rounded-sm border border-line" />
-                        <Image
-                          src="/shots/live-phone.webp"
-                          alt="The same /live page on a phone."
-                          width={780}
-                          height={1400}
-                          sizes="(min-width: 1024px) 160px, 25vw"
-                          className="h-auto w-[clamp(84px,22vw,170px)] rounded-[14px] border-4 border-[#1e1f27]"
-                        />
-                      </div>
-                    ) : (
-                      <Image
-                        src={s.img.src}
-                        alt={s.img.alt}
-                        width={s.img.w}
-                        height={s.img.h}
-                        sizes="(min-width: 1024px) 820px, 100vw"
-                        className={`h-auto w-full ${s.id === "hud" ? "" : "rounded-sm border border-line"}`}
-                      />
-                    )}
-                  </figure>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        {/* How it works */}
-        <section id="how" aria-labelledby="how-title" className="border-b border-line bg-bg-2">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-            <SectionLabel index="02">How it works</SectionLabel>
-            <h2 id="how-title" className="display mt-4 text-[clamp(2.25rem,5vw,3.75rem)]">
-              Three steps to your first stream.
-            </h2>
-            <ol className="mt-10 divide-y divide-line border-y border-line">
-              {STEPS.map((s) => (
-                <li key={s.n} className="grid gap-5 py-8 lg:grid-cols-[1fr_1.35fr] lg:gap-12 [&>*]:min-w-0">
-                  <div className="flex gap-5">
-                    <span className="display w-10 shrink-0 text-6xl text-accent">{s.n}</span>
-                    <div>
-                      <h3 className="text-xl font-bold">{s.title}</h3>
-                      <p className="mt-2 text-[15px] leading-relaxed text-muted">{s.body}</p>
-                    </div>
-                  </div>
-                  <CopyCommand lines={s.lines} label={`Step ${s.n} commands`} />
-                </li>
-              ))}
-            </ol>
-            <p className="mt-6 text-sm text-dim">
-              Want to look around first? <code className="font-mono text-muted">npm run vibe -- demo</code> serves every screen with seeded data
-              and writes nothing to your real history.
-            </p>
-          </div>
-        </section>
-
-        {/* Privacy */}
-        <section id="privacy" aria-labelledby="privacy-title" className="border-b border-line">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-            <SectionLabel index="03">Privacy</SectionLabel>
-            <div className="mt-4 grid gap-10 lg:grid-cols-[1fr_1.1fr]">
-              <div>
-                <h2 id="privacy-title" className="display text-[clamp(2.25rem,5vw,3.75rem)]">
-                  Your machine is the server.
-                </h2>
-                <p className="mt-4 leading-relaxed text-muted">
-                  VibeLog is one Node process on localhost. No account, no cloud by default. Token counts come from the Claude Code transcripts
-                  already on your disk, with no network call and no extra package.
-                </p>
-                <ul className="mt-6 space-y-3 text-[15px] leading-relaxed">
-                  <li className="flex gap-3">
-                    <span aria-hidden="true" className="mt-2.5 size-1.5 shrink-0 bg-accent" />
-                    <span>
-                      Text headed for a page goes through a secret scrubber (API keys, tokens, private keys) and a 140 character cap. Prompts,
-                      file paths and diffs never reach a public page.
-                    </span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span aria-hidden="true" className="mt-2.5 size-1.5 shrink-0 bg-accent" />
-                    <span>
-                      Dollar spend never shows on a public surface: /live, the embed, share cards and published snapshots leave it out unless you
-                      turn it on. Your OBS HUD can show it, because it reads your own machine, so keep it out of your scene if you like.
-                    </span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span aria-hidden="true" className="mt-2.5 size-1.5 shrink-0 bg-accent" />
-                    <span>
-                      Viewers who come in through a tunnel or your network get read-only pages. Other websites open in your browser cannot write to
-                      your HUD or read your dashboard.
-                    </span>
-                  </li>
-                </ul>
-              </div>
-              <div className="self-start overflow-hidden rounded-sm border border-line">
-                <table className="w-full text-left text-[15px]">
-                  <caption className="sr-only">What stays on your machine and what viewers can see</caption>
-                  <thead className="bg-bg-2">
-                    <tr>
-                      <th scope="col" className="slate px-4 py-3 font-semibold text-muted">Data</th>
-                      <th scope="col" className="slate px-4 py-3 font-semibold text-muted">Stays local</th>
-                      <th scope="col" className="slate px-4 py-3 font-semibold text-muted">Viewers see</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {[
-                      ["Your prompts", "Yes", "A short label, scrubbed"],
-                      ["Code, diffs, file paths", "Yes", "Never"],
-                      ["API keys and tokens", "Yes", "Never"],
-                      ["Commits, lines, files", "Yes", "Counts only"],
-                      ["Claude tokens", "Yes", "A total"],
-                      ["Dollar spend", "Yes", "Only if you opt in"],
-                      ["History and per-project data", "Yes", "Never"],
-                    ].map(([d, l, v]) => (
-                      <tr key={d}>
-                        <th scope="row" className="px-4 py-3 font-medium">{d}</th>
-                        <td className="px-4 py-3 text-teal">{l}</td>
-                        <td className="px-4 py-3 text-muted">{v}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Open source */}
-        <section id="open-source" aria-labelledby="oss-title" className="border-b border-line bg-bg-2">
-          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.2fr_1fr] lg:items-center">
-            <div>
-              <SectionLabel index="04">Open source</SectionLabel>
-              <h2 id="oss-title" className="display mt-4 text-[clamp(2.25rem,5vw,3.75rem)]">
-                MIT licensed. Read every line.
+          <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
+            <div className="reveal max-w-[38rem]">
+              <Eyebrow>What you get</Eyebrow>
+              <h2 id="product-title" className="display mt-3 text-[clamp(2rem,4.6vw,3.25rem)]">
+                One local process. Four views.
               </h2>
-              <p className="mt-4 max-w-xl leading-relaxed text-muted">
-                A tool that watches your repo and your prompts should be one you can audit. The source has been public since November 1, 2026,
-                and v0.1.0 shipped on November 2. Issues and pull requests are open.
+              <p className="mt-4 leading-relaxed text-muted">
+                Each one is for a different audience, so each one shows different things. These are real captures from a test session.
               </p>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <StarButton />
-                <a href={RELEASE_URL} className={`inline-flex min-h-11 items-center rounded-md px-4 text-[15px] font-semibold text-muted underline-offset-4 hover:text-ink hover:underline ${focusRing}`}>
-                  Release notes for v0.1.0
-                </a>
-              </div>
             </div>
-            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-sm border border-line bg-line">
+
+            <ol className="mt-14 space-y-20 sm:space-y-24">
+              {SCENES.map((s, i) => {
+                const flip = i % 2 === 1;
+                const Icon = s.icon;
+                return (
+                  <li key={s.id} id={`view-${s.id}`} className="reveal grid items-center gap-8 lg:grid-cols-12 lg:gap-12 [&>*]:min-w-0">
+                    <div className={`lg:col-span-5 ${flip ? "lg:order-2" : ""}`}>
+                      <div className="flex items-center gap-3">
+                        <span className="grid size-9 place-items-center rounded-md border border-line-2 bg-bg-3 text-accent">
+                          <Icon className="size-[18px]" />
+                        </span>
+                        <Audience kind={s.audience} />
+                      </div>
+                      <h3 className="display mt-5 text-[2.25rem] normal-case">{s.name}</h3>
+                      <p className="mt-1 font-mono text-[13px] text-accent">{s.route}</p>
+                      <p className="mt-4 max-w-[30rem] leading-relaxed text-muted">{s.body}</p>
+                    </div>
+                    <figure className={`lg:col-span-7 ${flip ? "lg:order-1" : ""}`}>
+                      {s.id === "live" ? (
+                        <div className="relative pr-[14%]">
+                          <Image src={s.img.src} alt={s.img.alt} width={s.img.w} height={s.img.h} sizes="(min-width: 1024px) 520px, 85vw" className="h-auto w-full rounded-sm border border-line" />
+                          <Image
+                            src="/shots/live-phone.webp"
+                            alt="The same live page on a phone."
+                            width={780}
+                            height={1400}
+                            sizes="(min-width: 1024px) 140px, 25vw"
+                            className="absolute right-0 -bottom-6 h-auto w-[26%] rounded-[14px] border-4 border-[#1e1f27] shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
+                          />
+                        </div>
+                      ) : s.id === "hud" ? (
+                        <div className="rounded-sm border border-line bg-[repeating-linear-gradient(45deg,#121218_0_12px,#0f0f14_12px_24px)] p-3 sm:p-5">
+                          <Image src={s.img.src} alt={s.img.alt} width={s.img.w} height={s.img.h} sizes="(min-width: 1024px) 600px, 100vw" className="h-auto w-full" />
+                        </div>
+                      ) : (
+                        <Image
+                          src={s.img.src}
+                          alt={s.img.alt}
+                          width={s.img.w}
+                          height={s.img.h}
+                          sizes="(min-width: 1024px) 600px, 100vw"
+                          className={`h-auto w-full rounded-sm border border-line ${s.id === "share" ? "shadow-[0_24px_60px_rgba(0,0,0,0.5)] lg:rotate-[-1.2deg]" : ""}`}
+                        />
+                      )}
+                    </figure>
+                  </li>
+                );
+              })}
+            </ol>
+
+            {/* The numbers behind the screenshots */}
+            <div className="reveal mt-24 grid grid-cols-2 gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-4">
               {[
-                ["License", "MIT"],
-                ["Version", "0.1.0"],
-                ["Open since", "Nov 1, 2026"],
-                ["Tested on", "Windows (WSL)"],
-              ].map(([k, v]) => (
-                <div key={k} className="bg-bg p-5">
-                  <dt className="slate text-dim">{k}</dt>
-                  <dd className="display mt-2 text-2xl normal-case sm:text-3xl">{v}</dd>
+                { n: 4, s: "", l: "prompts" },
+                { n: 2, s: "", l: "sub-agents" },
+                { n: 3, s: "", l: "commits" },
+                { n: 443900, s: "", l: "tokens" },
+              ].map((x) => (
+                <div key={x.l} className="bg-bg px-5 py-6 text-center">
+                  <div className="display text-4xl text-ink normal-case">
+                    <CountUp to={x.n} suffix={x.s} />
+                  </div>
+                  <div className="slate mt-2 text-dim">{x.l}</div>
                 </div>
               ))}
-              <div className="col-span-2 bg-bg p-5 text-sm leading-relaxed text-muted">
-                I build and test on Windows with WSL. macOS and Linux should work, since it is Node and git, but nobody has tested them yet.
-                Only Claude Code is tracked for now.
-              </div>
+              <p className="col-span-2 bg-bg px-5 py-3 text-center text-sm text-dim sm:col-span-4">The test session behind these screenshots, as VibeLog counted it.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* How it works: narrow centred timeline */}
+        <section id="how" aria-labelledby="how-title" className="border-b border-line bg-bg-2">
+          <div className="reveal mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24">
+            <Eyebrow center>How it works</Eyebrow>
+            <h2 id="how-title" className="display mt-3 text-center text-[clamp(2rem,4.6vw,3.25rem)]">
+              Three steps.
+            </h2>
+            <ol className="relative mt-12 space-y-10 before:absolute before:top-2 before:bottom-2 before:left-[15px] before:w-px before:bg-line-2">
+              {STEPS.map((s) => (
+                <li key={s.n} className="relative grid grid-cols-[32px_1fr] gap-5 [&>*]:min-w-0">
+                  <span className="relative z-10 grid size-8 place-items-center rounded-full border border-accent/60 bg-bg font-mono text-sm font-bold text-accent">
+                    {s.n}
+                  </span>
+                  <div>
+                    <h3 className="text-lg font-bold">{s.title}</h3>
+                    <p className="mt-1.5 mb-4 text-[15px] leading-relaxed text-muted">{s.body}</p>
+                    <CopyCommand lines={s.lines} label={`Step ${s.n}`} />
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-10 text-center text-sm text-dim">
+              Just looking? <code className="font-mono text-muted">npm run vibe -- demo</code> shows every view with sample data.
+            </p>
+          </div>
+        </section>
+
+        {/* Privacy: table left, points right */}
+        <section id="privacy" aria-labelledby="privacy-title" className="border-b border-line">
+          <div className="mx-auto grid max-w-5xl gap-12 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-12 lg:items-center">
+            <div className="reveal lg:order-2 lg:col-span-6">
+              <Eyebrow>Privacy</Eyebrow>
+              <h2 id="privacy-title" className="display mt-3 text-[clamp(2rem,4.6vw,3.25rem)]">
+                Your machine is the server.
+              </h2>
+              <ul className="mt-6 space-y-5 text-[15px] leading-relaxed">
+                {[
+                  { icon: IconLaptop, t: "Local by default", d: "One Node process on localhost. No account and no cloud. Token counts come from transcripts already on your disk." },
+                  { icon: IconShield, t: "Scrubbed before it's shown", d: "Text for any page passes a secret scrubber and a length cap. Prompts, code, file paths and keys never reach a public page." },
+                  { icon: IconEye, t: "Viewers can only look", d: "Tunnel and network visitors get read-only pages, and other websites in your browser can't write to your overlay or read your dashboard." },
+                ].map(({ icon: Icon, t, d }) => (
+                  <li key={t} className="flex gap-4">
+                    <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-md border border-line-2 bg-bg-3 text-teal">
+                      <Icon className="size-4" />
+                    </span>
+                    <span>
+                      <strong className="block font-semibold text-ink">{t}</strong>
+                      <span className="text-muted">{d}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="reveal overflow-hidden rounded-sm border border-line lg:order-1 lg:col-span-6">
+              <table className="w-full text-left text-[15px]">
+                <caption className="sr-only">What stays on your machine and what viewers can see</caption>
+                <thead className="bg-bg-2">
+                  <tr>
+                    <th scope="col" className="slate px-4 py-3 font-semibold text-muted">Data</th>
+                    <th scope="col" className="slate px-4 py-3 font-semibold text-muted">Viewers see</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {[
+                    ["Your prompts", "A short label, scrubbed"],
+                    ["Code, diffs, file paths", "Never"],
+                    ["API keys and tokens", "Never"],
+                    ["Commits, lines, files", "Counts only"],
+                    ["Agent tokens", "A total"],
+                    ["Dollar spend", "Only if you opt in"],
+                    ["History, per-project data", "Never"],
+                  ].map(([d, v]) => (
+                    <tr key={d}>
+                      <th scope="row" className="px-4 py-3 font-medium">{d}</th>
+                      <td className={`px-4 py-3 ${v === "Never" ? "text-teal" : "text-muted"}`}>{v}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* Open source: centred card */}
+        <section id="open-source" aria-labelledby="oss-title" className="border-b border-line bg-bg-2">
+          <div className="reveal mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-24">
+            <Logo className="mx-auto size-12" />
+            <h2 id="oss-title" className="display mt-6 text-[clamp(2rem,4.6vw,3.25rem)]">
+              Open source. MIT.
+            </h2>
+            <p className="mx-auto mt-4 max-w-[34rem] leading-relaxed text-muted">
+              A tool that watches your repo and your prompts should be one you can read. The code has been public since November 1, 2026, and
+              v0.1.0 came out on November 2.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
+              <StarButton />
+              <TextLink href={RELEASE_URL}>v0.1.0 release notes</TextLink>
+            </div>
+            <dl className="mx-auto mt-10 grid max-w-md grid-cols-2 gap-px overflow-hidden rounded-sm border border-line bg-line text-left">
+              {[
+                { k: "License", v: "MIT", icon: IconCheck },
+                { k: "Version", v: "0.1.0", icon: IconRoute },
+                { k: "Public since", v: "Nov 2026", icon: IconClock },
+                { k: "Tested on", v: "WSL", icon: IconLaptop },
+              ].map(({ k, v, icon: Icon }) => (
+                <div key={k} className="bg-bg p-4">
+                  <dt className="slate flex items-center gap-1.5 text-dim">
+                    <Icon className="size-3.5" />
+                    {k}
+                  </dt>
+                  <dd className="mt-1.5 font-semibold">{v}</dd>
+                </div>
+              ))}
             </dl>
           </div>
         </section>
 
-        {/* Roadmap */}
+        {/* Roadmap: three-up grid */}
         <section id="roadmap" aria-labelledby="roadmap-title" className="border-b border-line">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-            <SectionLabel index="05">Roadmap</SectionLabel>
-            <h2 id="roadmap-title" className="display mt-4 text-[clamp(2.25rem,5vw,3.75rem)]">
-              What works, what doesn&apos;t yet.
-            </h2>
-            <div className="mt-10 grid gap-px overflow-hidden rounded-sm border border-line bg-line md:grid-cols-3">
+          <div className="reveal mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <Eyebrow>Roadmap</Eyebrow>
+                <h2 id="roadmap-title" className="display mt-3 text-[clamp(2rem,4.6vw,3.25rem)]">
+                  What works, what doesn&apos;t yet.
+                </h2>
+              </div>
+              <a href={WAITLIST_URL} className="text-sm text-muted underline underline-offset-4 hover:text-ink">
+                Hear about the hosted version
+              </a>
+            </div>
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
               {ROADMAP.map((col) => (
-                <div key={col.title} className="bg-bg p-6">
+                <div key={col.title} className="rounded-sm border border-line bg-bg-2 p-6">
                   <h3 className={`slate ${col.tone}`}>{col.title}</h3>
                   <p className="mt-1 text-sm text-dim">{col.note}</p>
                   <ul className="mt-5 space-y-3 text-[15px]">
                     {col.items.map((i) => (
                       <li key={i} className="flex gap-3">
-                        <span aria-hidden="true" className={`mt-[0.55em] h-px w-3 shrink-0 bg-current ${col.tone}`} />
+                        <span aria-hidden="true" className={`mt-[0.6em] h-px w-3 shrink-0 bg-current ${col.tone}`} />
                         <span>{i}</span>
                       </li>
                     ))}
@@ -543,24 +545,41 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <p className="mt-6 text-sm text-dim">
-              Want the hosted version when it exists?{" "}
-              <a href={WAITLIST_URL} className="text-muted underline underline-offset-4 hover:text-ink">
-                Get a note on n8builds.dev
-              </a>
-              .
-            </p>
+          </div>
+        </section>
+
+        {/* FAQ: narrow column */}
+        <section id="faq" aria-labelledby="faq-title" className="border-b border-line bg-bg-2">
+          <div className="reveal mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-24">
+            <Eyebrow center>Questions</Eyebrow>
+            <h2 id="faq-title" className="display mt-3 text-center text-[clamp(2rem,4.6vw,3.25rem)]">
+              Fair questions.
+            </h2>
+            <div className="mt-10 divide-y divide-line border-y border-line">
+              {FAQ.map((f) => (
+                <details key={f.q} className="group py-1">
+                  <summary className={`flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 py-3 font-semibold ${focusRing}`}>
+                    {f.q}
+                    <span aria-hidden="true" className="font-mono text-accent transition group-open:rotate-45">+</span>
+                  </summary>
+                  <p className="pb-4 text-[15px] leading-relaxed text-muted">{f.a}</p>
+                </details>
+              ))}
+            </div>
           </div>
         </section>
       </main>
 
-      <footer className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 text-sm text-dim sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p>
-          VibeLog is built by N8 at{" "}
-          <a href={N8BUILDS_URL} className="text-muted underline-offset-4 hover:text-ink hover:underline">
-            n8builds.dev
-          </a>
-          . MIT licensed.
+      <footer className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-10 text-sm text-dim sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <p className="flex items-center gap-2">
+          <Logo className="size-5" />
+          <span>
+            Built by N8 at{" "}
+            <a href={N8BUILDS_URL} className="text-muted underline-offset-4 hover:text-ink hover:underline">
+              n8builds.dev
+            </a>
+            . MIT licensed.
+          </span>
         </p>
         <a href={REPO_URL} className="inline-flex items-center gap-2 text-muted hover:text-ink">
           <GitHubMark />
