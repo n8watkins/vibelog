@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { summarizeRange, vibeScore, formatChart, records } from "./chart.ts";
+import { summarizeRange, vibeScore, formatChart, records, recordBadge, MIN_ACTIVE_DAYS_FOR_RECORDS } from "./chart.ts";
 import { summarizeDay, type VibeEvent } from "./report.ts";
 
 // LOCAL-time timestamps so the local-date bucketing is TZ-independent.
@@ -94,4 +94,14 @@ test("records is safe on empty input", () => {
   assert.equal(r.bestDayScore, 0);
   assert.equal(r.bestDayDate, null);
   assert.equal(r.longestStreak, 0);
+});
+
+test("recordBadge stays quiet until there is enough history to beat", () => {
+  const fresh = { bestDayScore: 3, bestDayDate: "2026-11-09", longestStreak: 1, activeDays: 1 };
+  assert.equal(recordBadge(fresh, 3, 1), null);
+  const seasoned = { ...fresh, activeDays: MIN_ACTIVE_DAYS_FOR_RECORDS };
+  assert.equal(recordBadge(seasoned, 3, 1)?.kind, "best-day");
+  assert.equal(recordBadge({ ...seasoned, bestDayScore: 10, longestStreak: 4 }, 3, 4)?.kind, "best-streak");
+  assert.equal(recordBadge({ ...seasoned, bestDayScore: 10, longestStreak: 9 }, 3, 4), null);
+  assert.equal(recordBadge(seasoned, 0, 0), null);
 });

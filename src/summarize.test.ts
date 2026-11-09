@@ -236,3 +236,16 @@ test("detectLocalLLM caches result and does not re-probe on subsequent calls", a
     resetLocalLLMCache();
   }
 });
+
+test("sanitizeLabel cuts on a word boundary and drops punctuation the cut exposes", () => {
+  // The assessment's real case: 9-word cap landed right after a comma.
+  assert.equal(
+    sanitizeLabel("add a dark mode toggle to the settings page, and then also persist it"),
+    "Add a dark mode toggle to the settings page",
+  );
+  const long = sanitizeLabel("supercalifragilistic ".repeat(8));
+  assert.ok(long.length <= 90);
+  assert.ok(!long.endsWith(" "));
+  assert.equal(sanitizeLabel("x".repeat(120)).length, 90);
+  assert.equal(sanitizeLabel("ship it ("), "Ship it");
+});
