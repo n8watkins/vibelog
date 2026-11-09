@@ -5,7 +5,7 @@ import path from "node:path";
 import { getBranch, getStats } from "./git.ts";
 import { getClaudeUsageToday, dailyUsageMap, sessionTokenDelta, localDateString } from "./usage.ts";
 import { readEvents, summarizeDay, summarizeWeek } from "./report.ts";
-import { summarizeRange, currentStreak, records } from "./chart.ts";
+import { summarizeRange, currentStreak, records, recordBadge } from "./chart.ts";
 import { redact } from "./redact.ts";
 import {
   BUILD_LOG_MAX,
@@ -245,28 +245,15 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   }
 
   /**
-   * Compare today against the all-time bests and, if today set a record, return
-   * a SHORT, fixed/derived label (never raw user text) for the overlay badge +
-   * a milestone toast. The bests are computed from ALL days, so we only flag a
-   * record when today's number is at least the best — and require it to be a
-   * meaningful (>0) run, so a quiet day never falsely celebrates.
+   * Today's personal-best badge (a short fixed label, never user text) for the
+   * overlay badge + a milestone toast. See recordBadge() in src/chart.ts.
    */
   function deriveRecord(
     events: Awaited<ReturnType<typeof readEvents>>,
     todayScore: number,
     streak: number,
   ): LiveState["record"] {
-    const r = records(events);
-    // Best single-day score: today ties/owns the all-time peak (records() spans
-    // all days incl. today, so a new best makes bestDayScore === todayScore).
-    if (todayScore > 0 && todayScore >= r.bestDayScore) {
-      return { kind: "best-day", label: "NEW PERSONAL BEST — best day yet" };
-    }
-    // Longest streak: today's active run ties/owns the all-time longest.
-    if (streak > 1 && streak >= r.longestStreak) {
-      return { kind: "best-streak", label: "NEW PERSONAL BEST — longest streak" };
-    }
-    return null;
+    return recordBadge(records(events), todayScore, streak);
   }
 
   async function pollTokens(): Promise<void> {
@@ -1124,7 +1111,7 @@ function runDemoLoop(
     youtube: { live: false, followers: 3210, views: 142_000, url: "https://youtube.com/@yourchannel" },
     updatedAt: new Date().toISOString(),
   };
-  state.record = { kind: "best-day", label: "NEW PERSONAL BEST — best day yet" };
+  state.record = { kind: "best-day", label: "NEW PERSONAL BEST - best day yet" };
   session.features = 1;
   session.bugs = 0;
   session.subAgents = 1;

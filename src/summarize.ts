@@ -35,12 +35,22 @@ export const RECAP_SYSTEM_INSTRUCTION =
 
 /** Strip a model reply down to a clean label: no quotes, no trailing punctuation, capped. */
 export function sanitizeLabel(raw: string): string {
-  let s = raw.replace(/[`"']/g, "").replace(/\s+/g, " ").trim();
-  s = s.replace(/[.;:,\s]+$/, "");
-  const words = s.split(" ").filter(Boolean).slice(0, 9);
-  s = words.join(" ");
-  if (s) s = s[0]!.toUpperCase() + s.slice(1);
-  return s.slice(0, 90);
+  const s = raw.replace(/[`"']/g, "").replace(/\s+/g, " ").trim();
+  // Cap at 9 words, then at 90 characters on a word boundary (a single huge
+  // word is the only thing cut mid-word), then drop trailing punctuation that
+  // the cut may have exposed ("...the settings page," -> "...the settings page").
+  let out = "";
+  for (const w of s.split(" ").filter(Boolean).slice(0, 9)) {
+    const next = out ? `${out} ${w}` : w;
+    if (next.length > 90) {
+      if (!out) out = w.slice(0, 90);
+      break;
+    }
+    out = next;
+  }
+  out = out.replace(/[\s.;:,!?\-\u2013\u2014(\[{]+$/, "");
+  if (out) out = out[0]!.toUpperCase() + out.slice(1);
+  return out;
 }
 
 /**

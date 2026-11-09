@@ -53,7 +53,7 @@
       @keyframes drift1 { from { transform: translate(0, 0) scale(1); } to { transform: translate(-8vw, 10vh) scale(1.15); } }
       @keyframes drift2 { from { transform: translate(0, 0) scale(1); } to { transform: translate(10vw, -8vh) scale(1.1); } }
       .wrap { width: min(1120px, 94vw); margin: 0 auto; padding: 20px 0; min-height: 100vh; display: flex; flex-direction: column; gap: 13px; }
-      .topbar { display: flex; align-items: center; justify-content: space-between; }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
       .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -0.01em; font-size: 18px; }
       .brand .spark { width: 22px; height: 22px; border-radius: 7px; background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 0 18px rgba(124, 92, 255, 0.5); }
       .pill { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
@@ -175,7 +175,14 @@
       .chip b { color: var(--text); } .chip span { color: var(--muted); }
 
       /* topbar right: channel links + live pill */
-      .topright { display: flex; align-items: center; gap: 10px; }
+      .topright { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 0; margin-left: auto; }
+      /* Phones: tighten the icon row so brand + links + "Offline" pill + gear fit on one line. */
+      @media (max-width: 440px) {
+        .topright { gap: 6px; }
+        .topright .social, .gear { width: 32px; height: 32px; }
+        .topright .pill { padding: 6px 10px; letter-spacing: 0.04em; }
+        .brand { font-size: 17px; gap: 8px; }
+      }
       .social { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
                 border-radius: 9px; border: 1px solid var(--border); background: rgba(255,255,255,0.04);
                 color: var(--muted); transition: all 0.15s ease; }

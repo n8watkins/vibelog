@@ -54,6 +54,8 @@ export type Records = {
   bestDayDate: string | null;
   /** Longest run of consecutive active days (vibe score > 0). */
   longestStreak: number;
+  /** Days in the range with any activity (vibe score > 0). */
+  activeDays: number;
 };
 
 export function records(events: VibeEvent[], days = 371, end = new Date()): Records {
@@ -66,7 +68,33 @@ export function records(events: VibeEvent[], days = 371, end = new Date()): Reco
       bestDayDate = s.date;
     }
   }
-  return { bestDayScore, bestDayDate, longestStreak: longestStreak(stats) };
+  return {
+    bestDayScore,
+    bestDayDate,
+    longestStreak: longestStreak(stats),
+    activeDays: stats.filter((s) => s.score > 0).length,
+  };
+}
+
+/** Days of history needed before "personal best" means anything. */
+export const MIN_ACTIVE_DAYS_FOR_RECORDS = 3;
+
+export type RecordBadge = { kind: "best-day" | "best-streak"; label: string } | null;
+
+/**
+ * The overlay's personal-best badge for today, or null. Pure. A fresh install
+ * has no history to beat, so nothing is celebrated until there are at least
+ * MIN_ACTIVE_DAYS_FOR_RECORDS active days; ties with the all-time best count.
+ */
+export function recordBadge(r: Records, todayScore: number, streak: number): RecordBadge {
+  if (r.activeDays < MIN_ACTIVE_DAYS_FOR_RECORDS) return null;
+  if (todayScore > 0 && todayScore >= r.bestDayScore) {
+    return { kind: "best-day", label: "NEW PERSONAL BEST - best day yet" };
+  }
+  if (streak > 1 && streak >= r.longestStreak) {
+    return { kind: "best-streak", label: "NEW PERSONAL BEST - longest streak" };
+  }
+  return null;
 }
 
 /** Map a score to a 0–4 intensity level, relative to the range's busiest day. */
