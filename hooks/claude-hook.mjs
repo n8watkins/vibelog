@@ -23,11 +23,23 @@ try {
   // no/invalid stdin — forward an empty object
 }
 
+/** True when a process with this pid exists (EPERM: it exists, owned by someone else). */
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return err.code === "EPERM";
+  }
+}
+
 let port = 4545;
 try {
   const session = JSON.parse(
     readFileSync(path.join(os.homedir(), ".vibelog", "session.json"), "utf8"),
   );
+  // A session whose agent has died (no `vibe end`) is no session: send nothing.
+  if (typeof session.pid === "number" && !pidAlive(session.pid)) process.exit(0);
   if (session.port) port = session.port;
 } catch {
   // no active session — agent likely not running; we'll just fail the fetch

@@ -1,10 +1,14 @@
-import { mkdir, readFile, writeFile, appendFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile, appendFile } from "node:fs/promises";
 import { CONFIG_FILE, EVENTS_FILE, SESSION_FILE, SETTINGS_FILE, STATE_FILE, VIBE_DIR } from "./config.ts";
 import type { BuildLogEntry, BuildMode, LiveState } from "./state.ts";
 import type { Settings } from "./theme.ts";
 
 /** Persistent session metadata — lets the server resume after a restart. */
 export type Session = {
+  /** The agent process that owns this session. Missing in files written
+   *  before 0.1.1; a recorded pid that is no longer running means the agent
+   *  died without `vibe end`, so the session counts as over. */
+  pid?: number;
   cwd: string;
   port: number;
   baseline: string | null;
@@ -59,6 +63,30 @@ export const writeConfig = (c: Config) => writeJson(CONFIG_FILE, c);
 
 export const readSession = () => readJson<Session>(SESSION_FILE);
 export const writeSession = (s: Session) => writeJson(SESSION_FILE, s);
+
+/** True when a process with this pid exists (EPERM: it exists, owned by someone else). */
+export function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+/** True when the session's agent is known to be gone (a recorded pid that is not running). */
+export function sessionIsStale(s: Session): boolean {
+  return typeof s.pid === "number" && !pidAlive(s.pid);
+}
+
+/** The session of a running agent, or null when there is none or its agent is gone. */
+export async function readLiveSession(): Promise<Session | null> {
+  const s = await readSession();
+  return s && !sessionIsStale(s) ? s : null;
+}
+
+/** Remove session.json (no error when it is already gone). */
+export const clearSession = () => rm(SESSION_FILE, { force: true });
 
 export const readState = () => readJson<LiveState>(STATE_FILE);
 export const writeState = (s: LiveState) => writeJson(STATE_FILE, s);

@@ -81,3 +81,41 @@ test("since filter excludes older entries (UTC date)", () => {
   assert.equal(out.length, 1);
   assert.equal(out[0]!.tokens, 200);
 });
+
+/** Run `fn` with the process time zone set to `tz`, then restore it. */
+function inZone<T>(tz: string, fn: () => T): T {
+  const prev = process.env.TZ;
+  process.env.TZ = tz;
+  try {
+    return fn();
+  } finally {
+    if (prev === undefined) delete process.env.TZ;
+    else process.env.TZ = prev;
+  }
+}
+
+test("since compares local dates, not UTC dates (west of UTC)", () => {
+  inZone("America/Los_Angeles", () => {
+    const out = aggregate(
+      [
+        // 2026-11-10 03:00 UTC is still 2026-11-09 19:00 in Los Angeles.
+        row({ id: "a", requestId: "1", timestamp: "2026-11-10T03:00:00.000Z", usage: { output_tokens: 100 } }),
+        // 2026-11-10 09:00 UTC is 2026-11-10 01:00 in Los Angeles.
+        row({ id: "b", requestId: "2", timestamp: "2026-11-10T09:00:00.000Z", usage: { output_tokens: 7 } }),
+      ],
+      "2026-11-10",
+    );
+    assert.equal(out[0]!.tokens, 7);
+  });
+});
+
+test("since compares local dates, not UTC dates (east of UTC)", () => {
+  inZone("Asia/Tokyo", () => {
+    const out = aggregate(
+      // 2026-11-09 20:00 UTC is already 2026-11-10 05:00 in Tokyo.
+      [row({ id: "a", requestId: "1", timestamp: "2026-11-09T20:00:00.000Z", usage: { output_tokens: 100 } })],
+      "2026-11-10",
+    );
+    assert.equal(out[0]?.tokens, 100);
+  });
+});

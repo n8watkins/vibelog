@@ -105,15 +105,16 @@ function levelFor(score: number, max: number): number {
 }
 
 // Brand-tinted heatmap (truecolor): empty → teal/purple gradient.
-const SWATCH = [
+const COLOR_SWATCH = [
   "\x1b[38;2;38;44;64m",    // 0 empty
   "\x1b[38;2;30;90;82m",    // 1
   "\x1b[38;2;34;160;128m",  // 2
   "\x1b[38;2;90;120;230m",  // 3
   "\x1b[38;2;150;120;255m", // 4
 ];
-const RESET = "\x1b[0m";
-const DIM = "\x1b[2m";
+const COLOR_RESET = "\x1b[0m";
+const COLOR_DIM = "\x1b[2m";
+const PLAIN_CELLS = ["·", "░", "▒", "▓", "█"];
 
 /** Trailing run of days (ending at the most recent) with any activity. */
 export function currentStreak(stats: DayStat[]): number {
@@ -137,8 +138,16 @@ function longestStreak(stats: DayStat[]): number {
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-/** Render the heatmap + summary to a colored, multi-line string. Pure. */
-export function formatChart(stats: DayStat[]): string {
+/**
+ * Render the heatmap + summary to a multi-line string. Pure. With
+ * `color: false` (pipes, files, NO_COLOR) intensity is shown by the cell
+ * character instead (`·` empty, then `░ ▒ ▓ █`), with no escape codes.
+ */
+export function formatChart(stats: DayStat[], opts: { color?: boolean } = {}): string {
+  const color = opts.color ?? true;
+  const RESET = color ? COLOR_RESET : "";
+  const DIM = color ? COLOR_DIM : "";
+  const cellFor = (level: number) => (color ? COLOR_SWATCH[level]! + "■" + RESET : PLAIN_CELLS[level]!);
   if (!stats.length) return "No activity yet — run `vibe start` and ship something ✨";
 
   // Pad the front so the grid starts on a Sunday (GitHub-style week columns).
@@ -164,7 +173,7 @@ export function formatChart(stats: DayStat[]): string {
         line += "  ";
         continue;
       }
-      line += SWATCH[levelFor(cell.score, max)] + "■" + RESET + " ";
+      line += cellFor(levelFor(cell.score, max)) + " ";
     }
     L.push(line);
   }
@@ -172,7 +181,7 @@ export function formatChart(stats: DayStat[]): string {
   L.push("");
   const legend =
     `  ${DIM}less${RESET} ` +
-    SWATCH.map((c) => c + "■" + RESET).join(" ") +
+    COLOR_SWATCH.map((_, level) => cellFor(level)).join(" ") +
     ` ${DIM}more${RESET}`;
   L.push(legend);
 

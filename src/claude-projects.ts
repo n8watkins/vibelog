@@ -47,14 +47,15 @@ export function sumUsage(u: UsageLike | undefined | null): number {
 /**
  * Pure aggregation: group rows by cwd, dedupe by `id:requestId` (same scheme
  * src/usage.ts and ccusage use to avoid double-counting), optionally filter by `since` date
- * (YYYY-MM-DD, inclusive, compared against the UTC date of each timestamp).
+ * (YYYY-MM-DD, inclusive, compared against the LOCAL date of each timestamp, so
+ * `--days` and `--since` agree with the day boundaries the user lives in).
  */
 export function aggregate(rows: Row[], since?: string | null): ProjectTokens[] {
   const byCwd = new Map<string, { tokens: number; files: Set<string> }>();
   const seen = new Set<string>();
 
   for (const row of rows) {
-    if (since && row.timestamp && row.timestamp.slice(0, 10) < since) continue;
+    if (since && row.timestamp && localDateString(new Date(row.timestamp)) < since) continue;
     const key = `${row.id ?? ""}:${row.requestId ?? ""}`;
     if (key !== ":" && seen.has(key)) continue;
     if (key !== ":") seen.add(key);

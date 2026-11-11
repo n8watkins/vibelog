@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { EVENTS_FILE } from "./config.ts";
 import { localDateString } from "./usage.ts";
+import { formatTokens } from "./format.ts";
 import type { LiveStats } from "./state.ts";
 
 /**
@@ -96,13 +97,6 @@ export function summarizeDay(events: VibeEvent[], date: string): DaySummary {
   return s;
 }
 
-function fmtNum(n: number): string {
-  return n >= 1_000_000
-    ? (n / 1_000_000).toFixed(1) + "M"
-    : n >= 1_000
-      ? (n / 1_000).toFixed(1) + "k"
-      : String(n);
-}
 
 function fmtDuration(mins: number): string {
   const h = Math.floor(mins / 60);
@@ -110,18 +104,27 @@ function fmtDuration(mins: number): string {
   return h ? `${h}h ${m}m` : `${m}m`;
 }
 
+/** "today", "yesterday" or "on YYYY-MM-DD" for `date`, seen from `today`. */
+function dayPhrase(date: string, today: string): string {
+  if (date === today) return "today";
+  const d = new Date(`${today}T12:00:00`);
+  d.setDate(d.getDate() - 1);
+  return date === localDateString(d) ? "yesterday" : `on ${date}`;
+}
+
 /** Render a recap to plain text. `stats`/`project` come from the last snapshot. */
 export function formatReport(
   s: DaySummary,
   stats?: LiveStats | null,
   project?: string | null,
+  today: string = localDateString(),
 ): string {
   const L: string[] = [];
   L.push(`📊 Vibe report — ${s.date}`);
   L.push("");
 
   if (!s.firstTs) {
-    L.push("  No activity logged today. Run `vibe start` and code something ✨");
+    L.push(`  No activity logged ${dayPhrase(s.date, today)}. Run \`vibe start\` and code something ✨`);
     return L.join("\n");
   }
 
@@ -146,7 +149,7 @@ export function formatReport(
       `    +${stats.linesAdded} / -${stats.linesRemoved} lines` +
         `  ·  ${stats.filesChanged} files` +
         `  ·  ${stats.commits} commit${stats.commits === 1 ? "" : "s"}` +
-        `  ·  ${fmtNum(stats.claudeTokens)} tokens`,
+        `  ·  ${formatTokens(stats.claudeTokens)} tokens`,
     );
   }
 
