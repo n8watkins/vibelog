@@ -10,6 +10,12 @@ driven by CSS custom properties.
 (canonical roadmap — wins any conflict) and `docs/THEMING.md`. The root `README.md` is
 the user-facing quickstart; `V0_SPEC.md` / `PRD.md` / `NEXT_STEPS.md` are **historical**.
 
+## Direction and streaming freeze (2026-11-10)
+
+- VibeLog is now a private, local log of AI coding first: what you worked on, per project, across Claude Code and Codex, with time and cost. Streaming overlays are a bonus.
+- The phased plan is the owner's "VibeLog Final Plan" (https://claude.ai/artifact/KKEGuJY6zpkY1ov2yXz3RW, private). Phase 0 (positioning plus fixes B1, B4, B5, B7, B8) is done; work proceeds phase by phase from there.
+- **Streaming paths are frozen until a stream is scheduled; fix bugs only.** That covers the live agent (`src/agent.ts` routes and pollers), `hooks/claude-hook.mjs`, the overlay, `/live`, `/share`, embed and dashboard pages in `public/`, OBS, Twitch and YouTube, the summarizer, the snapshot publisher and `worker/`. The phase 0 fixes were the last non-bug edits there; streaming work resumes in plan phase 6.
+
 ## Streaming safety (this machine streams live to Twitch/OBS)
 
 - NEVER print secrets to the terminal: no `cat .env`/`secrets.json`, `printenv`, `env`,

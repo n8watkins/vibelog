@@ -2,7 +2,7 @@
 import { Command } from "commander";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_PORT } from "./config.ts";
@@ -13,17 +13,25 @@ import { localDateString } from "./usage.ts";
 import { formatReport, formatWeekly, readEvents, summarizeDay, summarizeWeek } from "./report.ts";
 import { formatChart, summarizeRange } from "./chart.ts";
 import { recapSummary } from "./summarize.ts";
-import { readConfig, readSession, readSettings, readState, writeConfig, writeSession, writeSettings, appendEvent } from "./store.ts";
+import { clearSession, readConfig, readLiveSession, readSession, readSettings, readState, sessionIsStale, writeConfig, writeSession, writeSettings, appendEvent } from "./store.ts";
+import { formatTokens } from "./format.ts";
 import { publicShowCost } from "./theme.ts";
 import { runAgent } from "./agent.ts";
 import { loginCommand as twitchLogin } from "./twitch-oauth.ts";
 
+const { version } = createRequire(import.meta.url)("../package.json") as { version: string };
+
 const program = new Command();
-program.name("vibe").description("VibeLog — live coding telemetry + OBS overlay (V0)").version("0.0.0");
+program
+  .name("vibe")
+  .description(
+    "VibeLog: a private, local log of your AI coding (what you worked on, per project, with time and cost). Streaming overlays are a bonus.",
+  )
+  .version(version);
 
 /** POST to the running agent; friendly error if it isn't up. */
 async function callAgent(pathname: string, body: unknown): Promise<void> {
-  const session = await readSession();
+  const session = await readLiveSession();
   if (!session) {
     console.error("No active session. Run `vibe start` first.");
     process.exit(1);
@@ -82,6 +90,7 @@ program
     const baseline = await getHead(cwd);
 
     await writeSession({
+      pid: process.pid,
       cwd,
       port,
       baseline,
@@ -137,7 +146,18 @@ program
   .command("end")
   .description("End the session and stop the agent")
   .action(async () => {
+    const session = await readSession();
+    if (!session) {
+      console.log("No active session.");
+      return;
+    }
+    if (sessionIsStale(session)) {
+      await clearSession();
+      console.log("The session's agent had already stopped. Cleared the leftover session.");
+      return;
+    }
     await callAgent("/end", {});
+    await clearSession();
     console.log("Session ended.");
   });
 
@@ -173,15 +193,21 @@ hooks
 
 hooks
   .command("install")
-  .description("Merge VibeLog hooks into a Claude Code settings.json")
-  .option("--global", "install into ~/.claude/settings.json")
+  .description("Merge VibeLog hooks into a project's .claude/settings.json (--global prints the block instead)")
+  .option("--global", "print the block to add to ~/.claude/settings.json yourself (VibeLog never edits it)")
   .option("--dir <path>", "install into <path>/.claude/settings.json")
   .action(async (opts: { global?: boolean; dir?: string }) => {
+    if (opts.global && !opts.dir) {
+      // Global Claude Code settings belong to the user (often kept in dotfiles):
+      // VibeLog shows what to add and never writes that file.
+      console.log('VibeLog does not edit ~/.claude/settings.json. Merge this into its "hooks" yourself:\n');
+      console.log(JSON.stringify({ hooks: vibeHooksConfig() }, null, 2));
+      console.log("\nThen restart Claude Code (or open a new session). For one project instead: vibe hooks install --dir <path>");
+      return;
+    }
     const target = opts.dir
       ? path.join(path.resolve(opts.dir), ".claude", "settings.json")
-      : opts.global
-        ? path.join(os.homedir(), ".claude", "settings.json")
-        : path.join(process.cwd(), ".claude", "settings.json");
+      : path.join(process.cwd(), ".claude", "settings.json");
 
     let settings: Record<string, unknown> = {};
     try {
@@ -223,10 +249,8 @@ program
       since = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     }
 
-    const fmt = (n: number) =>
-      n >= 1_000_000 ? (n / 1_000_000).toFixed(1) + "M" : n >= 1_000 ? (n / 1_000).toFixed(1) + "k" : String(n);
-
-    process.stdout.write("Reading Claude transcripts…\r");
+    // A progress line only on a terminal: piped output gets no stray \r text.
+    if (process.stdout.isTTY) process.stdout.write("Reading Claude transcripts…\r");
     const rows = await getTokensByProject({ since });
     if (!rows.length) {
       console.log("No Claude usage found in ~/.claude/projects.            ");
@@ -247,9 +271,9 @@ program
       const bar = "█".repeat(Math.round((r.tokens / max) * 24)) || "▏";
       const name = label(r).padEnd(nameW).slice(0, nameW);
       const pct = ((r.tokens / grand) * 100).toFixed(0);
-      console.log(`${name}  ${fmt(r.tokens).padStart(7)}  ${pct.padStart(3)}%  ${bar}`);
+      console.log(`${name}  ${formatTokens(r.tokens).padStart(7)}  ${pct.padStart(3)}%  ${bar}`);
     }
-    console.log(`\nTotal: ${fmt(grand)} tokens across ${rows.length} projects.`);
+    console.log(`\nTotal: ${formatTokens(grand)} tokens across ${rows.length} projects.`);
   });
 
 program
@@ -342,7 +366,9 @@ program
   .action(async (opts: { days: string }) => {
     const days = Math.max(7, Math.min(371, Number(opts.days) || 84));
     const stats = summarizeRange(await readEvents(), days);
-    console.log("\n" + formatChart(stats) + "\n");
+    // Color only on a terminal, and never when NO_COLOR is set (no-color.org).
+    const color = Boolean(process.stdout.isTTY) && !process.env.NO_COLOR;
+    console.log("\n" + formatChart(stats, { color }) + "\n");
   });
 
 const privacy = program.command("privacy").description("Control what your public surfaces reveal");
@@ -378,7 +404,7 @@ program
   .command("status")
   .description("Show the current live state")
   .action(async () => {
-    const session = await readSession();
+    const session = await readLiveSession();
     if (!session) {
       console.log("No active session.");
       return;

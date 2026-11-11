@@ -16,7 +16,7 @@ import {
   type LiveState,
   type PublicLiveState,
 } from "./state.ts";
-import { appendEvent, readConfig, readSession, readSettings, writeSession, writeSettings, writeState, type Session } from "./store.ts";
+import { appendEvent, clearSession, readConfig, readSession, readSettings, writeSession, writeSettings, writeState, type Session } from "./store.ts";
 import { PRESETS, publicShowCost, resolveTheme, sanitizeProfile, sanitizeSummarizer, validateVars, type Settings } from "./theme.ts";
 import { channelFrom, isShareKind, renderCardPng, shareCardSvg, timeLiveLabel, type ShareData } from "./share.ts";
 import { beginAuth, completeAuth, disconnect, integrationStatus, isProvider } from "./oauth.ts";
@@ -31,6 +31,9 @@ import { fetchSocial, socialGrowth } from "./social.ts";
 import { checkWrite, isAllowedHost } from "./guard.ts";
 
 const GIT_POLL_MS = 5_000;
+
+/** Claude Code tools that spawn a sub-agent: `Agent` now, `Task` in older versions. */
+const SUBAGENT_TOOLS = new Set(["Agent", "Task"]);
 const TOKEN_POLL_MS = 30_000;
 const SOCIAL_POLL_MS = 180_000;
 
@@ -433,6 +436,9 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
     state.updatedAt = new Date().toISOString();
     await saveState(state);
     await logEvent({ type: "session_ended", title: session!.title });
+    // The session is over: leave no session.json behind for status, the
+    // hook script or the next `vibe` command to mistake for a live one.
+    if (persist) await clearSession();
   }
 
   // ---- claude hooks (dumb script in, smart agent here) ---------------------
@@ -442,13 +448,15 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
    * first line (so the overlay updates instantly and Claude is never blocked),
    * then refine it in the background with a generated feature label from the
    * summarizer (Gemini 3.1 Flash-Lite, template fallback). The raw prompt is
-   * never persisted or sent to LiveState; only the redacted label is.
+   * never persisted. The redacted label is the live "Now Building" card, so it
+   * sits in LiveState and session.json while the session runs; the event log
+   * records only that a prompt happened, never its text.
    */
   async function onPrompt(rawPrompt: string): Promise<void> {
     const firstLine = rawPrompt.split("\n").map((l) => l.trim()).find(Boolean) ?? "";
     const title = redact(firstLine).slice(0, 120);
     session!.prompts += 1;
-    await logEvent({ type: "prompt_submitted", title });
+    await logEvent({ type: "prompt_submitted" });
     const mode = session!.nowBuilding?.mode ?? "coding";
     if (title) {
       session!.nowBuilding = { title, mode };
@@ -471,11 +479,12 @@ export async function runAgent(port: number, opts: { demo?: boolean } = {}): Pro
   }
 
   /** PostToolUse → log + refresh git promptly so stats feel live after edits.
-   *  The `Task` tool spawns a sub-agent — count those; they're the signal we
-   *  surface on /live (raw tool calls are noise). */
+   *  `Agent` (and `Task`, its name in older Claude Code) spawns a sub-agent:
+   *  count those; they're the signal we surface on /live (raw tool calls are
+   *  noise). */
   async function onTool(tool: string): Promise<void> {
     await logEvent({ type: "tool_used", tool });
-    if (tool === "Task") {
+    if (SUBAGENT_TOOLS.has(tool)) {
       session!.subAgents += 1;
       await persistSession();
       await logEvent({ type: "subagent_used" });

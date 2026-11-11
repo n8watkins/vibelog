@@ -1,16 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { SITE_URL } from "./site";
+import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "./site";
 
 // Archivo's width axis gives the condensed, broadcast-graphics headlines;
 // the same family at normal width carries the body copy.
 const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono-face", display: "swap" });
 
-const title = "VibeLog - live stats for coding with AI agents";
-const description =
-  "VibeLog follows your repo and your AI agent session and shows what you are building, prompts, commits, sub-agents and tokens: on your stream, on a page you can share, and in a card for your channel. Runs locally, MIT licensed.";
+const title = SITE_TITLE;
+const description = SITE_DESCRIPTION;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -20,12 +19,15 @@ export const metadata: Metadata = {
   authors: [{ name: "N8", url: "https://n8builds.dev" }],
   creator: "N8",
   keywords: [
+    "AI coding log",
+    "Claude Code",
+    "Codex",
+    "token usage",
+    "time tracking",
+    "vibe coding",
     "OBS overlay",
     "coding stream overlay",
-    "vibe coding",
     "build in public",
-    "Claude Code",
-    "token usage",
     "git stats",
     "open source",
   ],

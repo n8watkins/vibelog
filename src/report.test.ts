@@ -60,8 +60,17 @@ test("now_building titles are deduped, order preserved", () => {
 
 test("formatReport shows an empty-day message when nothing happened", () => {
   const s = summarizeDay([], DATE);
-  const out = formatReport(s);
+  const out = formatReport(s, null, null, DATE);
   assert.match(out, /No activity logged today/);
+});
+
+test("formatReport names the empty day relative to today", () => {
+  const s = summarizeDay([], DATE);
+  assert.match(formatReport(s, null, null, "2026-06-07"), /No activity logged yesterday\./);
+  assert.match(formatReport(s, null, null, "2026-06-20"), /No activity logged on 2026-06-06\./);
+  // Across a month boundary.
+  const first = summarizeDay([], "2026-05-31");
+  assert.match(formatReport(first, null, null, "2026-06-01"), /No activity logged yesterday\./);
 });
 
 test("formatReport renders stats block and sections", () => {

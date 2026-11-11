@@ -52,6 +52,15 @@ test("formatChart renders a heatmap and a streak/score summary", () => {
   assert.match(out, /best day 2026-06/);
 });
 
+test("formatChart can render without ANSI color", () => {
+  const end = new Date(2026, 5, 6, 12);
+  const stats = summarizeRange([], 14, end);
+  assert.match(formatChart(stats), /\x1b\[/);
+  const plain = formatChart(stats, { color: false });
+  assert.doesNotMatch(plain, /\x1b\[/);
+  assert.match(plain, /less .* more/);
+});
+
 test("formatChart handles an empty range gracefully", () => {
   const out = formatChart([]);
   assert.match(out, /No activity yet/);
