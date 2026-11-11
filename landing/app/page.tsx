@@ -19,7 +19,7 @@ import {
   IconUsers,
 } from "./icons";
 import { Reveal } from "./reveal";
-import { N8BUILDS_URL, RELEASE_URL, REPO_URL, SITE_URL, WAITLIST_URL } from "./site";
+import { N8BUILDS_URL, RELEASE_URL, REPO_URL, SITE_DESCRIPTION, SITE_URL, WAITLIST_URL } from "./site";
 
 /* ------------------------------------------------------------------ */
 /* Building blocks                                                     */
@@ -227,8 +227,7 @@ const jsonLd = {
   url: SITE_URL,
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Windows (WSL)",
-  description:
-    "Live stats for coding with AI agents: a stream overlay, a public live page, a private dashboard and share cards, from your git repo and agent session.",
+  description: SITE_DESCRIPTION,
   license: "https://opensource.org/licenses/MIT",
   softwareVersion: "0.1.0",
   datePublished: "2026-11-02",
@@ -275,13 +274,17 @@ export default function Home() {
           <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(50%_60%_at_50%_0%,rgba(177,140,255,0.13),transparent_70%)]" />
           <div className="relative mx-auto max-w-3xl px-4 pt-12 text-center sm:px-6 sm:pt-14">
             <h1 id="hero-title" className="display text-[clamp(2.6rem,7vw,4rem)]">
-              Your coding session,
+              Your AI coding,
               <br />
-              <span className="text-accent">live on stream.</span>
+              <span className="text-accent">logged per project.</span>
             </h1>
             <p className="mx-auto mt-5 max-w-[44rem] text-[17px] leading-relaxed text-pretty text-muted">
-              VibeLog follows your repo and your AI agent session and shows what you are building, with prompts, commits, sub-agents and
-              tokens. On your stream, on a page you can share, and on a card for your channel.
+              VibeLog is a private, local log of your AI coding: what you worked on, per project, across Claude Code and Codex, with time
+              and cost. Streaming overlays are a bonus.
+            </p>
+            <p className="mx-auto mt-4 max-w-[44rem] text-sm text-pretty text-dim">
+              <span className="slate mr-2 text-accent">Status</span>
+              Claude Code works today. Codex, per-project time and daily views are coming.
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
               <StarButton />
