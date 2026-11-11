@@ -9,6 +9,12 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
   Strict-Transport-Security: max-age=31536000
 
+# Uptime check (OpenPing): a static file, so it costs no Worker run.
+/healthz
+  ! Cache-Control
+  Cache-Control: no-store
+  Content-Type: text/plain; charset=utf-8
+
 # Hashed build output never changes, so browsers may cache it for a year.
 /_next/static/*
   ! Cache-Control
