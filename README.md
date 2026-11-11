@@ -1,9 +1,11 @@
 # VibeLog
 
-Live coding telemetry + an OBS overlay for vibe-coding streams. One local Node
-process tracks your git activity, Claude token spend, stream time and channel
-growth, and serves a live HUD (OBS Browser Source), a private dashboard, a public
-**/live** page, and shareable **/share** cards. **Local-first, no accounts, $0.**
+VibeLog is a private, local log of your AI coding: what you worked on, per project, across Claude Code and Codex, with time and cost.
+Streaming overlays are a bonus.
+
+**Where it stands.** Claude Code works today: `vibe tokens` reads the transcripts Claude Code already keeps on your machine and shows where your tokens went, per project.
+Codex support is coming, and so are per-project time, today and week views, a standup draft and a timesheet.
+The log stays on your machine: no account, no network.
 
 The marketing site is live at https://vibelogs.dev (source in `landing/`, deploy steps in
 [`landing/DEPLOY.md`](./landing/DEPLOY.md)).
@@ -15,11 +17,41 @@ Roadmap & direction live in [`docs/VISION.md`](./docs/VISION.md) (canonical) and
 
 What only the owner can do (tests that need real accounts and OBS) is in [`OWNER-TODO.md`](./OWNER-TODO.md).
 
-## Quick start
+## Install
+
+VibeLog is not on npm yet, so run it from a clone:
 
 ```bash
 npm install
+alias vibe="npx tsx $(pwd)/src/cli.ts"   # so `vibe` works from any directory
+```
 
+## Tokens by project
+
+See where your Claude tokens actually go, across *all* your work.
+It parses your local Claude Code transcripts (no network, no ccusage), and days are your local days:
+
+```bash
+vibe tokens --days 7                  # last 7 days
+vibe tokens --since 2026-06-01 --top 20
+```
+
+```
+la-pool-engine            301.6M   19%  ████████████████████████
+date-planner-mini-site    237.2M   15%  ███████████████████
+website-template          219.5M   14%  █████████████████
+...
+```
+
+## Streaming overlay (a bonus)
+
+The same tool can also run during a stream.
+One local Node process tracks your git activity, Claude token spend, stream time and channel growth, and serves a live HUD (OBS Browser Source), a private dashboard, a public **/live** page and shareable **/share** cards.
+The streaming side is feature-frozen for now: it gets bug fixes, and new work resumes when a stream is scheduled.
+
+### Quick start
+
+```bash
 # Optional: set a default project name
 npm run vibe -- init --project "VibeLog"
 
@@ -97,31 +129,24 @@ http://localhost:4545/dashboard
 
 Build modes: `planning designing coding debugging polishing deploying shipping`.
 
-### Make `vibe` a real command (recommended)
+With the `vibe` alias from [Install](#install), every `npm run vibe --` above is just `vibe`, from any repo.
 
-So `vibe` targets whatever repo you're in (instead of `npm run vibe --` from this dir):
-
-```bash
-alias vibe="npx tsx $(pwd)/src/cli.ts"
-# then, from any project:  vibe start
-```
-
-## Auto-track with Claude Code hooks (optional)
+### Auto-track with Claude Code hooks (optional)
 
 Wire VibeLog into Claude Code so the overlay updates itself while you code — your
 prompt becomes the "Now Building" card and git stats refresh right after each edit.
 
 ```bash
-npm run vibe -- hooks print              # preview the settings.json block
-npm run vibe -- hooks install --global   # ~/.claude/settings.json (all projects)
-npm run vibe -- hooks install --dir .    # ./.claude/settings.json (this project only)
+npm run vibe -- hooks print              # print the settings.json hooks block
+npm run vibe -- hooks install --dir .    # merge it into ./.claude/settings.json (this project only)
 ```
 
-Restart Claude Code afterwards. The hook script is fire-and-forget: it never blocks
-Claude, writes nothing to its stdout, and silently does nothing when no `vibe`
-session is running. Prompt text is redacted before it can reach the overlay.
+VibeLog never edits your global `~/.claude/settings.json`: `hooks install --global` prints the block for you to add yourself.
+Restart Claude Code afterwards.
+The hook script is fire-and-forget: it never blocks Claude, writes nothing to its stdout, and does nothing when no `vibe` session is running, including when a session's agent died without `vibe end`.
+Prompt text is redacted before it can reach the overlay.
 
-## What it tracks
+### What it tracks
 
 - **Git**, polled every 5s: lines added/removed, files changed (incl. untracked),
   commits since session start, current branch.
@@ -133,26 +158,11 @@ session is running. Prompt text is redacted before it can reach the overlay.
 - **Now Building**: whatever you type via `vibe building`, or — when Claude Code hooks
   are wired — your prompt, turned into a short feature label by the summarizer
   (Gemini Flash-Lite via `src/summarize.ts`, with a pure-local template fallback when
-  no key is set). The raw prompt is never persisted; only the redacted label is.
+  no key is set). The raw prompt is never saved.
+  The redacted first line, or the label made from it, is the live card, so it is kept in `~/.vibelog/session.json` until `vibe end` and in `state.json` until the next session replaces it.
+  The event log (`events.jsonl`) records only that a prompt happened, never its text.
 - **Stream time** from the OBS WebSocket, and **Twitch/YouTube** live status +
   follower/sub counts (channel-growth deltas over time) when configured.
-
-## Tokens by project
-
-See where your Claude tokens actually go — across *all* your work, not just
-VibeLog sessions. Parses local Claude Code transcripts (no network, no ccusage):
-
-```bash
-npm run vibe -- tokens --days 7        # last 7 days
-npm run vibe -- tokens --since 2026-06-01 --top 20
-```
-
-```
-la-pool-engine            301.6M   19%  ████████████████████████
-date-planner-mini-site    237.2M   15%  ███████████████████
-website-template          219.5M   14%  █████████████████
-...
-```
 
 ## Safety
 
@@ -234,7 +244,7 @@ hooks/
   claude-hook.mjs    dumb Claude Code hook → forwards to the agent (no deps)
 src/
   cli.ts             vibe CLI (commander): start/demo/building/mark/report/chart/
-                       tokens/share/twitch login/hooks/status/end
+                       tokens/share/twitch login/hooks/status/end  (+ cli.test.ts, end to end)
   agent.ts           HTTP server + in-memory LiveState + pollers + all routes
                        (+ isRemote/originOf origin gate)  (+ agent.test.ts)
   config.ts          paths + defaults (ports, ~/.vibelog file locations)
@@ -248,6 +258,7 @@ src/
   claude-projects.ts tokens-by-project from local transcripts  (+ test)
   projects.ts        per-project activity (transcripts × git)  (+ projects.test.ts)
   report.ts          `vibe report` daily/weekly recaps  (+ report.test.ts)
+  format.ts          token counts as K/M/B for terminal output  (+ format.test.ts)
   chart.ts           `vibe chart` heatmap + Vibe Score  (+ chart.test.ts)
   summarize.ts       prompt → feature label (Gemini Flash-Lite + fallback)  (+ test)
   obs.ts             OBS WebSocket bridge (live started/ended)
@@ -279,7 +290,7 @@ Releasing is optional and only for this repository: a fork never has to tag, rel
 The Release workflow runs only in `n8watkins/vibelog`, so pushing a tag in a fork publishes nothing.
 The hook only checks message format; `git commit --no-verify` skips it.
 
-VibeLog reads no environment variables, so there is no `.env.example`: credentials go in `~/.vibelog/secrets.json` (see [Safety](#safety)).
+VibeLog reads no environment variables for settings or credentials (the only one it honors is the standard `NO_COLOR`), so there is no `.env.example`: credentials go in `~/.vibelog/secrets.json` (see [Safety](#safety)).
 
 ## License
 
